@@ -14,7 +14,8 @@ import {
   Compass,
   Zap,
   Loader2,
-  X
+  X,
+  ArrowDown
 } from 'lucide-react';
 
 interface GearItem {
@@ -59,9 +60,8 @@ export default function TackleVault() {
     const { data, error } = await supabase
       .from('gear_items')
       .select('*')
-      .order('is_ghost', { ascending: true })     // Active items first, 'Gone' dropped to bottom
-      .order('is_favorite', { ascending: false }) // Starred Favourites at top of active items
-      .order('created_at', { ascending: false });  // Newest items third
+      .order('is_favorite', { ascending: false })
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching gear from Supabase:', error);
@@ -73,12 +73,9 @@ export default function TackleVault() {
 
   // Toggle "Favourites" Status
   const toggleFavorite = async (id: string, currentStatus: boolean) => {
-    const updatedItems = items.map(item => 
+    setItems(items.map(item => 
       item.id === id ? { ...item, is_favorite: !currentStatus } : item
-    );
-    
-    // Sort in UI immediately
-    setItems(sortItems(updatedItems));
+    ));
 
     const { error } = await supabase
       .from('gear_items')
@@ -93,12 +90,9 @@ export default function TackleVault() {
 
   // Toggle "Gone" Status
   const toggleGhost = async (id: string, currentStatus: boolean) => {
-    const updatedItems = items.map(item => 
+    setItems(items.map(item => 
       item.id === id ? { ...item, is_ghost: !currentStatus } : item
-    );
-
-    // Sort in UI immediately so 'Gone' items sink to bottom instantly
-    setItems(sortItems(updatedItems));
+    ));
 
     const { error } = await supabase
       .from('gear_items')
@@ -111,13 +105,12 @@ export default function TackleVault() {
     }
   };
 
-  // Helper function to keep sorting consistent on local UI updates
-  const sortItems = (itemList: GearItem[]) => {
-    return [...itemList].sort((a, b) => {
-      if (a.is_ghost !== b.is_ghost) return a.is_ghost ? 1 : -1;
-      if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
-      return 0;
-    });
+  // Smooth scroll to "Items to replace" section
+  const scrollToReplaceSection = () => {
+    const el = document.getElementById('to-replace-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   // Handle Form Submission
@@ -154,7 +147,7 @@ export default function TackleVault() {
       console.error('Error inserting new lure:', error);
       alert('Failed to add lure. Please try again.');
     } else if (data) {
-      setItems(sortItems([data[0] as GearItem, ...items]));
+      setItems([data[0] as GearItem, ...items]);
       setFormData({
         name: '',
         brand: '',
@@ -171,7 +164,8 @@ export default function TackleVault() {
   };
 
   const ghostItems = items.filter(item => item.is_ghost);
-  const favoriteItems = items.filter(item => item.is_favorite);
+  const activeItems = items.filter(item => !item.is_ghost);
+  const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24 selection:bg-amber-500 selection:text-slate-950">
@@ -245,10 +239,18 @@ export default function TackleVault() {
             <span className="text-slate-500 block uppercase">Favourites</span>
             <span className="text-lg font-bold text-amber-400">{favoriteItems.length} Items</span>
           </div>
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3">
-            <span className="text-slate-500 block uppercase">To replace</span>
+          
+          {/* CLICKABLE TO REPLACE BUTTON CARD */}
+          <button 
+            onClick={scrollToReplaceSection}
+            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-red-500/40 rounded-xl p-3 text-left transition group relative cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 group-hover:text-red-400 block uppercase transition">To replace</span>
+              <ArrowDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-red-400 transition" />
+            </div>
             <span className="text-lg font-bold text-red-400">{ghostItems.length} Gone</span>
-          </div>
+          </button>
         </div>
 
         {loading ? (
@@ -260,86 +262,140 @@ export default function TackleVault() {
           <>
             {/* 1. TACKLE BOX TRAY GRID VIEW */}
             {viewMode === 'grid' && (
-              <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
-                    <Compass className="w-4 h-4 text-amber-400" /> Tackle Box Items
-                  </span>
-                  <span className="text-xs text-slate-500 font-mono">Pinned Favourites</span>
-                </div>
+              <div className="space-y-8">
+                
+                {/* TOP SECTION: ACTIVE ITEMS */}
+                <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
+                      <Compass className="w-4 h-4 text-amber-400" /> Tackle Box Items
+                    </span>
+                    <span className="text-xs text-slate-500 font-mono">{activeItems.length} Available</span>
+                  </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  {items.map((item) => (
-                    <div 
-                      key={item.id}
-                      className={`relative group rounded-xl p-3 transition-all duration-300 border ${
-                        item.is_ghost 
-                          ? 'bg-slate-950/40 border-dashed border-red-500/40 opacity-60 hover:opacity-100' 
-                          : item.is_favorite 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    {activeItems.map((item) => (
+                      <div 
+                        key={item.id}
+                        className={`relative group rounded-xl p-3 transition-all duration-300 border ${
+                          item.is_favorite 
                             ? 'bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5' 
                             : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      {/* Image Compartment */}
-                      <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
-                        <img 
-                          src={item.image_url} 
-                          alt={item.name} 
-                          className={`w-full h-full object-cover transition duration-500 ${item.is_ghost ? 'grayscale opacity-40 blur-[1px]' : 'group-hover:scale-105'}`}
-                        />
-                        
-                        {/* "Favourites" Star Badge */}
-                        <button 
-                          onClick={() => toggleFavorite(item.id, item.is_favorite)}
-                          className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition ${
-                            item.is_favorite 
-                              ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
-                              : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
-                          }`}
-                          title="Mark as Favourite"
-                        >
-                          <Star className="w-3.5 h-3.5 fill-current" />
-                        </button>
-
-                        {/* Ghost Slot Overlay */}
-                        {item.is_ghost && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-[2px]">
-                            <span className="bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest">
-                              Gone
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Card Metadata */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                          <span>{item.brand}</span>
-                          <span className="text-amber-400/80">{item.depth}</span>
+                        }`}
+                      >
+                        {/* Image Compartment */}
+                        <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
+                          <img 
+                            src={item.image_url} 
+                            alt={item.name} 
+                            className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                          />
+                          
+                          {/* "Favourites" Star Badge */}
+                          <button 
+                            onClick={() => toggleFavorite(item.id, item.is_favorite)}
+                            className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition ${
+                              item.is_favorite 
+                                ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
+                                : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
+                            }`}
+                            title="Mark as Favourite"
+                          >
+                            <Star className="w-3.5 h-3.5 fill-current" />
+                          </button>
                         </div>
-                        <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                        <p className="text-xs text-slate-400">{item.color}</p>
-                      </div>
 
-                      {/* Quick Action Button */}
-                      <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                        <button 
-                          onClick={() => toggleGhost(item.id, item.is_ghost)}
-                          className={`text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 ${
-                            item.is_ghost 
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' 
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
-                          }`}
-                        >
-                          {item.is_ghost ? <RotateCcw className="w-3 h-3" /> : <Trash2 className="w-3 h-3" />}
-                          {item.is_ghost ? 'Replaced' : 'Gone'}
-                        </button>
-                        
-                        <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                        {/* Card Metadata */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                            <span>{item.brand}</span>
+                            <span className="text-amber-400/80">{item.depth}</span>
+                          </div>
+                          <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
+                          <p className="text-xs text-slate-400">{item.color}</p>
+                        </div>
+
+                        {/* Quick Action Button */}
+                        <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                          <button 
+                            onClick={() => toggleGhost(item.id, item.is_ghost)}
+                            className="text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Gone
+                          </button>
+                          
+                          <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+
+                {/* BOTTOM SECTION: ITEMS TO REPLACE (GHOSTED CARDS) */}
+                <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-red-400 font-mono flex items-center gap-1.5">
+                      <Trash2 className="w-4 h-4" /> Items to replace
+                    </span>
+                    <span className="text-xs text-slate-500 font-mono">{ghostItems.length} Logged Lost</span>
+                  </div>
+
+                  {ghostItems.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 font-mono text-xs border border-dashed border-slate-800 rounded-xl">
+                      No lost items. Tap "Gone" on active gear when snagged.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      {ghostItems.map((item) => (
+                        <div 
+                          key={item.id}
+                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40 opacity-70 hover:opacity-100"
+                        >
+                          {/* Image Compartment */}
+                          <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
+                            <img 
+                              src={item.image_url} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover grayscale opacity-40 blur-[1px]"
+                            />
+                            
+                            {/* Ghost Overlay Tag */}
+                            <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-[2px]">
+                              <span className="bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest">
+                                Gone
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Card Metadata */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                              <span>{item.brand}</span>
+                              <span className="text-amber-400/80">{item.depth}</span>
+                            </div>
+                            <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
+                            <p className="text-xs text-slate-400">{item.color}</p>
+                          </div>
+
+                          {/* Quick Action Button: Replaced */}
+                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                            <button 
+                              onClick={() => toggleGhost(item.id, item.is_ghost)}
+                              className="text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              Replaced
+                            </button>
+                            
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
               </div>
             )}
 
