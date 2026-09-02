@@ -15,7 +15,8 @@ import {
   Zap,
   Loader2,
   X,
-  ArrowDown
+  ArrowDown,
+  Package
 } from 'lucide-react';
 
 interface GearItem {
@@ -60,7 +61,6 @@ export default function TackleVault() {
     const { data, error } = await supabase
       .from('gear_items')
       .select('*')
-      .order('is_favorite', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -105,9 +105,9 @@ export default function TackleVault() {
     }
   };
 
-  // Smooth scroll to "Items to replace" section
-  const scrollToReplaceSection = () => {
-    const el = document.getElementById('to-replace-section');
+  // Smooth scroll helper
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
@@ -163,9 +163,11 @@ export default function TackleVault() {
     setIsSubmitting(false);
   };
 
+  // Filter items into 3 distinct operational buckets
   const ghostItems = items.filter(item => item.is_ghost);
-  const activeItems = items.filter(item => !item.is_ghost);
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost);
+  const myGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
+  const totalActiveItems = items.filter(item => !item.is_ghost);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24 selection:bg-amber-500 selection:text-slate-950">
@@ -229,21 +231,37 @@ export default function TackleVault() {
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 pt-6">
         
-        {/* Quick Stats Bar */}
+        {/* Quick Stats Bar (Jump Buttons) */}
         <div className="grid grid-cols-3 gap-3 mb-6 font-mono text-xs">
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3">
-            <span className="text-slate-500 block uppercase">Total Gear</span>
-            <span className="text-lg font-bold text-slate-200">{items.length} Units</span>
-          </div>
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3">
-            <span className="text-slate-500 block uppercase">Favourites</span>
-            <span className="text-lg font-bold text-amber-400">{favoriteItems.length} Items</span>
-          </div>
           
-          {/* CLICKABLE TO REPLACE BUTTON CARD */}
+          {/* 1. TOTAL GEAR -> JUMP TO MY GEAR */}
           <button 
-            onClick={scrollToReplaceSection}
-            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-red-500/40 rounded-xl p-3 text-left transition group relative cursor-pointer"
+            onClick={() => scrollToSection('my-gear-section')}
+            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3 text-left transition group cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 group-hover:text-slate-300 block uppercase transition">Total Gear</span>
+              <ArrowDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition" />
+            </div>
+            <span className="text-lg font-bold text-slate-200">{items.length} Units</span>
+          </button>
+
+          {/* 2. FAVOURITES -> JUMP TO FAVOURITES */}
+          <button 
+            onClick={() => scrollToSection('favourites-section')}
+            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/40 rounded-xl p-3 text-left transition group cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 group-hover:text-amber-400 block uppercase transition">Favourites</span>
+              <ArrowDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition" />
+            </div>
+            <span className="text-lg font-bold text-amber-400">{favoriteItems.length} Items</span>
+          </button>
+
+          {/* 3. TO REPLACE -> JUMP TO TO REPLACE */}
+          <button 
+            onClick={() => scrollToSection('to-replace-section')}
+            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-red-500/40 rounded-xl p-3 text-left transition group cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <span className="text-slate-500 group-hover:text-red-400 block uppercase transition">To replace</span>
@@ -260,79 +278,145 @@ export default function TackleVault() {
           </div>
         ) : (
           <>
-            {/* 1. TACKLE BOX TRAY GRID VIEW */}
+            {/* 1. TACKLE BOX TRAY GRID VIEW (THREE SECTIONS) */}
             {viewMode === 'grid' && (
               <div className="space-y-8">
                 
-                {/* TOP SECTION: ACTIVE ITEMS */}
-                <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl">
+                {/* SECTION 1: FAVOURITES */}
+                <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-20">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
-                      <Compass className="w-4 h-4 text-amber-400" /> Tackle Box Items
+                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
+                      <Star className="w-4 h-4 fill-current" /> Favourites
                     </span>
-                    <span className="text-xs text-slate-500 font-mono">{activeItems.length} Available</span>
+                    <span className="text-xs text-slate-500 font-mono">{favoriteItems.length} Go-To Items</span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    {activeItems.map((item) => (
-                      <div 
-                        key={item.id}
-                        className={`relative group rounded-xl p-3 transition-all duration-300 border ${
-                          item.is_favorite 
-                            ? 'bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5' 
-                            : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-                        }`}
-                      >
-                        {/* Image Compartment */}
-                        <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
-                          <img 
-                            src={item.image_url} 
-                            alt={item.name} 
-                            className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
-                          />
-                          
-                          {/* "Favourites" Star Badge */}
-                          <button 
-                            onClick={() => toggleFavorite(item.id, item.is_favorite)}
-                            className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition ${
-                              item.is_favorite 
-                                ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
-                                : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
-                            }`}
-                            title="Mark as Favourite"
-                          >
-                            <Star className="w-3.5 h-3.5 fill-current" />
-                          </button>
-                        </div>
-
-                        {/* Card Metadata */}
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                            <span>{item.brand}</span>
-                            <span className="text-amber-400/80">{item.depth}</span>
+                  {favoriteItems.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 font-mono text-xs border border-dashed border-slate-800/80 rounded-xl">
+                      No favourites pinned yet. Star your go-to lures to keep them at the top!
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      {favoriteItems.map((item) => (
+                        <div 
+                          key={item.id}
+                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
+                        >
+                          {/* Image Compartment */}
+                          <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
+                            <img 
+                              src={item.image_url} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                            />
+                            
+                            {/* "Favourites" Star Badge */}
+                            <button 
+                              onClick={() => toggleFavorite(item.id, item.is_favorite)}
+                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-amber-500 text-slate-950 border-amber-400 scale-110"
+                              title="Unstar Favourite"
+                            >
+                              <Star className="w-3.5 h-3.5 fill-current" />
+                            </button>
                           </div>
-                          <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                          <p className="text-xs text-slate-400">{item.color}</p>
-                        </div>
 
-                        {/* Quick Action Button */}
-                        <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                          <button 
-                            onClick={() => toggleGhost(item.id, item.is_ghost)}
-                            className="text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            Gone
-                          </button>
-                          
-                          <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                          {/* Card Metadata */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                              <span>{item.brand}</span>
+                              <span className="text-amber-400/80">{item.depth}</span>
+                            </div>
+                            <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
+                            <p className="text-xs text-slate-400">{item.color}</p>
+                          </div>
+
+                          {/* Quick Action Button */}
+                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                            <button 
+                              onClick={() => toggleGhost(item.id, item.is_ghost)}
+                              className="text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Gone
+                            </button>
+                            
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* BOTTOM SECTION: ITEMS TO REPLACE (GHOSTED CARDS) */}
+                {/* SECTION 2: MY GEAR */}
+                <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-20">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
+                      <Package className="w-4 h-4 text-slate-400" /> My gear
+                    </span>
+                    <span className="text-xs text-slate-500 font-mono">{myGearItems.length} Units</span>
+                  </div>
+
+                  {myGearItems.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 font-mono text-xs border border-dashed border-slate-800/80 rounded-xl">
+                      {totalActiveItems.length > 0 
+                        ? 'All your active gear is currently starred as Favourites!' 
+                        : 'No active gear in vault. Tap "Add Lure" to log new gear.'}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      {myGearItems.map((item) => (
+                        <div 
+                          key={item.id}
+                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900/80 border-slate-800 hover:border-slate-700"
+                        >
+                          {/* Image Compartment */}
+                          <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
+                            <img 
+                              src={item.image_url} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                            />
+                            
+                            {/* "Favourites" Star Badge */}
+                            <button 
+                              onClick={() => toggleFavorite(item.id, item.is_favorite)}
+                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200"
+                              title="Mark as Favourite"
+                            >
+                              <Star className="w-3.5 h-3.5 fill-current" />
+                            </button>
+                          </div>
+
+                          {/* Card Metadata */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                              <span>{item.brand}</span>
+                              <span className="text-amber-400/80">{item.depth}</span>
+                            </div>
+                            <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
+                            <p className="text-xs text-slate-400">{item.color}</p>
+                          </div>
+
+                          {/* Quick Action Button */}
+                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                            <button 
+                              onClick={() => toggleGhost(item.id, item.is_ghost)}
+                              className="text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Gone
+                            </button>
+                            
+                            <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* SECTION 3: ITEMS TO REPLACE */}
                 <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xs font-semibold uppercase tracking-wider text-red-400 font-mono flex items-center gap-1.5">
@@ -408,7 +492,7 @@ export default function TackleVault() {
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full">
-                  {items.filter(i => !i.is_ghost).map((item) => (
+                  {favoriteItems.map((item) => (
                     <div key={item.id} className="group relative flex flex-col items-center">
                       <div className="w-full aspect-square rounded-2xl bg-slate-900/50 border border-slate-800/80 p-4 flex items-center justify-center group-hover:border-amber-500/40 transition">
                         <img 
@@ -448,6 +532,8 @@ export default function TackleVault() {
                         <td className="p-3">
                           {item.is_ghost ? (
                             <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Gone</span>
+                          ) : item.is_favorite ? (
+                            <span className="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Favourite</span>
                           ) : (
                             <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">In Vault</span>
                           )}
