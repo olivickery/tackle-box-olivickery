@@ -59,8 +59,9 @@ export default function TackleVault() {
     const { data, error } = await supabase
       .from('gear_items')
       .select('*')
-      .order('is_favorite', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('is_ghost', { ascending: true })     // Active items first, 'Gone' dropped to bottom
+      .order('is_favorite', { ascending: false }) // Starred Favourites at top of active items
+      .order('created_at', { ascending: false });  // Newest items third
 
     if (error) {
       console.error('Error fetching gear from Supabase:', error);
@@ -72,9 +73,12 @@ export default function TackleVault() {
 
   // Toggle "Favourites" Status
   const toggleFavorite = async (id: string, currentStatus: boolean) => {
-    setItems(items.map(item => 
+    const updatedItems = items.map(item => 
       item.id === id ? { ...item, is_favorite: !currentStatus } : item
-    ));
+    );
+    
+    // Sort in UI immediately
+    setItems(sortItems(updatedItems));
 
     const { error } = await supabase
       .from('gear_items')
@@ -89,9 +93,12 @@ export default function TackleVault() {
 
   // Toggle "Gone" Status
   const toggleGhost = async (id: string, currentStatus: boolean) => {
-    setItems(items.map(item => 
+    const updatedItems = items.map(item => 
       item.id === id ? { ...item, is_ghost: !currentStatus } : item
-    ));
+    );
+
+    // Sort in UI immediately so 'Gone' items sink to bottom instantly
+    setItems(sortItems(updatedItems));
 
     const { error } = await supabase
       .from('gear_items')
@@ -102,6 +109,15 @@ export default function TackleVault() {
       console.error('Failed to update ghost status:', error);
       fetchGearItems();
     }
+  };
+
+  // Helper function to keep sorting consistent on local UI updates
+  const sortItems = (itemList: GearItem[]) => {
+    return [...itemList].sort((a, b) => {
+      if (a.is_ghost !== b.is_ghost) return a.is_ghost ? 1 : -1;
+      if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
+      return 0;
+    });
   };
 
   // Handle Form Submission
@@ -138,7 +154,7 @@ export default function TackleVault() {
       console.error('Error inserting new lure:', error);
       alert('Failed to add lure. Please try again.');
     } else if (data) {
-      setItems([data[0] as GearItem, ...items]);
+      setItems(sortItems([data[0] as GearItem, ...items]));
       setFormData({
         name: '',
         brand: '',
@@ -230,7 +246,7 @@ export default function TackleVault() {
             <span className="text-lg font-bold text-amber-400">{favoriteItems.length} Items</span>
           </div>
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3">
-            <span className="text-slate-500 block uppercase">Items to replace</span>
+            <span className="text-slate-500 block uppercase">To replace</span>
             <span className="text-lg font-bold text-red-400">{ghostItems.length} Gone</span>
           </div>
         </div>
@@ -247,7 +263,7 @@ export default function TackleVault() {
               <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
-                    <Compass className="w-4 h-4 text-amber-400" /> Tackle Box items: Vault 1
+                    <Compass className="w-4 h-4 text-amber-400" /> Tackle Box Items
                   </span>
                   <span className="text-xs text-slate-500 font-mono">Pinned Favourites</span>
                 </div>
