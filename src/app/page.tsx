@@ -45,7 +45,8 @@ export default function TackleVault() {
     const { data, error } = await supabase
       .from('gear_items')
       .select('*')
-      .order('created_at', { ascending: true });
+      .order('is_favorite', { ascending: false }) // Pinned Go-To favorites first
+      .order('created_at', { ascending: false });  // Newest items second
 
     if (error) {
       console.error('Error fetching gear from Supabase:', error);
