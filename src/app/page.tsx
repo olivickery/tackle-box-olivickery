@@ -13,7 +13,8 @@ import {
   RotateCcw,
   Compass,
   Zap,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 
 interface GearItem {
@@ -34,6 +35,19 @@ export default function TackleVault() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'showroom'>('grid');
   const [isRestockOpen, setIsRestockOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    brand: '',
+    type: 'Hardbody Suspending',
+    depth: '1.5m',
+    color: '',
+    species: '',
+    image_url: ''
+  });
 
   // Fetch live gear from Supabase on mount
   useEffect(() => {
@@ -45,7 +59,7 @@ export default function TackleVault() {
     const { data, error } = await supabase
       .from('gear_items')
       .select('*')
-      .order('is_favorite', { ascending: false }) // Pinned Go-To favorites first
+      .order('is_favorite', { ascending: false }) // Starred "Go-To" items stay pinned to top
       .order('created_at', { ascending: false });  // Newest items second
 
     if (error) {
@@ -56,9 +70,8 @@ export default function TackleVault() {
     setLoading(false);
   };
 
-  // Toggle "Go-To" Favorite Status in Supabase
+  // Toggle "Go-To" Favorite Status
   const toggleFavorite = async (id: string, currentStatus: boolean) => {
-    // Optimistic UI Update
     setItems(items.map(item => 
       item.id === id ? { ...item, is_favorite: !currentStatus } : item
     ));
@@ -70,13 +83,12 @@ export default function TackleVault() {
 
     if (error) {
       console.error('Failed to update favorite status:', error);
-      fetchGearItems(); // Revert on error
+      fetchGearItems();
     }
   };
 
-  // Toggle "Lost to Reef" Ghost Slot Status in Supabase
+  // Toggle "Snagged" Ghost Slot Status
   const toggleGhost = async (id: string, currentStatus: boolean) => {
-    // Optimistic UI Update
     setItems(items.map(item => 
       item.id === id ? { ...item, is_ghost: !currentStatus } : item
     ));
@@ -88,8 +100,58 @@ export default function TackleVault() {
 
     if (error) {
       console.error('Failed to update ghost status:', error);
-      fetchGearItems(); // Revert on error
+      fetchGearItems();
     }
+  };
+
+  // Handle Form Submission
+  const handleAddLure = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.brand || !formData.color) return;
+
+    setIsSubmitting(true);
+
+    const speciesArray = formData.species
+      ? formData.species.split(',').map(s => s.trim())
+      : ['General'];
+
+    const fallbackImage = formData.image_url || 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=400&q=80';
+
+    const newItem = {
+      name: formData.name,
+      brand: formData.brand,
+      type: formData.type,
+      depth: formData.depth,
+      color: formData.color,
+      is_favorite: false,
+      is_ghost: false,
+      image_url: fallbackImage,
+      species: speciesArray
+    };
+
+    const { data, error } = await supabase
+      .from('gear_items')
+      .insert([newItem])
+      .select();
+
+    if (error) {
+      console.error('Error inserting new lure:', error);
+      alert('Failed to add lure. Please try again.');
+    } else if (data) {
+      setItems([data[0] as GearItem, ...items]);
+      setFormData({
+        name: '',
+        brand: '',
+        type: 'Hardbody Suspending',
+        depth: '1.5m',
+        color: '',
+        species: '',
+        image_url: ''
+      });
+      setIsAddModalOpen(false);
+    }
+
+    setIsSubmitting(false);
   };
 
   const ghostItems = items.filter(item => item.is_ghost);
@@ -113,7 +175,6 @@ export default function TackleVault() {
 
           {/* Action Bar */}
           <div className="flex items-center gap-2">
-            {/* Restock List Trigger */}
             <button 
               onClick={() => setIsRestockOpen(true)}
               className="relative p-2 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 transition text-slate-300"
@@ -188,7 +249,7 @@ export default function TackleVault() {
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
                     <Compass className="w-4 h-4 text-amber-400" /> Main Compartment Tray A
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">Live PostgreSQL Persistence</span>
+                  <span className="text-xs text-slate-500 font-mono">Pinned Go-To Favorites</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -330,6 +391,140 @@ export default function TackleVault() {
 
       </main>
 
+      {/* FLOATING ACTION BUTTON: ADD LURE */}
+      <button 
+        onClick={() => setIsAddModalOpen(true)}
+        className="fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95"
+      >
+        <Plus className="w-6 h-6 stroke-[3]" />
+        <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
+      </button>
+
+      {/* ADD LURE MODAL */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-amber-400" />
+                <h2 className="font-bold text-lg text-slate-100">Log New Gear to Vault</h2>
+              </div>
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase">Brand Name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Megabass" 
+                    value={formData.brand}
+                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase">Lure Name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Vision 110" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase">Colorway *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Eleking" 
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase">Running Depth</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 1.2m or Surface" 
+                    value={formData.depth}
+                    onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase">Gear Type</label>
+                  <select 
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                  >
+                    <option value="Hardbody Suspending">Hardbody Suspending</option>
+                    <option value="Soft Plastic">Soft Plastic</option>
+                    <option value="Topwater / Surface">Topwater / Surface</option>
+                    <option value="Jerkbait">Jerkbait</option>
+                    <option value="Metal Jig">Metal Jig</option>
+                    <option value="Vibe / Blade">Vibe / Blade</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase">Species (Comma Separated)</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Bass, Trout, Mangrove Jack" 
+                    value={formData.species}
+                    onChange={(e) => setFormData({ ...formData, species: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1 uppercase">Image URL (Optional)</label>
+                <input 
+                  type="url" 
+                  placeholder="https://..." 
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 mt-4"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5" />
+                    <span>Save to Supabase Vault</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* RESTOCK LIST SLIDE-OUT DRAWER */}
       {isRestockOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
@@ -347,7 +542,6 @@ export default function TackleVault() {
               </button>
             </div>
 
-            {/* List Body */}
             <div className="flex-1 overflow-y-auto py-4 space-y-3">
               {ghostItems.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 font-mono text-xs">
@@ -373,7 +567,6 @@ export default function TackleVault() {
               )}
             </div>
 
-            {/* Drawer Footer */}
             <div className="pt-4 border-t border-slate-800 font-mono text-xs text-slate-400">
               <div className="flex justify-between mb-2">
                 <span>Items to Buy:</span>
