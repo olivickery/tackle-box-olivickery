@@ -59,8 +59,8 @@ export default function TackleVault() {
     const { data, error } = await supabase
       .from('gear_items')
       .select('*')
-      .order('is_favorite', { ascending: false }) // Starred "Go-To" items stay pinned to top
-      .order('created_at', { ascending: false });  // Newest items second
+      .order('is_favorite', { ascending: false })
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching gear from Supabase:', error);
@@ -87,7 +87,7 @@ export default function TackleVault() {
     }
   };
 
-  // Toggle "Snagged" Ghost Slot Status
+  // Toggle "Gone" Ghost Slot Status
   const toggleGhost = async (id: string, currentStatus: boolean) => {
     setItems(items.map(item => 
       item.id === id ? { ...item, is_ghost: !currentStatus } : item
@@ -231,7 +231,7 @@ export default function TackleVault() {
           </div>
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3">
             <span className="text-slate-500 block uppercase">Ghost Slots</span>
-            <span className="text-lg font-bold text-red-400">{ghostItems.length} Snagged</span>
+            <span className="text-lg font-bold text-red-400">{ghostItems.length} Gone</span>
           </div>
         </div>
 
@@ -289,7 +289,7 @@ export default function TackleVault() {
                         {item.is_ghost && (
                           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-[2px]">
                             <span className="bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest">
-                              Snagged
+                              Gone
                             </span>
                           </div>
                         )}
@@ -305,7 +305,7 @@ export default function TackleVault() {
                         <p className="text-xs text-slate-400">{item.color}</p>
                       </div>
 
-                      {/* Quick Action Button: Lost to Reef */}
+                      {/* Quick Action Button */}
                       <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                         <button 
                           onClick={() => toggleGhost(item.id, item.is_ghost)}
@@ -316,7 +316,7 @@ export default function TackleVault() {
                           }`}
                         >
                           {item.is_ghost ? <RotateCcw className="w-3 h-3" /> : <Trash2 className="w-3 h-3" />}
-                          {item.is_ghost ? 'Restock' : 'Snagged'}
+                          {item.is_ghost ? 'Replaced' : 'Gone'}
                         </button>
                         
                         <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
@@ -375,7 +375,7 @@ export default function TackleVault() {
                         <td className="p-3 text-slate-400">{item.color}</td>
                         <td className="p-3">
                           {item.is_ghost ? (
-                            <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Snagged</span>
+                            <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Gone</span>
                           ) : (
                             <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">In Vault</span>
                           )}
@@ -546,7 +546,7 @@ export default function TackleVault() {
               {ghostItems.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 font-mono text-xs">
                   <p>Zero ghost slots logged.</p>
-                  <p className="mt-1">Tap "Snagged" on any item to build your shopping list!</p>
+                  <p className="mt-1">Tap "Gone" on any item to build your shopping list!</p>
                 </div>
               ) : (
                 ghostItems.map((item) => (
@@ -560,7 +560,7 @@ export default function TackleVault() {
                       onClick={() => toggleGhost(item.id, item.is_ghost)}
                       className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition"
                     >
-                      Restocked
+                      Replaced
                     </button>
                   </div>
                 ))
