@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { VaultIcon } from './components/VaultIcon';
 import { 
   Star, 
   Trash2, 
@@ -11,7 +12,6 @@ import {
   Sparkles, 
   Plus, 
   RotateCcw,
-  Zap,
   Loader2,
   X,
   ArrowDown,
@@ -287,8 +287,9 @@ export default function TackleVault() {
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 text-amber-400">
-              <Zap className="w-5 h-5" />
+            {/* Custom Vault Logo Container */}
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-amber-500/10 border border-amber-500/20 p-1">
+              <VaultIcon className="w-full h-full object-contain filter invert" />
             </div>
             <div>
               <h1 className="font-bold text-lg leading-none tracking-wide text-slate-100 uppercase">Tackle Vault</h1>
@@ -591,7 +592,6 @@ export default function TackleVault() {
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             
-                            {/* Adjusted Overay Transparency for Better Visibility */}
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
                               <span className="bg-red-500/30 text-red-300 border border-red-500/50 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest backdrop-blur-sm">
                                 Needs Replacement
