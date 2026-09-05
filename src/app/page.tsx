@@ -11,7 +11,6 @@ import {
   Sparkles, 
   Plus, 
   RotateCcw,
-  Compass,
   Zap,
   Loader2,
   X,
@@ -20,7 +19,8 @@ import {
   Package,
   Tag,
   Camera,
-  Wand2
+  Wand2,
+  Sparkle
 } from 'lucide-react';
 
 interface GearItem {
@@ -45,6 +45,7 @@ export default function TackleVault() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
 
   // Form State
@@ -52,7 +53,7 @@ export default function TackleVault() {
     name: '',
     brand: '',
     type: 'Hardbody Suspending',
-    depth: '1.5m',
+    depth: '',
     color: '',
     species: '',
     image_url: ''
@@ -133,6 +134,8 @@ export default function TackleVault() {
     if (!file) return;
 
     setIsUploading(true);
+    setExtractionError(null);
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
@@ -156,21 +159,26 @@ export default function TackleVault() {
     setFormData(prev => ({ ...prev, image_url: publicUrl }));
     setIsUploading(false);
 
-    // Trigger AI Extraction on uploaded photo
+    // Auto-trigger AI Scan
     extractMetadataFromImage(publicUrl);
   };
 
   // AI Extraction Handler
   const extractMetadataFromImage = async (url: string) => {
+    if (!url) return;
     setIsExtracting(true);
+    setExtractionError(null);
+
     try {
       const res = await fetch('/api/extract-gear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: url })
       });
+
       const result = await res.json();
-      if (result.success && result.data) {
+
+      if (res.ok && result.success && result.data) {
         setFormData(prev => ({
           ...prev,
           brand: result.data.brand || prev.brand,
@@ -180,9 +188,14 @@ export default function TackleVault() {
           type: result.data.type || prev.type,
           species: result.data.species ? result.data.species.join(', ') : prev.species
         }));
+      } else {
+        const errorMsg = result.error || 'AI Extraction returned no data';
+        console.error('AI Extraction Error:', errorMsg);
+        setExtractionError(errorMsg);
       }
-    } catch (err) {
-      console.error('AI extraction error:', err);
+    } catch (err: any) {
+      console.error('AI extraction call failed:', err);
+      setExtractionError(err?.message || 'Network error executing AI scan');
     }
     setIsExtracting(false);
   };
@@ -202,7 +215,7 @@ export default function TackleVault() {
       name: formData.name,
       brand: formData.brand,
       type: formData.type,
-      depth: formData.depth,
+      depth: formData.depth || 'N/A',
       color: formData.color,
       is_favorite: false,
       is_ghost: false,
@@ -224,7 +237,7 @@ export default function TackleVault() {
         name: '',
         brand: '',
         type: 'Hardbody Suspending',
-        depth: '1.5m',
+        depth: '',
         color: '',
         species: '',
         image_url: ''
@@ -648,14 +661,17 @@ export default function TackleVault() {
 
       {/* Floating Add Button */}
       <button 
-        onClick={() => setIsAddModalOpen(true)}
+        onClick={() => {
+          setExtractionError(null);
+          setIsAddModalOpen(true);
+        }}
         className="fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95"
       >
         <Plus className="w-6 h-6 stroke-[3]" />
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
       </button>
 
-      {/* Add Lure Modal with Camera Upload & AI Extraction */}
+      {/* Add Lure Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -674,35 +690,52 @@ export default function TackleVault() {
 
             <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
               
-              {/* Photo Camera Upload & AI Scan Section */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-2">
+              {/* Photo Camera Upload & Explicit AI Trigger */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-3">
                 <label className="block text-slate-400 font-bold uppercase text-[10px]">Camera Capture & AI Metadata Auto-Fill</label>
                 
                 {formData.image_url ? (
-                  <div className="relative aspect-video rounded-lg overflow-hidden border border-amber-500/40 group">
-                    <img src={formData.image_url} alt="Uploaded gear" className="w-full h-full object-cover" />
-                    <button 
-                      type="button" 
-                      onClick={() => setFormData({ ...formData, image_url: '' })}
-                      className="absolute top-2 right-2 bg-slate-900/80 text-slate-300 p-1 rounded-md"
+                  <div className="space-y-3">
+                    <div className="relative aspect-video rounded-lg overflow-hidden border border-amber-500/40 group">
+                      <img src={formData.image_url} alt="Uploaded gear" className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData({ ...formData, image_url: '' })}
+                        className="absolute top-2 right-2 bg-slate-900/80 text-slate-300 p-1 rounded-md"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Dedicated Scan Button */}
+                    <button
+                      type="button"
+                      onClick={() => extractMetadataFromImage(formData.image_url)}
+                      disabled={isExtracting}
+                      className="w-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-sans font-bold py-2 rounded-xl transition flex items-center justify-center gap-2"
                     >
-                      <X className="w-4 h-4" />
+                      {isExtracting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Gemini Vision Reading Packaging...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-4 h-4" />
+                          <span>Scan Photo with AI Vision</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl cursor-pointer transition">
                     {isUploading ? (
                       <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
-                    ) : isExtracting ? (
-                      <div className="flex items-center gap-2 text-amber-400 animate-pulse">
-                        <Wand2 className="w-6 h-6" />
-                        <span>AI Vision Analyzing Gear Photo...</span>
-                      </div>
                     ) : (
                       <>
                         <Camera className="w-6 h-6 text-amber-400" />
                         <span className="text-slate-300 font-semibold">Snap Photo or Select Image</span>
-                        <span className="text-[10px] text-slate-500">Auto-uploads to Supabase Storage & AI extracts specs</span>
+                        <span className="text-[10px] text-slate-500">Auto-uploads to Supabase Storage</span>
                       </>
                     )}
                     <input 
@@ -715,6 +748,13 @@ export default function TackleVault() {
                     />
                   </label>
                 )}
+
+                {/* Display Extraction Error if API returns failure */}
+                {extractionError && (
+                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-2 rounded-lg text-[11px] text-left">
+                    <strong>AI Error:</strong> {extractionError}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -723,7 +763,7 @@ export default function TackleVault() {
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Megabass / Shimano" 
+                    placeholder="e.g. Chasebaits" 
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
@@ -734,7 +774,7 @@ export default function TackleVault() {
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Vision 110" 
+                    placeholder="e.g. The Swinger" 
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
@@ -748,7 +788,7 @@ export default function TackleVault() {
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Eleking" 
+                    placeholder="e.g. Natural Green" 
                     value={formData.color}
                     onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
@@ -758,7 +798,7 @@ export default function TackleVault() {
                   <label className="block text-slate-400 mb-1 uppercase">Running Depth / Spec</label>
                   <input 
                     type="text" 
-                    placeholder="e.g. 1.2m, Surface, 20lb" 
+                    placeholder="e.g. 9g, 90mm" 
                     value={formData.depth}
                     onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
