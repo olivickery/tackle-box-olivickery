@@ -115,7 +115,6 @@ export default function TackleVault() {
     }
   };
 
-  // Permanent Hard Delete Handler
   const confirmPermanentDelete = async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
@@ -153,7 +152,6 @@ export default function TackleVault() {
     }
   };
 
-  // Upload Photo to Supabase Storage
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -184,11 +182,9 @@ export default function TackleVault() {
     setFormData(prev => ({ ...prev, image_url: publicUrl }));
     setIsUploading(false);
 
-    // Auto-trigger AI Scan
     extractMetadataFromImage(publicUrl);
   };
 
-  // AI Extraction Handler
   const extractMetadataFromImage = async (url: string) => {
     if (!url) return;
     setIsExtracting(true);
@@ -417,7 +413,6 @@ export default function TackleVault() {
                               className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                             />
 
-                            {/* Top Left Circular Delete Button */}
                             <button 
                               onClick={() => setItemToDelete(item)}
                               className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white"
@@ -426,7 +421,6 @@ export default function TackleVault() {
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             
-                            {/* Top Right Circular Favorite Button */}
                             <button 
                               onClick={() => toggleFavorite(item.id, item.is_favorite)}
                               className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-amber-500 text-slate-950 border-amber-400 scale-110"
@@ -448,9 +442,9 @@ export default function TackleVault() {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-xs font-mono px-2.5 py-1 rounded transition flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                              className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20 flex items-center gap-1"
                             >
-                              <Repeat className="w-3.5 h-3.5" />
+                              <Repeat className="w-3 h-3" />
                               Replace
                             </button>
                             
@@ -514,7 +508,6 @@ export default function TackleVault() {
                               className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                             />
 
-                            {/* Top Left Circular Delete Button */}
                             <button 
                               onClick={() => setItemToDelete(item)}
                               className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500"
@@ -523,7 +516,6 @@ export default function TackleVault() {
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
 
-                            {/* Top Right Circular Favorite Button */}
                             <button 
                               onClick={() => toggleFavorite(item.id, item.is_favorite)}
                               className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200"
@@ -545,9 +537,9 @@ export default function TackleVault() {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-xs font-mono px-2.5 py-1 rounded transition flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                              className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20 flex items-center gap-1"
                             >
-                              <Repeat className="w-3.5 h-3.5" />
+                              <Repeat className="w-3 h-3" />
                               Replace
                             </button>
                             
@@ -582,16 +574,15 @@ export default function TackleVault() {
                       {ghostItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40 opacity-70 hover:opacity-100"
+                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40"
                         >
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
                             <img 
                               src={item.image_url} 
                               alt={item.name} 
-                              className="w-full h-full object-cover grayscale opacity-40 blur-[1px]"
+                              className="w-full h-full object-cover opacity-70"
                             />
 
-                            {/* Top Left Circular Delete Button */}
                             <button 
                               onClick={() => setItemToDelete(item)}
                               className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
@@ -600,8 +591,9 @@ export default function TackleVault() {
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             
-                            <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-[2px]">
-                              <span className="bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest">
+                            {/* Adjusted Overay Transparency for Better Visibility */}
+                            <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
+                              <span className="bg-red-500/30 text-red-300 border border-red-500/50 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest backdrop-blur-sm">
                                 Needs Replacement
                               </span>
                             </div>
@@ -619,7 +611,7 @@ export default function TackleVault() {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
+                              className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
                             >
                               <RotateCcw className="w-3 h-3" />
                               Replaced
@@ -723,7 +715,7 @@ export default function TackleVault() {
 
       </main>
 
-      {/* Permanent Deletion Confirmation Modal */}
+      {/* Deletion Confirmation Modal */}
       {itemToDelete && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-slate-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl relative text-center">
@@ -732,7 +724,7 @@ export default function TackleVault() {
               <AlertTriangle className="w-6 h-6" />
             </div>
 
-            <h3 className="text-lg font-bold text-slate-100">Permanently Delete Item?</h3>
+            <h3 className="text-lg font-bold text-slate-100">Permanently delete item?</h3>
             <p className="text-xs text-slate-400 font-mono mt-1">
               You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand} - {itemToDelete.name}</span> from your vault.
             </p>
@@ -758,7 +750,7 @@ export default function TackleVault() {
                 ) : (
                   <>
                     <Trash2 className="w-4 h-4" />
-                    <span>Delete Permanently</span>
+                    <span>Delete</span>
                   </>
                 )}
               </button>
@@ -799,7 +791,6 @@ export default function TackleVault() {
 
             <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
               
-              {/* Photo Camera Upload & Explicit AI Trigger */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-3">
                 <label className="block text-slate-400 font-bold uppercase text-[10px]">Camera Capture & AI Metadata Auto-Fill</label>
                 
@@ -816,7 +807,6 @@ export default function TackleVault() {
                       </button>
                     </div>
 
-                    {/* Dedicated Scan Button */}
                     <button
                       type="button"
                       onClick={() => extractMetadataFromImage(formData.image_url)}
@@ -858,7 +848,6 @@ export default function TackleVault() {
                   </label>
                 )}
 
-                {/* Display Extraction Error if API returns failure */}
                 {extractionError && (
                   <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-2 rounded-lg text-[11px] text-left">
                     <strong>AI Error:</strong> {extractionError}
