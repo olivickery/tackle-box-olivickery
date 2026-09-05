@@ -49,9 +49,9 @@ export async function POST(request: Request) {
       required: ['brand', 'name', 'color', 'depth', 'type', 'species']
     };
 
-    // Use current supported flash vision model
+    // Use gemini-3.6-flash as requested by the API error response
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: [
         {
           inlineData: {
