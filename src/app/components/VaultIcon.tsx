@@ -8,7 +8,7 @@ export function VaultIcon({ className = "w-5 h-5" }: { className?: string }) {
       fill="currentColor"
       className={className}
     >
-      {/* tackle-box-olivickery/src/app/TackleVault.svg */}
+      {src/app/TackleVault.svg}
     </svg>
   );
 }
