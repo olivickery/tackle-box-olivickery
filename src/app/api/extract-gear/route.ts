@@ -11,16 +11,16 @@ export async function POST(request: Request) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error('GEMINI_API_KEY is missing from process.env');
+      console.error('GEMINI_API_KEY is missing from environment variables');
       return NextResponse.json({ error: 'Server missing GEMINI_API_KEY' }, { status: 500 });
     }
 
+    // Initialize SDK with key
     const ai = new GoogleGenAI({ apiKey });
 
-    // Fetch image from Supabase public URL and convert to Base64
+    // Download image from Supabase URL & convert to Base64
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
-      console.error('Failed to fetch image from URL:', imageUrl);
       return NextResponse.json({ error: 'Failed to download image from storage' }, { status: 400 });
     }
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
 
-    // Structured JSON Schema for Gemini
+    // JSON Schema definition
     const gearSchema: Schema = {
       type: Type.OBJECT,
       properties: {
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       required: ['brand', 'name', 'color', 'depth', 'type', 'species']
     };
 
+    // Generate vision content
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
             data: base64Data
           }
         },
-        'Analyze this fishing gear/lure photo in detail. Extract the brand name, product name, weight/depth specifications, colorway, and gear type from the packaging text.'
+        'Analyze this fishing gear/lure photo in detail. Extract brand name, product name, weight/depth specifications, colorway, and gear type from the packaging text.'
       ],
       config: {
         responseMimeType: 'application/json',
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: extractedData });
   } catch (error: any) {
-    console.error('Gemini vision extraction server error:', error?.message || error);
+    console.error('Gemini vision extraction error:', error?.message || error);
     return NextResponse.json({ error: error?.message || 'Failed to extract gear specs' }, { status: 500 });
   }
 }
