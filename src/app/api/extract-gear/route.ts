@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 
-// Explicitly run this route on the Node.js serverless runtime
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
@@ -14,16 +13,14 @@ export async function POST(request: Request) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error('Server error: GEMINI_API_KEY is undefined in process.env');
-      return NextResponse.json({ error: 'GEMINI_API_KEY missing from server configuration' }, { status: 500 });
+      return NextResponse.json({ error: 'GEMINI_API_KEY missing from environment variables' }, { status: 500 });
     }
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Download image from Supabase Storage public URL
+    // Download photo from Supabase Storage
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
-      console.error('Failed to download image from URL:', imageUrl);
       return NextResponse.json({ error: 'Failed to download image from storage' }, { status: 400 });
     }
 
@@ -31,14 +28,14 @@ export async function POST(request: Request) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
 
-    // JSON Schema
+    // JSON Output Schema
     const gearSchema: Schema = {
       type: Type.OBJECT,
       properties: {
-        brand: { type: Type.STRING, description: 'Brand name on package' },
-        name: { type: Type.STRING, description: 'Lure model name' },
-        color: { type: Type.STRING, description: 'Visible colorway' },
-        depth: { type: Type.STRING, description: 'Weight or depth spec' },
+        brand: { type: Type.STRING, description: 'Brand name found on package (e.g. Chasebaits)' },
+        name: { type: Type.STRING, description: 'Lure or product name (e.g. The Swinger)' },
+        color: { type: Type.STRING, description: 'Visible colorway (e.g. Natural Green)' },
+        depth: { type: Type.STRING, description: 'Weight or length spec (e.g. 9g, 90mm)' },
         type: { 
           type: Type.STRING, 
           description: 'Must match one: Hardbody Suspending, Soft Plastic, Topwater / Surface, Jerkbait, Metal Jig, Vibe / Blade, Reel, Rod, Terminal tackle, Tool, Accessory' 
@@ -52,6 +49,7 @@ export async function POST(request: Request) {
       required: ['brand', 'name', 'color', 'depth', 'type', 'species']
     };
 
+    // Use current supported flash vision model
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
@@ -61,7 +59,7 @@ export async function POST(request: Request) {
             data: base64Data
           }
         },
-        'Analyze this fishing gear photo. Read the brand, model, weight/depth specs, colorway, and category from the package.'
+        'Analyze this fishing lure packaging photo in detail. Extract the brand name, product model name, size/weight/depth specs, colorway, and gear type from the text on the package.'
       ],
       config: {
         responseMimeType: 'application/json',
@@ -69,10 +67,12 @@ export async function POST(request: Request) {
       }
     });
 
-    const extractedData = JSON.parse(response.text || '{}');
+    const textResponse = response.text || '{}';
+    const extractedData = JSON.parse(textResponse);
+
     return NextResponse.json({ success: true, data: extractedData });
   } catch (error: any) {
-    console.error('Gemini vision API error:', error?.message || error);
+    console.error('Gemini Vision Error:', error);
     return NextResponse.json({ error: error?.message || 'Vision extraction failed' }, { status: 500 });
   }
 }
