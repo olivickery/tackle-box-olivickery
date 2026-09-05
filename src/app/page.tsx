@@ -18,8 +18,9 @@ import {
   ArrowDown,
   ArrowUp,
   Package,
-  Filter,
-  Tag
+  Tag,
+  Camera,
+  Wand2
 } from 'lucide-react';
 
 interface GearItem {
@@ -42,6 +43,8 @@ export default function TackleVault() {
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
 
   // Form State
@@ -55,7 +58,6 @@ export default function TackleVault() {
     image_url: ''
   });
 
-  // Fetch live gear from Supabase on mount
   useEffect(() => {
     fetchGearItems();
   }, []);
@@ -75,7 +77,6 @@ export default function TackleVault() {
     setLoading(false);
   };
 
-  // Toggle "Favourites" Status
   const toggleFavorite = async (id: string, currentStatus: boolean) => {
     setItems(items.map(item => 
       item.id === id ? { ...item, is_favorite: !currentStatus } : item
@@ -92,7 +93,6 @@ export default function TackleVault() {
     }
   };
 
-  // Toggle "Gone" Status
   const toggleGhost = async (id: string, currentStatus: boolean) => {
     setItems(items.map(item => 
       item.id === id ? { ...item, is_ghost: !currentStatus } : item
@@ -109,35 +109,89 @@ export default function TackleVault() {
     }
   };
 
-  // Smooth scroll helper
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Sort items by category click
   const handleCategoryClick = (categoryType: string) => {
     if (activeCategoryFilter === categoryType) {
-      setActiveCategoryFilter(null); // Toggle off if clicked again
+      setActiveCategoryFilter(null);
     } else {
       setActiveCategoryFilter(categoryType);
       scrollToSection('my-gear-section');
     }
   };
 
-  // Handle Form Submission
+  // Upload Photo to Supabase Storage
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('tackle-vault-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError);
+      alert('Image upload failed. Ensure bucket policies are saved.');
+      setIsUploading(false);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('tackle-vault-images')
+      .getPublicUrl(filePath);
+
+    const publicUrl = publicUrlData.publicUrl;
+    setFormData(prev => ({ ...prev, image_url: publicUrl }));
+    setIsUploading(false);
+
+    // Trigger AI Extraction on uploaded photo
+    extractMetadataFromImage(publicUrl);
+  };
+
+  // AI Extraction Handler
+  const extractMetadataFromImage = async (url: string) => {
+    setIsExtracting(true);
+    try {
+      const res = await fetch('/api/extract-gear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url })
+      });
+      const result = await res.json();
+      if (result.success && result.data) {
+        setFormData(prev => ({
+          ...prev,
+          brand: result.data.brand || prev.brand,
+          name: result.data.name || prev.name,
+          color: result.data.color || prev.color,
+          depth: result.data.depth || prev.depth,
+          type: result.data.type || prev.type,
+          species: result.data.species ? result.data.species.join(', ') : prev.species
+        }));
+      }
+    } catch (err) {
+      console.error('AI extraction error:', err);
+    }
+    setIsExtracting(false);
+  };
+
   const handleAddLure = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.brand || !formData.color) return;
 
     setIsSubmitting(true);
-
     const speciesArray = formData.species
       ? formData.species.split(',').map(s => s.trim())
       : ['General'];
@@ -181,11 +235,8 @@ export default function TackleVault() {
     setIsSubmitting(false);
   };
 
-  // Filter items into operational buckets
   const ghostItems = items.filter(item => item.is_ghost);
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost);
-  
-  // My Gear items logic: sorted if a category filter is active
   const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
   const myGearItems = activeCategoryFilter
     ? [...baseMyGearItems].sort((a, b) => {
@@ -198,7 +249,7 @@ export default function TackleVault() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
       
-      {/* Top Header Bar */}
+      {/* Header Bar */}
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -211,7 +262,6 @@ export default function TackleVault() {
             </div>
           </div>
 
-          {/* Action Bar */}
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setIsRestockOpen(true)}
@@ -226,7 +276,6 @@ export default function TackleVault() {
               )}
             </button>
 
-            {/* View Switcher Controls */}
             <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
               <button 
                 onClick={() => setViewMode('grid')}
@@ -257,10 +306,8 @@ export default function TackleVault() {
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 pt-6">
         
-        {/* Quick Stats Bar (Jump Buttons & Resort) */}
+        {/* Quick Stats Bar */}
         <div className="grid grid-cols-3 gap-3 mb-6 font-mono text-xs">
-          
-          {/* 1. ALL MY GEAR -> JUMPS AND RESORTS DEFAULT VIEW */}
           <button 
             onClick={() => {
               setActiveCategoryFilter(null);
@@ -275,7 +322,6 @@ export default function TackleVault() {
             <span className="text-lg font-bold text-slate-200">{items.length} Items</span>
           </button>
 
-          {/* 2. FAVOURITE ITEMS */}
           <button 
             onClick={() => favoriteItems.length > 0 && scrollToSection('favourites-section')}
             className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/40 rounded-xl p-3 text-left transition group cursor-pointer"
@@ -287,7 +333,6 @@ export default function TackleVault() {
             <span className="text-lg font-bold text-amber-400">{favoriteItems.length} Items</span>
           </button>
 
-          {/* 3. GEAR TO REPLACE */}
           <button 
             onClick={() => ghostItems.length > 0 && scrollToSection('to-replace-section')}
             className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-red-500/40 rounded-xl p-3 text-left transition group cursor-pointer"
@@ -307,11 +352,11 @@ export default function TackleVault() {
           </div>
         ) : (
           <>
-            {/* 1. TACKLE BOX TRAY GRID VIEW */}
+            {/* Tray Grid View */}
             {viewMode === 'grid' && (
               <div className="space-y-8">
                 
-                {/* SECTION 1: FAVOURITES */}
+                {/* Favourites Section */}
                 {favoriteItems.length > 0 && (
                   <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -327,7 +372,6 @@ export default function TackleVault() {
                           key={item.id}
                           className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
                         >
-                          {/* Image Compartment */}
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
                             <img 
                               src={item.image_url} 
@@ -344,7 +388,6 @@ export default function TackleVault() {
                             </button>
                           </div>
 
-                          {/* Card Metadata */}
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                               <span>{item.brand}</span>
@@ -354,7 +397,6 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          {/* Quick Action & Category Sort Badge */}
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
@@ -364,7 +406,6 @@ export default function TackleVault() {
                               Gone
                             </button>
                             
-                            {/* Interactive Category Badge */}
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
                               className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
@@ -372,7 +413,6 @@ export default function TackleVault() {
                                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
                                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
                               }`}
-                              title={`Sort all ${item.type} items to top`}
                             >
                               {item.type}
                             </button>
@@ -383,7 +423,7 @@ export default function TackleVault() {
                   </div>
                 )}
 
-                {/* SECTION 2: MY GEAR */}
+                {/* My Gear Section */}
                 {myGearItems.length > 0 && (
                   <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -392,7 +432,6 @@ export default function TackleVault() {
                           <Package className="w-4 h-4 text-slate-400" /> My gear
                         </span>
 
-                        {/* Active Sort Tag Pill */}
                         {activeCategoryFilter && (
                           <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
                             <Tag className="w-3 h-3" />
@@ -400,7 +439,6 @@ export default function TackleVault() {
                             <button 
                               onClick={() => setActiveCategoryFilter(null)}
                               className="ml-1 hover:text-slate-100"
-                              title="Clear category sort"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -421,7 +459,6 @@ export default function TackleVault() {
                               : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
                           }`}
                         >
-                          {/* Image Compartment */}
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
                             <img 
                               src={item.image_url} 
@@ -438,7 +475,6 @@ export default function TackleVault() {
                             </button>
                           </div>
 
-                          {/* Card Metadata */}
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                               <span>{item.brand}</span>
@@ -448,7 +484,6 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          {/* Quick Action & Category Sort Badge */}
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
@@ -458,7 +493,6 @@ export default function TackleVault() {
                               Gone
                             </button>
                             
-                            {/* Interactive Category Badge */}
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
                               className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
@@ -466,7 +500,6 @@ export default function TackleVault() {
                                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
                                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
                               }`}
-                              title={`Sort all ${item.type} items to top`}
                             >
                               {item.type}
                             </button>
@@ -477,7 +510,7 @@ export default function TackleVault() {
                   </div>
                 )}
 
-                {/* SECTION 3: ITEMS TO REPLACE */}
+                {/* Items To Replace Section */}
                 {ghostItems.length > 0 && (
                   <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -493,7 +526,6 @@ export default function TackleVault() {
                           key={item.id}
                           className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40 opacity-70 hover:opacity-100"
                         >
-                          {/* Image Compartment */}
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
                             <img 
                               src={item.image_url} 
@@ -508,7 +540,6 @@ export default function TackleVault() {
                             </div>
                           </div>
 
-                          {/* Card Metadata */}
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                               <span>{item.brand}</span>
@@ -518,7 +549,6 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          {/* Quick Action Button: Replaced */}
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
@@ -539,7 +569,7 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* 2. SHOWROOM VIEW */}
+            {/* Showroom View */}
             {viewMode === 'showroom' && (
               <div className="bg-black p-8 rounded-2xl border border-slate-800 min-h-[400px] flex flex-col items-center justify-center">
                 <div className="text-center mb-8">
@@ -565,7 +595,7 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* 3. LIST SPECS VIEW */}
+            {/* List View */}
             {viewMode === 'list' && (
               <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden font-mono text-xs">
                 <table className="w-full text-left">
@@ -601,7 +631,7 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* RETURN TO TOP BUTTON */}
+            {/* Return To Top */}
             <div className="mt-12 flex justify-center">
               <button 
                 onClick={scrollToTop}
@@ -616,7 +646,7 @@ export default function TackleVault() {
 
       </main>
 
-      {/* FLOATING ACTION BUTTON: ADD LURE */}
+      {/* Floating Add Button */}
       <button 
         onClick={() => setIsAddModalOpen(true)}
         className="fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95"
@@ -625,7 +655,7 @@ export default function TackleVault() {
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
       </button>
 
-      {/* ADD LURE MODAL */}
+      {/* Add Lure Modal with Camera Upload & AI Extraction */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -643,13 +673,57 @@ export default function TackleVault() {
             </div>
 
             <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
+              
+              {/* Photo Camera Upload & AI Scan Section */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-2">
+                <label className="block text-slate-400 font-bold uppercase text-[10px]">Camera Capture & AI Metadata Auto-Fill</label>
+                
+                {formData.image_url ? (
+                  <div className="relative aspect-video rounded-lg overflow-hidden border border-amber-500/40 group">
+                    <img src={formData.image_url} alt="Uploaded gear" className="w-full h-full object-cover" />
+                    <button 
+                      type="button" 
+                      onClick={() => setFormData({ ...formData, image_url: '' })}
+                      className="absolute top-2 right-2 bg-slate-900/80 text-slate-300 p-1 rounded-md"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl cursor-pointer transition">
+                    {isUploading ? (
+                      <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+                    ) : isExtracting ? (
+                      <div className="flex items-center gap-2 text-amber-400 animate-pulse">
+                        <Wand2 className="w-6 h-6" />
+                        <span>AI Vision Analyzing Gear Photo...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Camera className="w-6 h-6 text-amber-400" />
+                        <span className="text-slate-300 font-semibold">Snap Photo or Select Image</span>
+                        <span className="text-[10px] text-slate-500">Auto-uploads to Supabase Storage & AI extracts specs</span>
+                      </>
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment"
+                      onChange={handleImageUpload}
+                      disabled={isUploading || isExtracting}
+                      className="hidden" 
+                    />
+                  </label>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-400 mb-1 uppercase">Brand Name *</label>
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Shimano" 
+                    placeholder="e.g. Megabass / Shimano" 
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
@@ -660,7 +734,7 @@ export default function TackleVault() {
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Stella FK 2500" 
+                    placeholder="e.g. Vision 110" 
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
@@ -674,7 +748,7 @@ export default function TackleVault() {
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Silver / Gold" 
+                    placeholder="e.g. Eleking" 
                     value={formData.color}
                     onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
@@ -725,20 +799,9 @@ export default function TackleVault() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-400 mb-1 uppercase">Image URL (Optional)</label>
-                <input 
-                  type="url" 
-                  placeholder="https://..." 
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
-                />
-              </div>
-
               <button 
                 type="submit" 
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading || isExtracting}
                 className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 mt-4"
               >
                 {isSubmitting ? (
@@ -755,7 +818,7 @@ export default function TackleVault() {
         </div>
       )}
 
-      {/* RESTOCK LIST SLIDE-OUT DRAWER */}
+      {/* Restock List Drawer */}
       {isRestockOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 p-6 flex flex-col h-full">
