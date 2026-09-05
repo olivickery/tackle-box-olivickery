@@ -20,7 +20,8 @@ import {
   Tag,
   Camera,
   Wand2,
-  Sparkle
+  Repeat,
+  AlertTriangle
 } from 'lucide-react';
 
 interface GearItem {
@@ -47,6 +48,10 @@ export default function TackleVault() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
+
+  // Deletion Modal State
+  const [itemToDelete, setItemToDelete] = useState<GearItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -108,6 +113,26 @@ export default function TackleVault() {
       console.error('Failed to update ghost status:', error);
       fetchGearItems();
     }
+  };
+
+  // Permanent Hard Delete Handler
+  const confirmPermanentDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+
+    const { error } = await supabase
+      .from('gear_items')
+      .delete()
+      .eq('id', itemToDelete.id);
+
+    if (error) {
+      console.error('Failed to delete item from Supabase:', error);
+      alert('Could not delete item. Check Supabase RLS delete permissions.');
+    } else {
+      setItems(items.filter(item => item.id !== itemToDelete.id));
+      setItemToDelete(null);
+    }
+    setIsDeleting(false);
   };
 
   const scrollToSection = (id: string) => {
@@ -391,7 +416,17 @@ export default function TackleVault() {
                               alt={item.name} 
                               className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                             />
+
+                            {/* Top Left Circular Delete Button */}
+                            <button 
+                              onClick={() => setItemToDelete(item)}
+                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white"
+                              title="Delete Item Permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                             
+                            {/* Top Right Circular Favorite Button */}
                             <button 
                               onClick={() => toggleFavorite(item.id, item.is_favorite)}
                               className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-amber-500 text-slate-950 border-amber-400 scale-110"
@@ -413,10 +448,10 @@ export default function TackleVault() {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                              className="text-xs font-mono px-2.5 py-1 rounded transition flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
                             >
-                              <Trash2 className="w-3 h-3" />
-                              Gone
+                              <Repeat className="w-3.5 h-3.5" />
+                              Replace
                             </button>
                             
                             <button 
@@ -478,7 +513,17 @@ export default function TackleVault() {
                               alt={item.name} 
                               className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                             />
-                            
+
+                            {/* Top Left Circular Delete Button */}
+                            <button 
+                              onClick={() => setItemToDelete(item)}
+                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500"
+                              title="Delete Item Permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Top Right Circular Favorite Button */}
                             <button 
                               onClick={() => toggleFavorite(item.id, item.is_favorite)}
                               className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200"
@@ -500,10 +545,10 @@ export default function TackleVault() {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-xs font-mono px-2 py-1 rounded transition flex items-center gap-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+                              className="text-xs font-mono px-2.5 py-1 rounded transition flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
                             >
-                              <Trash2 className="w-3 h-3" />
-                              Gone
+                              <Repeat className="w-3.5 h-3.5" />
+                              Replace
                             </button>
                             
                             <button 
@@ -528,7 +573,7 @@ export default function TackleVault() {
                   <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-red-400 font-mono flex items-center gap-1.5">
-                        <Trash2 className="w-4 h-4" /> Items to replace
+                        <Repeat className="w-4 h-4" /> Items to replace
                       </span>
                       <span className="text-xs text-slate-500 font-mono">{ghostItems.length} Items</span>
                     </div>
@@ -545,10 +590,19 @@ export default function TackleVault() {
                               alt={item.name} 
                               className="w-full h-full object-cover grayscale opacity-40 blur-[1px]"
                             />
+
+                            {/* Top Left Circular Delete Button */}
+                            <button 
+                              onClick={() => setItemToDelete(item)}
+                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
+                              title="Delete Item Permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                             
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-[2px]">
                               <span className="bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest">
-                                Gone
+                                Needs Replacement
                               </span>
                             </div>
                           </div>
@@ -619,6 +673,7 @@ export default function TackleVault() {
                       <th className="p-3">Running Depth</th>
                       <th className="p-3">Colorway</th>
                       <th className="p-3">Status</th>
+                      <th className="p-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
@@ -630,12 +685,21 @@ export default function TackleVault() {
                         <td className="p-3 text-slate-400">{item.color}</td>
                         <td className="p-3">
                           {item.is_ghost ? (
-                            <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Gone</span>
+                            <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Needs Replacement</span>
                           ) : item.is_favorite ? (
                             <span className="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Favourite</span>
                           ) : (
                             <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">In Vault</span>
                           )}
+                        </td>
+                        <td className="p-3 text-right">
+                          <button 
+                            onClick={() => setItemToDelete(item)}
+                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"
+                            title="Delete Item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -658,6 +722,51 @@ export default function TackleVault() {
         )}
 
       </main>
+
+      {/* Permanent Deletion Confirmation Modal */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl relative text-center">
+            
+            <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-lg font-bold text-slate-100">Permanently Delete Item?</h3>
+            <p className="text-xs text-slate-400 font-mono mt-1">
+              You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand} - {itemToDelete.name}</span> from your vault.
+            </p>
+
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 my-4 font-mono text-[11px] text-red-400">
+              ⚠️ <strong>Disclaimer:</strong> Once it's gone, it's gone! This action cannot be undone.
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs py-2.5 rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmPermanentDelete}
+                disabled={isDeleting}
+                className="flex-1 bg-red-600 hover:bg-red-500 text-white font-sans font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5"
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Floating Add Button */}
       <button 
@@ -879,7 +988,7 @@ export default function TackleVault() {
               {ghostItems.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 font-mono text-xs">
                   <p>Zero items to replace.</p>
-                  <p className="mt-1">Tap "Gone" on any item to build your shopping list!</p>
+                  <p className="mt-1">Tap "Replace" on any item to build your shopping list!</p>
                 </div>
               ) : (
                 ghostItems.map((item) => (
