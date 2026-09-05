@@ -17,7 +17,9 @@ import {
   X,
   ArrowDown,
   ArrowUp,
-  Package
+  Package,
+  Filter,
+  Tag
 } from 'lucide-react';
 
 interface GearItem {
@@ -40,6 +42,7 @@ export default function TackleVault() {
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -106,7 +109,7 @@ export default function TackleVault() {
     }
   };
 
-  // Smooth scroll helpers
+  // Smooth scroll helper
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
@@ -116,6 +119,16 @@ export default function TackleVault() {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Sort items by category click
+  const handleCategoryClick = (categoryType: string) => {
+    if (activeCategoryFilter === categoryType) {
+      setActiveCategoryFilter(null); // Toggle off if clicked again
+    } else {
+      setActiveCategoryFilter(categoryType);
+      scrollToSection('my-gear-section');
+    }
   };
 
   // Handle Form Submission
@@ -168,10 +181,19 @@ export default function TackleVault() {
     setIsSubmitting(false);
   };
 
-  // Filter items into 3 distinct operational buckets
+  // Filter items into operational buckets
   const ghostItems = items.filter(item => item.is_ghost);
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost);
-  const myGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
+  
+  // My Gear items logic: sorted if a category filter is active
+  const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
+  const myGearItems = activeCategoryFilter
+    ? [...baseMyGearItems].sort((a, b) => {
+        if (a.type === activeCategoryFilter && b.type !== activeCategoryFilter) return -1;
+        if (a.type !== activeCategoryFilter && b.type === activeCategoryFilter) return 1;
+        return 0;
+      })
+    : baseMyGearItems;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
@@ -235,12 +257,15 @@ export default function TackleVault() {
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 pt-6">
         
-        {/* Quick Stats Bar (Jump Buttons) */}
+        {/* Quick Stats Bar (Jump Buttons & Resort) */}
         <div className="grid grid-cols-3 gap-3 mb-6 font-mono text-xs">
           
-          {/* 1. ALL MY GEAR */}
+          {/* 1. ALL MY GEAR -> JUMPS AND RESORTS DEFAULT VIEW */}
           <button 
-            onClick={() => myGearItems.length > 0 && scrollToSection('my-gear-section')}
+            onClick={() => {
+              setActiveCategoryFilter(null);
+              if (myGearItems.length > 0) scrollToSection('my-gear-section');
+            }}
             className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3 text-left transition group cursor-pointer"
           >
             <div className="flex items-center justify-between">
@@ -282,11 +307,11 @@ export default function TackleVault() {
           </div>
         ) : (
           <>
-            {/* 1. TACKLE BOX TRAY GRID VIEW (DYNAMIC SECTIONS) */}
+            {/* 1. TACKLE BOX TRAY GRID VIEW */}
             {viewMode === 'grid' && (
               <div className="space-y-8">
                 
-                {/* SECTION 1: FAVOURITES (Only visible if favoriteItems > 0) */}
+                {/* SECTION 1: FAVOURITES */}
                 {favoriteItems.length > 0 && (
                   <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -310,7 +335,6 @@ export default function TackleVault() {
                               className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                             />
                             
-                            {/* "Favourites" Star Badge */}
                             <button 
                               onClick={() => toggleFavorite(item.id, item.is_favorite)}
                               className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-amber-500 text-slate-950 border-amber-400 scale-110"
@@ -330,7 +354,7 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          {/* Quick Action Button */}
+                          {/* Quick Action & Category Sort Badge */}
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
@@ -340,7 +364,18 @@ export default function TackleVault() {
                               Gone
                             </button>
                             
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                            {/* Interactive Category Badge */}
+                            <button 
+                              onClick={() => handleCategoryClick(item.type)}
+                              className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
+                                activeCategoryFilter === item.type 
+                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
+                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+                              }`}
+                              title={`Sort all ${item.type} items to top`}
+                            >
+                              {item.type}
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -348,13 +383,31 @@ export default function TackleVault() {
                   </div>
                 )}
 
-                {/* SECTION 2: MY GEAR (Only visible if myGearItems > 0) */}
+                {/* SECTION 2: MY GEAR */}
                 {myGearItems.length > 0 && (
                   <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
-                        <Package className="w-4 h-4 text-slate-400" /> My gear
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
+                          <Package className="w-4 h-4 text-slate-400" /> My gear
+                        </span>
+
+                        {/* Active Sort Tag Pill */}
+                        {activeCategoryFilter && (
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                            <Tag className="w-3 h-3" />
+                            <span>Sorted by: {activeCategoryFilter}</span>
+                            <button 
+                              onClick={() => setActiveCategoryFilter(null)}
+                              className="ml-1 hover:text-slate-100"
+                              title="Clear category sort"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       <span className="text-xs text-slate-500 font-mono">{myGearItems.length} Items</span>
                     </div>
 
@@ -362,7 +415,11 @@ export default function TackleVault() {
                       {myGearItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900/80 border-slate-800 hover:border-slate-700"
+                          className={`relative group rounded-xl p-3 transition-all duration-300 border ${
+                            activeCategoryFilter === item.type 
+                              ? 'bg-slate-900 border-amber-500/40 shadow-lg shadow-amber-500/5' 
+                              : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                          }`}
                         >
                           {/* Image Compartment */}
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
@@ -372,7 +429,6 @@ export default function TackleVault() {
                               className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                             />
                             
-                            {/* "Favourites" Star Badge */}
                             <button 
                               onClick={() => toggleFavorite(item.id, item.is_favorite)}
                               className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200"
@@ -392,7 +448,7 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          {/* Quick Action Button */}
+                          {/* Quick Action & Category Sort Badge */}
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
@@ -402,7 +458,18 @@ export default function TackleVault() {
                               Gone
                             </button>
                             
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                            {/* Interactive Category Badge */}
+                            <button 
+                              onClick={() => handleCategoryClick(item.type)}
+                              className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
+                                activeCategoryFilter === item.type 
+                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
+                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+                              }`}
+                              title={`Sort all ${item.type} items to top`}
+                            >
+                              {item.type}
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -410,7 +477,7 @@ export default function TackleVault() {
                   </div>
                 )}
 
-                {/* SECTION 3: ITEMS TO REPLACE (Only visible if ghostItems > 0) */}
+                {/* SECTION 3: ITEMS TO REPLACE */}
                 {ghostItems.length > 0 && (
                   <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -434,7 +501,6 @@ export default function TackleVault() {
                               className="w-full h-full object-cover grayscale opacity-40 blur-[1px]"
                             />
                             
-                            {/* Ghost Overlay Tag */}
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-[2px]">
                               <span className="bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest">
                                 Gone
@@ -583,18 +649,18 @@ export default function TackleVault() {
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Megabass" 
+                    placeholder="e.g. Shimano" 
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Lure Name *</label>
+                  <label className="block text-slate-400 mb-1 uppercase">Lure / Gear Name *</label>
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Vision 110" 
+                    placeholder="e.g. Stella FK 2500" 
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
@@ -608,17 +674,17 @@ export default function TackleVault() {
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Eleking" 
+                    placeholder="e.g. Silver / Gold" 
                     value={formData.color}
                     onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Running Depth</label>
+                  <label className="block text-slate-400 mb-1 uppercase">Running Depth / Spec</label>
                   <input 
                     type="text" 
-                    placeholder="e.g. 1.2m or Surface" 
+                    placeholder="e.g. 1.2m, Surface, 20lb" 
                     value={formData.depth}
                     onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
@@ -640,13 +706,18 @@ export default function TackleVault() {
                     <option value="Jerkbait">Jerkbait</option>
                     <option value="Metal Jig">Metal Jig</option>
                     <option value="Vibe / Blade">Vibe / Blade</option>
+                    <option value="Reel">Reel</option>
+                    <option value="Rod">Rod</option>
+                    <option value="Terminal tackle">Terminal tackle</option>
+                    <option value="Tool">Tool</option>
+                    <option value="Accessory">Accessory</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-slate-400 mb-1 uppercase">Species (Comma Separated)</label>
                   <input 
                     type="text" 
-                    placeholder="e.g. Bass, Trout, Mangrove Jack" 
+                    placeholder="e.g. Bass, Bream, Flathead" 
                     value={formData.species}
                     onChange={(e) => setFormData({ ...formData, species: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
