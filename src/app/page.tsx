@@ -11,7 +11,6 @@ import {
   List, 
   Sparkles, 
   Plus, 
-  RotateCcw,
   Loader2,
   X,
   ArrowDown,
@@ -24,7 +23,8 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Edit3
+  Edit3,
+  Filter
 } from 'lucide-react';
 
 interface GearItem {
@@ -42,7 +42,7 @@ interface GearItem {
   species: string[];
 }
 
-// Sub-component for Multi-Slide Carousel per Card (Hover arrows on desktop, hidden on mobile)
+// Sub-component for Multi-Slide Carousel per Card
 function CardCarousel({ 
   item, 
   onEditNotes,
@@ -129,17 +129,19 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE (Clean text-only header) */
+        /* SPECS SLIDE (Vertically centered heading aligned with Trash Icon) */
         <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block ml-7 pt-0.5 mb-1">
-              Specs
-            </span>
+            <div className="h-7 flex items-center ml-7">
+              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider leading-none">
+                Specs
+              </span>
+            </div>
             <div className="space-y-1.5 text-slate-300 text-[11px] pt-3">
               <p><span className="text-slate-500">Brand:</span> {item.brand}</p>
               <p><span className="text-slate-500">Name:</span> {item.name}</p>
-              <p><span className="text-slate-500">Color:</span> {item.color}</p>
-              <p><span className="text-slate-500">Depth/Spec:</span> {item.depth}</p>
+              <p><span className="text-slate-500">Colour:</span> {item.color}</p>
+              <p><span className="text-slate-500">Specs:</span> {item.depth}</p>
               <p><span className="text-slate-500">Type:</span> {item.type}</p>
               <p><span className="text-slate-500">Species:</span> {item.species.join(', ')}</p>
             </div>
@@ -150,11 +152,11 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (Clean text-only header) */
+        /* NOTES SLIDE (Vertically centered heading aligned with Trash Icon) */
         <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <div className="flex items-center justify-between mb-2 ml-7">
-              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block pt-0.5">
+            <div className="h-7 flex items-center justify-between ml-7">
+              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider leading-none">
                 Notes
               </span>
               <button 
@@ -171,7 +173,7 @@ function CardCarousel({
 
             <div className="pt-3">
               <div className="text-slate-300 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px]">
-                {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add rigging tips or hook specs!</span>}
+                {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add notes!</span>}
               </div>
             </div>
           </div>
@@ -189,7 +191,7 @@ function CardCarousel({
         />
       )}
 
-      {/* Navigation Arrows - Desktop Hover Only (Hidden on Mobile) */}
+      {/* Navigation Arrows */}
       {totalSlides > 1 && (
         <>
           <button 
@@ -237,7 +239,10 @@ export default function TackleVault() {
   const [isUploading, setIsUploading] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  
+  // Filter States (Category & Brand)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
+  const [activeBrandFilter, setActiveBrandFilter] = useState<string | null>(null);
 
   // Deletion Modal State
   const [itemToDelete, setItemToDelete] = useState<GearItem | null>(null);
@@ -248,7 +253,7 @@ export default function TackleVault() {
   const [editedNotes, setEditedNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
-  // Form State with Multi-Photo support
+  // Form State
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
@@ -334,7 +339,6 @@ export default function TackleVault() {
     setIsDeleting(false);
   };
 
-  // Notes Edit Handler
   const openNotesEditor = (item: GearItem) => {
     setItemToEditNotes(item);
     setEditedNotes(item.notes || '');
@@ -375,6 +379,15 @@ export default function TackleVault() {
       setActiveCategoryFilter(null);
     } else {
       setActiveCategoryFilter(categoryType);
+      scrollToSection('my-gear-section');
+    }
+  };
+
+  const handleBrandClick = (brandName: string) => {
+    if (activeBrandFilter === brandName) {
+      setActiveBrandFilter(null);
+    } else {
+      setActiveBrandFilter(brandName);
       scrollToSection('my-gear-section');
     }
   };
@@ -530,16 +543,19 @@ export default function TackleVault() {
     setIsSubmitting(false);
   };
 
+  // List of Unique Brands for Filter Dropdown
+  const uniqueBrands = Array.from(new Set(items.map(item => item.brand))).filter(Boolean).sort();
+
   const ghostItems = items.filter(item => item.is_ghost);
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost);
   const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
-  const myGearItems = activeCategoryFilter
-    ? [...baseMyGearItems].sort((a, b) => {
-        if (a.type === activeCategoryFilter && b.type !== activeCategoryFilter) return -1;
-        if (a.type !== activeCategoryFilter && b.type === activeCategoryFilter) return 1;
-        return 0;
-      })
-    : baseMyGearItems;
+
+  // Apply Category and Brand Filters
+  const myGearItems = baseMyGearItems.filter(item => {
+    const matchesCategory = activeCategoryFilter ? item.type === activeCategoryFilter : true;
+    const matchesBrand = activeBrandFilter ? item.brand === activeBrandFilter : true;
+    return matchesCategory && matchesBrand;
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
@@ -606,6 +622,7 @@ export default function TackleVault() {
           <button 
             onClick={() => {
               setActiveCategoryFilter(null);
+              setActiveBrandFilter(null);
               if (myGearItems.length > 0) scrollToSection('my-gear-section');
             }}
             className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3 text-left transition group cursor-pointer"
@@ -685,7 +702,12 @@ export default function TackleVault() {
 
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                              <span>{item.brand}</span>
+                              <button 
+                                onClick={() => handleBrandClick(item.brand)} 
+                                className="hover:text-amber-400 transition"
+                              >
+                                {item.brand}
+                              </button>
                               <span className="text-amber-400/80">{item.depth}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
@@ -719,18 +741,19 @@ export default function TackleVault() {
                 )}
 
                 {/* My Gear Section */}
-                {myGearItems.length > 0 && (
+                {baseMyGearItems.length > 0 && (
                   <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-20">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
                           <Package className="w-4 h-4 text-slate-400" /> My gear
                         </span>
 
+                        {/* Active Filter Badges */}
                         {activeCategoryFilter && (
                           <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
                             <Tag className="w-3 h-3" />
-                            <span>Sorted by: {activeCategoryFilter}</span>
+                            <span>Category: {activeCategoryFilter}</span>
                             <button 
                               onClick={() => setActiveCategoryFilter(null)}
                               className="ml-1 hover:text-slate-100"
@@ -739,9 +762,35 @@ export default function TackleVault() {
                             </button>
                           </div>
                         )}
+
+                        {activeBrandFilter && (
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                            <Filter className="w-3 h-3" />
+                            <span>Brand: {activeBrandFilter}</span>
+                            <button 
+                              onClick={() => setActiveBrandFilter(null)}
+                              className="ml-1 hover:text-slate-100"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
-                      <span className="text-xs text-slate-500 font-mono">{myGearItems.length} Items</span>
+                      {/* Brand Filter Selector */}
+                      <div className="flex items-center gap-2 font-mono text-xs">
+                        <select 
+                          value={activeBrandFilter || ''}
+                          onChange={(e) => setActiveBrandFilter(e.target.value || null)}
+                          className="bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-amber-500"
+                        >
+                          <option value="">Filter by Brand (All)</option>
+                          {uniqueBrands.map(brand => (
+                            <option key={brand} value={brand}>{brand}</option>
+                          ))}
+                        </select>
+                        <span className="text-slate-500 text-xs">{myGearItems.length} Items</span>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -749,7 +798,7 @@ export default function TackleVault() {
                         <div 
                           key={item.id}
                           className={`relative group rounded-xl p-3 transition-all duration-300 border ${
-                            activeCategoryFilter === item.type 
+                            activeCategoryFilter === item.type || activeBrandFilter === item.brand
                               ? 'bg-slate-900 border-amber-500/40 shadow-lg shadow-amber-500/5' 
                               : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
                           }`}
@@ -772,7 +821,12 @@ export default function TackleVault() {
 
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                              <span>{item.brand}</span>
+                              <button 
+                                onClick={() => handleBrandClick(item.brand)} 
+                                className="hover:text-amber-400 transition"
+                              >
+                                {item.brand}
+                              </button>
                               <span className="text-amber-400/80">{item.depth}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
@@ -853,11 +907,12 @@ export default function TackleVault() {
                           </div>
 
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                            {/* Standardized Replace/Replaced Repeat Icon */}
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
                               className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
                             >
-                              <RotateCcw className="w-3 h-3" />
+                              <Repeat className="w-3 h-3" />
                               Replaced
                             </button>
                             
@@ -906,8 +961,8 @@ export default function TackleVault() {
                     <tr>
                       <th className="p-3">Item</th>
                       <th className="p-3">Type</th>
-                      <th className="p-3">Running Depth</th>
-                      <th className="p-3">Colorway</th>
+                      <th className="p-3">Gear Specs</th>
+                      <th className="p-3">Colourway</th>
                       <th className="p-3">Status</th>
                       <th className="p-3 text-right">Actions</th>
                     </tr>
@@ -1070,14 +1125,14 @@ export default function TackleVault() {
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
       </button>
 
-      {/* Add Lure Modal */}
+      {/* Add New Gear Modal (Updated Copy) */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Plus className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100">Log New Gear to Vault</h2>
+                <h2 className="font-bold text-lg text-slate-100">Add new gear</h2>
               </div>
               <button 
                 onClick={() => setIsAddModalOpen(false)}
@@ -1142,7 +1197,7 @@ export default function TackleVault() {
                       <>
                         <Camera className="w-6 h-6 text-amber-400" />
                         <span className="text-slate-300 font-semibold">
-                          {formData.image_urls.length === 0 ? 'Snap Package Front (Triggers AI)' : '+ Add Photo'}
+                          {formData.image_urls.length === 0 ? 'Snap your gear' : '+ Add Photo'}
                         </span>
                       </>
                     )}
@@ -1173,7 +1228,7 @@ export default function TackleVault() {
                     ) : (
                       <>
                         <Wand2 className="w-3.5 h-3.5" />
-                        <span>Rescan Package Photo with AI</span>
+                        <span>Rescan Photo #1 with AI</span>
                       </>
                     )}
                   </button>
@@ -1188,7 +1243,7 @@ export default function TackleVault() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Brand Name *</label>
+                  <label className="block text-slate-400 mb-1 uppercase">Brand *</label>
                   <input 
                     type="text" 
                     required
@@ -1199,7 +1254,7 @@ export default function TackleVault() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Lure / Gear Name *</label>
+                  <label className="block text-slate-400 mb-1 uppercase">Item name *</label>
                   <input 
                     type="text" 
                     required
@@ -1213,7 +1268,7 @@ export default function TackleVault() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Colorway *</label>
+                  <label className="block text-slate-400 mb-1 uppercase">Colourway *</label>
                   <input 
                     type="text" 
                     required
@@ -1224,7 +1279,7 @@ export default function TackleVault() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Running Depth / Spec</label>
+                  <label className="block text-slate-400 mb-1 uppercase">Gear Specs</label>
                   <input 
                     type="text" 
                     placeholder="e.g. 9g, 90mm" 
@@ -1237,7 +1292,7 @@ export default function TackleVault() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Gear Type</label>
+                  <label className="block text-slate-400 mb-1 uppercase">Category dropdown</label>
                   <select 
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
@@ -1269,7 +1324,7 @@ export default function TackleVault() {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 uppercase">Custom Notes / Rigging Details</label>
+                <label className="block text-slate-400 mb-1 uppercase">Add notes</label>
                 <textarea 
                   rows={2}
                   placeholder="e.g. Recommended hook size #1/0, best in brackish estuaries..." 
@@ -1289,7 +1344,7 @@ export default function TackleVault() {
                 ) : (
                   <>
                     <Plus className="w-5 h-5" />
-                    <span>Save to Supabase Vault</span>
+                    <span>Save to vault</span>
                   </>
                 )}
               </button>
