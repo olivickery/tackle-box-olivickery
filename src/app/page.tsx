@@ -24,7 +24,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit3,
-  Filter
+  Filter,
+  Check
 } from 'lucide-react';
 
 interface GearItem {
@@ -101,7 +102,6 @@ function CardCarousel({
   const isNotesSlide = currentIndex === images.length + 1;
   const isFirstSlide = currentIndex === 0;
 
-  // Clean Spec Display (hides N/A)
   const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
 
   return (
@@ -112,7 +112,7 @@ function CardCarousel({
       className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
     >
       
-      {/* Favourite Star Button - Restricted exclusively to Slide 1 */}
+      {/* Favourite Star Button - Slide 1 Only */}
       {isFirstSlide && (
         <button 
           onClick={(e) => {
@@ -135,13 +135,11 @@ function CardCarousel({
         /* SPECS SLIDE */
         <div className="w-full h-full p-2.5 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            {/* Header Title Positioned High & Aligned Top with Trash Icon */}
             <div className="h-6 flex items-center ml-8 pt-0.5">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Specs
               </span>
             </div>
-            {/* Spec List with White Values */}
             <div className="space-y-1.5 text-[11px] pt-2 px-1">
               <p><span className="text-slate-500">Brand:</span> <span className="text-slate-100">{item.brand}</span></p>
               <p><span className="text-slate-500">Name:</span> <span className="text-slate-100">{item.name}</span></p>
@@ -157,10 +155,9 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE */
+        /* NOTES SLIDE (White Edit Button & Icon) */
         <div className="w-full h-full p-2.5 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            {/* Header Container Aligned Top with Trash Icon */}
             <div className="h-6 flex items-center justify-between ml-8">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Notes
@@ -170,16 +167,15 @@ function CardCarousel({
                   e.stopPropagation();
                   onEditNotes(item);
                 }}
-                className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition z-20"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition z-20"
               >
-                <Edit3 className="w-3 h-3" />
-                Edit
+                <Edit3 className="w-3 h-3 text-slate-100" />
+                <span>Edit</span>
               </button>
             </div>
 
-            {/* Notes Container Stretched to Match Edge Buttons */}
             <div className="pt-2 mx-1">
-              <div className="text-slate-200 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[95px] w-full">
+              <div className="text-slate-100 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[95px] w-full">
                 {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add notes!</span>}
               </div>
             </div>
@@ -246,6 +242,7 @@ export default function TackleVault() {
   const [isUploading, setIsUploading] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   
   // Filter States
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
@@ -370,6 +367,40 @@ export default function TackleVault() {
       setItemToEditNotes(null);
     }
     setIsSavingNotes(false);
+  };
+
+  // Clipboard Export Handler for Restock List
+  const handleExportRestockList = async () => {
+    if (ghostItems.length === 0) return;
+
+    const listText = ghostItems.map((item, index) => 
+      `${index + 1}. ${item.brand} - ${item.name} (${item.color}${item.depth && item.depth !== 'N/A' ? `, ${item.depth}` : ''})`
+    ).join('\n');
+
+    const formattedExport = `🎣 TACKLE VAULT RESTOCK SHOPPING LIST:\n-----------------------------------\n${listText}\n-----------------------------------`;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(formattedExport);
+      } else {
+        // Fallback for non-HTTPS or older mobile WebViews
+        const textArea = document.createElement("textarea");
+        textArea.value = formattedExport;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
+      setCopiedToClipboard(true);
+      setTimeout(() => setCopiedToClipboard(false), 3000);
+    } catch (err) {
+      console.error('Failed to write to clipboard:', err);
+      alert('Could not copy automatically. Check browser clipboard permissions.');
+    }
   };
 
   const scrollToSection = (id: string) => {
@@ -713,7 +744,8 @@ export default function TackleVault() {
                               >
                                 {item.brand}
                               </button>
-                              <span className="text-amber-400/80">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                              {/* Gear Specs Data Displayed in White */}
+                              <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                             <p className="text-xs text-slate-400">{item.color}</p>
@@ -830,7 +862,8 @@ export default function TackleVault() {
                               >
                                 {item.brand}
                               </button>
-                              <span className="text-amber-400/80">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                              {/* Gear Specs Data Displayed in White */}
+                              <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                             <p className="text-xs text-slate-400">{item.color}</p>
@@ -903,7 +936,7 @@ export default function TackleVault() {
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                               <span>{item.brand}</span>
-                              <span className="text-amber-400/80">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                              <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                             <p className="text-xs text-slate-400">{item.color}</p>
@@ -1403,11 +1436,22 @@ export default function TackleVault() {
                 <span className="text-slate-200 font-bold">{ghostItems.length} Items</span>
               </div>
               <button 
-                onClick={() => alert('Restock list copied to clipboard for tackle shop run!')}
+                onClick={handleExportRestockList}
                 disabled={ghostItems.length === 0}
-                className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-sans font-bold py-2.5 rounded-xl transition"
+                className={`w-full font-sans font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 ${
+                  copiedToClipboard 
+                    ? 'bg-emerald-500 text-slate-950' 
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50'
+                }`}
               >
-                Export Tackle Shop List
+                {copiedToClipboard ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <span>Export Tackle Shop List</span>
+                )}
               </button>
             </div>
           </div>
