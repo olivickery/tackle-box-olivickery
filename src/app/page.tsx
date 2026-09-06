@@ -46,7 +46,7 @@ interface GearItem {
   created_at?: string;
 }
 
-// Sub-component for Multi-Slide Carousel per Card (With Dedicated Management Slide)
+// Sub-component for Multi-Slide Carousel per Card
 function CardCarousel({ 
   item, 
   onEditNotes,
@@ -66,7 +66,6 @@ function CardCarousel({
     ? item.image_urls 
     : [item.image_url];
   
-  // Total slides = images + 1 (Specs) + 1 (Notes) + 1 (Management slide)
   const totalSlides = images.length + 3;
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -155,7 +154,7 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE (Completely Uncluttered) */
+        /* SPECS SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center mb-1">
@@ -176,30 +175,30 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (Full Height Box) */
-        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
-          <div>
-            <div className="h-6 flex items-center mb-1">
-              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
-                Notes
-              </span>
-            </div>
+        /* NOTES SLIDE (Maximised Text Area without Inner Black Container) */
+        <div className="w-full h-full p-3 pb-6 bg-slate-900/95 flex flex-col font-mono text-xs overflow-y-auto">
+          <div className="h-6 flex items-center mb-2">
+            <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
+              Notes
+            </span>
+          </div>
 
-            <div className="pt-1">
-              <div className="text-slate-100 text-[11px] leading-relaxed bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 min-h-[170px] max-h-[185px] overflow-y-auto w-full">
-                {item.notes ? item.notes : <span className="text-slate-500">No custom notes logged yet. Swipe to Manage Gear to add notes!</span>}
-              </div>
-            </div>
+          <div className="text-slate-100 text-[11px] leading-relaxed pt-1 overflow-y-auto flex-1 pr-1">
+            {item.notes ? (
+              <p className="whitespace-pre-wrap">{item.notes}</p>
+            ) : (
+              <p className="text-slate-500">No custom notes logged yet. Swipe to Manage Item to add notes!</p>
+            )}
           </div>
         </div>
       ) : isManageSlide ? (
-        /* MANAGEMENT SLIDE (Houses All Change Buttons with Left Icon / Right Text) */
+        /* MANAGE ITEM SLIDE (White Heading, White Icons, White Buttons) */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center mb-2">
-              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider leading-none flex items-center gap-1.5">
-                <Settings className="w-3 h-3 text-amber-400" />
-                Manage Gear
+              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none flex items-center gap-1.5">
+                <Settings className="w-3.5 h-3.5 text-slate-100" />
+                Manage Item
               </span>
             </div>
 
@@ -212,7 +211,7 @@ function CardCarousel({
                 }}
                 className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
               >
-                <Edit3 className="w-4 h-4 text-amber-400 shrink-0" />
+                <Edit3 className="w-4 h-4 text-slate-100 shrink-0" />
                 <span className="font-semibold">Edit specs</span>
               </button>
 
@@ -224,7 +223,7 @@ function CardCarousel({
                 }}
                 className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
               >
-                <Edit3 className="w-4 h-4 text-amber-400 shrink-0" />
+                <Edit3 className="w-4 h-4 text-slate-100 shrink-0" />
                 <span className="font-semibold">Edit notes</span>
               </button>
 
@@ -236,7 +235,7 @@ function CardCarousel({
                 }}
                 className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
               >
-                <Camera className="w-4 h-4 text-amber-400 shrink-0" />
+                <Camera className="w-4 h-4 text-slate-100 shrink-0" />
                 <span className="font-semibold">Edit images</span>
               </button>
 
