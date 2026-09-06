@@ -155,7 +155,7 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (White Edit Button & Icon) */
+        /* NOTES SLIDE */
         <div className="w-full h-full p-2.5 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center justify-between ml-8">
@@ -369,7 +369,7 @@ export default function TackleVault() {
     setIsSavingNotes(false);
   };
 
-  // Clipboard Export Handler for Restock List
+  // Clean Clipboard Export Handler
   const handleExportRestockList = async () => {
     if (ghostItems.length === 0) return;
 
@@ -377,13 +377,12 @@ export default function TackleVault() {
       `${index + 1}. ${item.brand} - ${item.name} (${item.color}${item.depth && item.depth !== 'N/A' ? `, ${item.depth}` : ''})`
     ).join('\n');
 
-    const formattedExport = `🎣 TACKLE VAULT RESTOCK SHOPPING LIST:\n-----------------------------------\n${listText}\n-----------------------------------`;
+    const formattedExport = `TACKLE VAULT restock list:\n${listText}`;
 
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(formattedExport);
       } else {
-        // Fallback for non-HTTPS or older mobile WebViews
         const textArea = document.createElement("textarea");
         textArea.value = formattedExport;
         textArea.style.position = "fixed";
@@ -653,43 +652,43 @@ export default function TackleVault() {
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 pt-6">
         
-        {/* Quick Stats Bar */}
-        <div className="grid grid-cols-3 gap-3 mb-6 font-mono text-xs">
+        {/* Quick Stats Bar - Reduced Font Size to Fit 3 Digits on Mobile */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 font-mono text-[10px] sm:text-xs">
           <button 
             onClick={() => {
               setActiveCategoryFilter(null);
               setActiveBrandFilter(null);
               if (myGearItems.length > 0) scrollToSection('my-gear-section');
             }}
-            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3 text-left transition group cursor-pointer"
+            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl p-2.5 sm:p-3 text-left transition group cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <span className="text-slate-500 group-hover:text-slate-300 block uppercase transition">All my gear</span>
-              {myGearItems.length > 0 && <ArrowDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition" />}
+              <span className="text-slate-500 group-hover:text-slate-300 block uppercase transition text-[9px] sm:text-[10px] truncate">All my gear</span>
+              {myGearItems.length > 0 && <ArrowDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition shrink-0 ml-1" />}
             </div>
-            <span className="text-lg font-bold text-slate-200">{items.length} Items</span>
+            <span className="text-sm sm:text-base font-bold text-slate-200 whitespace-nowrap block mt-1">{items.length} Items</span>
           </button>
 
           <button 
             onClick={() => favoriteItems.length > 0 && scrollToSection('favourites-section')}
-            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/40 rounded-xl p-3 text-left transition group cursor-pointer"
+            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/40 rounded-xl p-2.5 sm:p-3 text-left transition group cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <span className="text-slate-500 group-hover:text-amber-400 block uppercase transition">Favourite Items</span>
-              {favoriteItems.length > 0 && <ArrowDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition" />}
+              <span className="text-slate-500 group-hover:text-amber-400 block uppercase transition text-[9px] sm:text-[10px] truncate">Favourites</span>
+              {favoriteItems.length > 0 && <ArrowDown className="w-3 h-3 text-slate-500 group-hover:text-amber-400 transition shrink-0 ml-1" />}
             </div>
-            <span className="text-lg font-bold text-amber-400">{favoriteItems.length} Items</span>
+            <span className="text-sm sm:text-base font-bold text-amber-400 whitespace-nowrap block mt-1">{favoriteItems.length} Items</span>
           </button>
 
           <button 
             onClick={() => ghostItems.length > 0 && scrollToSection('to-replace-section')}
-            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-red-500/40 rounded-xl p-3 text-left transition group cursor-pointer"
+            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-red-500/40 rounded-xl p-2.5 sm:p-3 text-left transition group cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <span className="text-slate-500 group-hover:text-red-400 block uppercase transition">Gear to replace</span>
-              {ghostItems.length > 0 && <ArrowDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-red-400 transition" />}
+              <span className="text-slate-500 group-hover:text-red-400 block uppercase transition text-[9px] sm:text-[10px] truncate">To replace</span>
+              {ghostItems.length > 0 && <ArrowDown className="w-3 h-3 text-slate-500 group-hover:text-red-400 transition shrink-0 ml-1" />}
             </div>
-            <span className="text-lg font-bold text-red-400">{ghostItems.length} Items</span>
+            <span className="text-sm sm:text-base font-bold text-red-400 whitespace-nowrap block mt-1">{ghostItems.length} Items</span>
           </button>
         </div>
 
@@ -744,7 +743,6 @@ export default function TackleVault() {
                               >
                                 {item.brand}
                               </button>
-                              {/* Gear Specs Data Displayed in White */}
                               <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
@@ -862,7 +860,6 @@ export default function TackleVault() {
                               >
                                 {item.brand}
                               </button>
-                              {/* Gear Specs Data Displayed in White */}
                               <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
