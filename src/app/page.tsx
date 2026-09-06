@@ -21,7 +21,10 @@ import {
   Camera,
   Wand2,
   Repeat,
-  AlertTriangle
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  FileText
 } from 'lucide-react';
 
 interface GearItem {
@@ -34,7 +37,112 @@ interface GearItem {
   is_favorite: boolean;
   is_ghost: boolean;
   image_url: string;
+  image_urls: string[];
+  notes?: string;
   species: string[];
+}
+
+// Sub-component for Multi-Slide Carousel per Card
+function CardCarousel({ item }: { item: GearItem }) {
+  const images = item.image_urls && item.image_urls.length > 0 
+    ? item.image_urls 
+    : [item.image_url];
+  
+  // Total slides = images count + 1 (the Info/Notes slide)
+  const totalSlides = images.length + 1;
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const prevSlide = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === 0 ? totalSlides - 1 : prev - 1));
+  };
+
+  const nextSlide = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === totalSlides - 1 ? 0 : prev + 1));
+  };
+
+  const isInfoSlide = currentIndex === images.length;
+
+  return (
+    <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group">
+      
+      {/* Slide Content */}
+      {isInfoSlide ? (
+        <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+          <div>
+            <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block mb-1">
+              📝 Specs & Notes
+            </span>
+            <div className="space-y-1.5 text-slate-300 text-[11px] mt-2">
+              <p><span className="text-slate-500">Brand:</span> {item.brand}</p>
+              <p><span className="text-slate-500">Name:</span> {item.name}</p>
+              <p><span className="text-slate-500">Color:</span> {item.color}</p>
+              <p><span className="text-slate-500">Depth/Spec:</span> {item.depth}</p>
+              <p><span className="text-slate-500">Type:</span> {item.type}</p>
+              <p><span className="text-slate-500">Species:</span> {item.species.join(', ')}</p>
+            </div>
+
+            {item.notes && (
+              <div className="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
+                <span className="text-amber-400/80 font-bold block mb-0.5">Rigging / Notes:</span>
+                <p className="italic leading-relaxed">{item.notes}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="text-[9px] text-slate-500 text-center uppercase tracking-widest pt-2">
+            Swipe or use arrows to view photos
+          </div>
+        </div>
+      ) : (
+        <img 
+          src={images[currentIndex]} 
+          alt={`${item.name} slide ${currentIndex + 1}`} 
+          className="w-full h-full object-cover transition duration-500"
+        />
+      )}
+
+      {/* Navigation Arrows */}
+      {totalSlides > 1 && (
+        <>
+          <button 
+            onClick={prevSlide}
+            className="absolute left-1 top-1/2 -translate-y-1/2 p-1 rounded-full bg-slate-950/70 text-slate-300 opacity-0 group-hover:opacity-100 transition hover:bg-slate-900 hover:text-white"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={nextSlide}
+            className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-full bg-slate-950/70 text-slate-300 opacity-0 group-hover:opacity-100 transition hover:bg-slate-900 hover:text-white"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </>
+      )}
+
+      {/* Navigation Dots Indicator Bar */}
+      <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1 z-10 pointer-events-none">
+        {images.map((_, idx) => (
+          <span 
+            key={idx} 
+            className={`h-1.5 rounded-full transition-all ${
+              currentIndex === idx ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-500/60'
+            }`}
+          />
+        ))}
+        {/* Info Slide Indicator Icon */}
+        <span 
+          className={`h-1.5 rounded-full transition-all flex items-center justify-center ${
+            isInfoSlide ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-500/60'
+          }`}
+        >
+          <FileText className="w-2 h-2 text-slate-950" />
+        </span>
+      </div>
+
+    </div>
+  );
 }
 
 export default function TackleVault() {
@@ -53,7 +161,7 @@ export default function TackleVault() {
   const [itemToDelete, setItemToDelete] = useState<GearItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Form State
+  // Form State with Multi-Photo support
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
@@ -61,7 +169,8 @@ export default function TackleVault() {
     depth: '',
     color: '',
     species: '',
-    image_url: ''
+    notes: '',
+    image_urls: [] as string[]
   });
 
   useEffect(() => {
@@ -152,6 +261,7 @@ export default function TackleVault() {
     }
   };
 
+  // Upload Multi-Photos to Supabase Storage
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -179,12 +289,26 @@ export default function TackleVault() {
       .getPublicUrl(filePath);
 
     const publicUrl = publicUrlData.publicUrl;
-    setFormData(prev => ({ ...prev, image_url: publicUrl }));
+    
+    // Append photo to array
+    const updatedUrls = [...formData.image_urls, publicUrl];
+    setFormData(prev => ({ ...prev, image_urls: updatedUrls }));
     setIsUploading(false);
 
-    extractMetadataFromImage(publicUrl);
+    // If it's the first photo, trigger AI Vision scan automatically
+    if (updatedUrls.length === 1) {
+      extractMetadataFromImage(publicUrl);
+    }
   };
 
+  const removeImage = (indexToRemove: number) => {
+    setFormData(prev => ({
+      ...prev,
+      image_urls: prev.image_urls.filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
+
+  // AI Extraction Handler
   const extractMetadataFromImage = async (url: string) => {
     if (!url) return;
     setIsExtracting(true);
@@ -230,7 +354,7 @@ export default function TackleVault() {
       ? formData.species.split(',').map(s => s.trim())
       : ['General'];
 
-    const fallbackImage = formData.image_url || 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=400&q=80';
+    const fallbackImage = formData.image_urls[0] || 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=400&q=80';
 
     const newItem = {
       name: formData.name,
@@ -241,6 +365,8 @@ export default function TackleVault() {
       is_favorite: false,
       is_ghost: false,
       image_url: fallbackImage,
+      image_urls: formData.image_urls.length > 0 ? formData.image_urls : [fallbackImage],
+      notes: formData.notes,
       species: speciesArray
     };
 
@@ -261,7 +387,8 @@ export default function TackleVault() {
         depth: '',
         color: '',
         species: '',
-        image_url: ''
+        notes: '',
+        image_urls: []
       });
       setIsAddModalOpen(false);
     }
@@ -287,7 +414,6 @@ export default function TackleVault() {
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {/* Custom Vault Logo Container */}
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-amber-500/10 border border-amber-500/20 p-1">
               <VaultIcon className="w-full h-full object-contain filter invert" />
             </div>
@@ -407,16 +533,13 @@ export default function TackleVault() {
                           key={item.id}
                           className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
                         >
-                          <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
-                            <img 
-                              src={item.image_url} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
-                            />
+                          {/* Multi-Slide Carousel Box */}
+                          <div className="relative">
+                            <CardCarousel item={item} />
 
                             <button 
                               onClick={() => setItemToDelete(item)}
-                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white"
+                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white z-10"
                               title="Delete Item Permanently"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -424,7 +547,7 @@ export default function TackleVault() {
                             
                             <button 
                               onClick={() => toggleFavorite(item.id, item.is_favorite)}
-                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-amber-500 text-slate-950 border-amber-400 scale-110"
+                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-amber-500 text-slate-950 border-amber-400 scale-110 z-10"
                               title="Unstar Favourite"
                             >
                               <Star className="w-3.5 h-3.5 fill-current" />
@@ -502,16 +625,13 @@ export default function TackleVault() {
                               : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
                           }`}
                         >
-                          <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
-                            <img 
-                              src={item.image_url} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
-                            />
+                          {/* Multi-Slide Carousel Box */}
+                          <div className="relative">
+                            <CardCarousel item={item} />
 
                             <button 
                               onClick={() => setItemToDelete(item)}
-                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500"
+                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
                               title="Delete Item Permanently"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -519,7 +639,7 @@ export default function TackleVault() {
 
                             <button 
                               onClick={() => toggleFavorite(item.id, item.is_favorite)}
-                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200"
+                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200 z-10"
                               title="Mark as Favourite"
                             >
                               <Star className="w-3.5 h-3.5 fill-current" />
@@ -579,7 +699,7 @@ export default function TackleVault() {
                         >
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
                             <img 
-                              src={item.image_url} 
+                              src={item.image_urls?.[0] || item.image_url} 
                               alt={item.name} 
                               className="w-full h-full object-cover opacity-70"
                             />
@@ -641,7 +761,7 @@ export default function TackleVault() {
                     <div key={item.id} className="group relative flex flex-col items-center">
                       <div className="w-full aspect-square rounded-2xl bg-slate-900/50 border border-slate-800/80 p-4 flex items-center justify-center group-hover:border-amber-500/40 transition">
                         <img 
-                          src={item.image_url} 
+                          src={item.image_urls?.[0] || item.image_url} 
                           alt={item.name} 
                           className="max-h-full max-w-full object-contain filter drop-shadow-[0_10px_8px_rgba(0,0,0,0.8)] group-hover:scale-110 transition duration-300"
                         />
@@ -772,7 +892,7 @@ export default function TackleVault() {
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
       </button>
 
-      {/* Add Lure Modal */}
+      {/* Add Lure Modal with Multi-Photo Upload */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -791,50 +911,49 @@ export default function TackleVault() {
 
             <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
               
+              {/* Multi-Photo Camera Strip */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-3">
-                <label className="block text-slate-400 font-bold uppercase text-[10px]">Camera Capture & AI Metadata Auto-Fill</label>
-                
-                {formData.image_url ? (
-                  <div className="space-y-3">
-                    <div className="relative aspect-video rounded-lg overflow-hidden border border-amber-500/40 group">
-                      <img src={formData.image_url} alt="Uploaded gear" className="w-full h-full object-cover" />
-                      <button 
-                        type="button" 
-                        onClick={() => setFormData({ ...formData, image_url: '' })}
-                        className="absolute top-2 right-2 bg-slate-900/80 text-slate-300 p-1 rounded-md"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-400 font-bold uppercase text-[10px]">
+                    Photos ({formData.image_urls.length}/4)
+                  </label>
+                  <span className="text-[9px] text-amber-400">Photo #1 triggers AI Scan</span>
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={() => extractMetadataFromImage(formData.image_url)}
-                      disabled={isExtracting}
-                      className="w-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-sans font-bold py-2 rounded-xl transition flex items-center justify-center gap-2"
-                    >
-                      {isExtracting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Gemini Vision Reading Packaging...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="w-4 h-4" />
-                          <span>Scan Photo with AI Vision</span>
-                        </>
-                      )}
-                    </button>
+                {/* Uploaded Thumbnails Grid */}
+                {formData.image_urls.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2 mb-2">
+                    {formData.image_urls.map((url, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-amber-500/40 group">
+                        <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button 
+                          type="button" 
+                          onClick={() => removeImage(idx)}
+                          className="absolute top-1 right-1 bg-slate-900/80 text-red-400 p-1 rounded"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        {idx === 0 && (
+                          <span className="absolute bottom-1 left-1 bg-amber-500 text-slate-950 text-[8px] font-bold px-1 rounded">
+                            HERO
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ) : (
+                )}
+
+                {/* Add Photo Button */}
+                {formData.image_urls.length < 4 && (
                   <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl cursor-pointer transition">
                     {isUploading ? (
                       <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
                     ) : (
                       <>
                         <Camera className="w-6 h-6 text-amber-400" />
-                        <span className="text-slate-300 font-semibold">Snap Photo or Select Image</span>
-                        <span className="text-[10px] text-slate-500">Auto-uploads to Supabase Storage</span>
+                        <span className="text-slate-300 font-semibold">
+                          {formData.image_urls.length === 0 ? 'Snap Package Front (Triggers AI)' : '+ Add Another Photo'}
+                        </span>
                       </>
                     )}
                     <input 
@@ -846,6 +965,28 @@ export default function TackleVault() {
                       className="hidden" 
                     />
                   </label>
+                )}
+
+                {/* Explicit Rescan AI Trigger */}
+                {formData.image_urls.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => extractMetadataFromImage(formData.image_urls[0])}
+                    disabled={isExtracting}
+                    className="w-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-sans font-bold py-1.5 rounded-lg transition flex items-center justify-center gap-2 text-xs"
+                  >
+                    {isExtracting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Gemini Vision Scanning Photo #1...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-3.5 h-3.5" />
+                        <span>Rescan Photo #1 with AI</span>
+                      </>
+                    )}
+                  </button>
                 )}
 
                 {extractionError && (
@@ -935,6 +1076,17 @@ export default function TackleVault() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1 uppercase">Custom Notes / Rigging Details</label>
+                <textarea 
+                  rows={2}
+                  placeholder="e.g. Recommended hook size #1/0, best in brackish estuaries..." 
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none resize-none"
+                />
               </div>
 
               <button 
