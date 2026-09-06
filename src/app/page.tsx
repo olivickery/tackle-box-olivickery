@@ -25,7 +25,8 @@ import {
   ChevronRight,
   Edit3,
   Filter,
-  Check
+  Check,
+  Image as ImageIcon
 } from 'lucide-react';
 
 interface GearItem {
@@ -49,12 +50,14 @@ function CardCarousel({
   item, 
   onEditNotes,
   onEditSpecs,
+  onEditPhotos,
   onToggleFavorite,
   onDeleteItem
 }: { 
   item: GearItem;
   onEditNotes: (item: GearItem) => void;
   onEditSpecs: (item: GearItem) => void;
+  onEditPhotos: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
   onDeleteItem: (item: GearItem) => void;
 }) {
@@ -109,7 +112,6 @@ function CardCarousel({
 
   const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
 
-  // Format Date Added (e.g. "06 Sep 2026")
   const formattedDate = item.created_at 
     ? new Date(item.created_at).toLocaleDateString('en-GB', {
         day: '2-digit',
@@ -130,22 +132,38 @@ function CardCarousel({
       className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
     >
       
-      {/* Favourite Star Button - Slide 1 Only */}
+      {/* Top Bar Controls for Slide 1 (Cover Photo) */}
       {isFirstSlide && (
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(item.id, item.is_favorite);
-          }}
-          className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 ${
-            item.is_favorite 
-              ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
-              : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
-          }`}
-          title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
-        >
-          <Star className="w-3.5 h-3.5 fill-current" />
-        </button>
+        <>
+          {/* Edit Photos Trigger Button (Top Left) */}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditPhotos(item);
+            }}
+            className="absolute top-2 left-2 px-2 py-1 rounded-full backdrop-blur-md bg-slate-900/80 text-slate-200 border border-slate-700/80 hover:bg-slate-800 text-[10px] font-mono flex items-center gap-1 transition z-20"
+            title="Manage or Add Photos"
+          >
+            <Camera className="w-3 h-3 text-amber-400" />
+            <span>Edit Photos</span>
+          </button>
+
+          {/* Favourite Star Button (Top Right) */}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(item.id, item.is_favorite);
+            }}
+            className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 ${
+              item.is_favorite 
+                ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
+                : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
+            }`}
+            title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
+          >
+            <Star className="w-3.5 h-3.5 fill-current" />
+          </button>
+        </>
       )}
 
       {/* Slide Content */}
@@ -185,7 +203,6 @@ function CardCarousel({
         /* NOTES SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
           <div>
-            {/* Header Row */}
             <div className="h-6 flex items-center justify-between mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Notes
@@ -204,7 +221,6 @@ function CardCarousel({
               </button>
             </div>
 
-            {/* Notes Display Box (Non-Italicized Regular Text) */}
             <div className="pt-1">
               <div className="text-slate-100 text-[11px] leading-relaxed bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px] w-full">
                 {item.notes ? item.notes : <span className="text-slate-500">No custom notes logged yet. Tap Edit below to add notes!</span>}
@@ -308,6 +324,11 @@ export default function TackleVault() {
     species: ''
   });
   const [isSavingSpecs, setIsSavingSpecs] = useState(false);
+
+  // Edit Photos Modal State
+  const [itemToEditPhotos, setItemToEditPhotos] = useState<GearItem | null>(null);
+  const [modalPhotos, setModalPhotos] = useState<string[]>([]);
+  const [isSavingPhotos, setIsSavingPhotos] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -465,6 +486,85 @@ export default function TackleVault() {
       setItemToEditSpecs(null);
     }
     setIsSavingSpecs(false);
+  };
+
+  // Photo Management Handlers
+  const openPhotosEditor = (item: GearItem) => {
+    setItemToEditPhotos(item);
+    setModalPhotos(item.image_urls && item.image_urls.length > 0 ? [...item.image_urls] : [item.image_url]);
+  };
+
+  const handleModalPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('tackle-vault-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError);
+      alert('Image upload failed.');
+      setIsUploading(false);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('tackle-vault-images')
+      .getPublicUrl(filePath);
+
+    setModalPhotos(prev => [...prev, publicUrlData.publicUrl]);
+    setIsUploading(false);
+  };
+
+  const removeModalPhoto = (indexToRemove: number) => {
+    if (modalPhotos.length <= 1) {
+      alert('Items must keep at least 1 photo.');
+      return;
+    }
+    setModalPhotos(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const pinModalHero = (indexToPin: number) => {
+    setModalPhotos(prev => {
+      const selected = prev[indexToPin];
+      const remaining = prev.filter((_, idx) => idx !== indexToPin);
+      return [selected, ...remaining];
+    });
+  };
+
+  const saveUpdatedPhotos = async () => {
+    if (!itemToEditPhotos || modalPhotos.length === 0) return;
+    setIsSavingPhotos(true);
+
+    const fallbackCover = modalPhotos[0];
+
+    const { error } = await supabase
+      .from('gear_items')
+      .update({
+        image_url: fallbackCover,
+        image_urls: modalPhotos
+      })
+      .eq('id', itemToEditPhotos.id);
+
+    if (error) {
+      console.error('Failed to update photos:', error);
+      alert('Could not update item photos.');
+    } else {
+      setItems(items.map(item => 
+        item.id === itemToEditPhotos.id 
+          ? { ...item, image_url: fallbackCover, image_urls: modalPhotos } 
+          : item
+      ));
+      setItemToEditPhotos(null);
+    }
+    setIsSavingPhotos(false);
   };
 
   const handleExportRestockList = async () => {
@@ -816,6 +916,7 @@ export default function TackleVault() {
                               item={item} 
                               onEditNotes={openNotesEditor} 
                               onEditSpecs={openSpecsEditor}
+                              onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
                               onDeleteItem={setItemToDelete}
                             />
@@ -915,6 +1016,7 @@ export default function TackleVault() {
                               item={item} 
                               onEditNotes={openNotesEditor} 
                               onEditSpecs={openSpecsEditor}
+                              onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
                               onDeleteItem={setItemToDelete}
                             />
@@ -1053,7 +1155,7 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* List View (Updated Label to 'Available') */}
+            {/* List View */}
             {viewMode === 'list' && (
               <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden font-mono text-xs">
                 <table className="w-full text-left">
@@ -1113,6 +1215,111 @@ export default function TackleVault() {
         )}
 
       </main>
+
+      {/* Edit Photos Overlay Modal */}
+      {itemToEditPhotos && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-amber-400" />
+                <h2 className="font-bold text-lg text-slate-100">Manage Item Photos</h2>
+              </div>
+              <button 
+                onClick={() => setItemToEditPhotos(null)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4 font-mono text-xs">
+              <p className="text-slate-400">
+                Photos for <span className="text-slate-200 font-bold">{itemToEditPhotos.brand} - {itemToEditPhotos.name}</span> ({modalPhotos.length}/4):
+              </p>
+
+              {/* Photos Scratchpad Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {modalPhotos.map((url, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-700 bg-slate-950 group">
+                    <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    
+                    {/* Delete Photo */}
+                    <button 
+                      type="button" 
+                      onClick={() => removeModalPhoto(idx)}
+                      className="absolute top-1 right-1 bg-slate-900/90 text-red-400 p-1 rounded-md z-10 hover:bg-red-500 hover:text-white transition"
+                      title="Remove Photo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Hero Badge vs Pin Button */}
+                    {idx === 0 ? (
+                      <span className="absolute bottom-1 left-1 right-1 bg-amber-500 text-slate-950 text-[8px] font-bold py-1 rounded text-center shadow font-sans">
+                        ★ HERO COVER
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => pinModalHero(idx)}
+                        className="absolute bottom-1 left-1 right-1 bg-slate-900/90 hover:bg-amber-500 text-slate-200 hover:text-slate-950 text-[8px] font-bold py-1 rounded text-center transition border border-slate-700 hover:border-amber-400 font-sans"
+                        title="Set as Hero Cover"
+                      >
+                        📌 PIN HERO
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {/* Upload New Photo Button */}
+                {modalPhotos.length < 4 && (
+                  <label className="flex flex-col items-center justify-center gap-1.5 aspect-square border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl cursor-pointer transition bg-slate-950/50">
+                    {isUploading ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5 text-amber-400" />
+                        <span className="text-[10px] text-slate-300 font-semibold text-center px-1">
+                          + Add Photo
+                        </span>
+                      </>
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment"
+                      onChange={handleModalPhotoUpload}
+                      disabled={isUploading}
+                      className="hidden" 
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-slate-800">
+                <button 
+                  onClick={() => setItemToEditPhotos(null)}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs py-2.5 rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveUpdatedPhotos}
+                  disabled={isSavingPhotos || isUploading}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5"
+                >
+                  {isSavingPhotos ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <span>Save Photo Changes</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Specs Modal */}
       {itemToEditSpecs && (
