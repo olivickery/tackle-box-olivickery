@@ -134,7 +134,7 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE (Title Top-Left) */
+        /* SPECS SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center">
@@ -157,16 +157,14 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (Title Top-Left, Delete Button Top-Right, Edit Button Bottom-Right of Notes Field) */
+        /* NOTES SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
           <div>
-            {/* Header Row */}
             <div className="h-6 flex items-center justify-between mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Notes
               </span>
               
-              {/* Delete Trash Button - Exclusive to Notes Slide Top-Right */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -179,13 +177,11 @@ function CardCarousel({
               </button>
             </div>
 
-            {/* Notes Display Box */}
             <div className="pt-1">
               <div className="text-slate-100 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px] w-full">
                 {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit below to add notes!</span>}
               </div>
 
-              {/* Edit Button Sitting Under Notes Field on Right Hand Side */}
               <div className="flex justify-end mt-2">
                 <button 
                   onClick={(e) => {
@@ -600,8 +596,6 @@ export default function TackleVault() {
     setIsSubmitting(false);
   };
 
-  const uniqueBrands = Array.from(new Set(items.map(item => item.brand))).filter(Boolean).sort();
-
   const ghostItems = items.filter(item => item.is_ghost);
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost);
   const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
@@ -791,7 +785,7 @@ export default function TackleVault() {
                 {/* My Gear Section */}
                 {baseMyGearItems.length > 0 && (
                   <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-20">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center justify-between mb-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
                           <Package className="w-4 h-4 text-slate-400" /> My gear
@@ -824,19 +818,7 @@ export default function TackleVault() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 font-mono text-xs">
-                        <select 
-                          value={activeBrandFilter || ''}
-                          onChange={(e) => setActiveBrandFilter(e.target.value || null)}
-                          className="bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-amber-500"
-                        >
-                          <option value="">Filter by Brand (All)</option>
-                          {uniqueBrands.map(brand => (
-                            <option key={brand} value={brand}>{brand}</option>
-                          ))}
-                        </select>
-                        <span className="text-slate-500 text-xs">{myGearItems.length} Items</span>
-                      </div>
+                      <span className="text-xs text-slate-500 font-mono">{myGearItems.length} Items</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
