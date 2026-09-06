@@ -47,11 +47,13 @@ interface GearItem {
 function CardCarousel({ 
   item, 
   onEditNotes,
+  onEditSpecs,
   onToggleFavorite,
   onDeleteItem
 }: { 
   item: GearItem;
   onEditNotes: (item: GearItem) => void;
+  onEditSpecs: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
   onDeleteItem: (item: GearItem) => void;
 }) {
@@ -134,15 +136,27 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE */
+        /* SPECS SLIDE (With Edit Specs Button) */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <div className="h-6 flex items-center">
+            <div className="h-6 flex items-center justify-between mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Specs
               </span>
+
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditSpecs(item);
+                }}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition z-20"
+              >
+                <Edit3 className="w-3 h-3 text-slate-100" />
+                <span>Edit Specs</span>
+              </button>
             </div>
-            <div className="space-y-1.5 text-[11px] pt-2">
+
+            <div className="space-y-1.5 text-[11px] pt-1">
               <p><span className="text-slate-500">Brand:</span> <span className="text-slate-100">{item.brand}</span></p>
               <p><span className="text-slate-500">Name:</span> <span className="text-slate-100">{item.name}</span></p>
               <p><span className="text-slate-500">Colour:</span> <span className="text-slate-100">{item.color}</span></p>
@@ -157,31 +171,36 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE */
+        /* NOTES SLIDE (Delete Button with 'Delete item' title) */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
           <div>
+            {/* Header Row */}
             <div className="h-6 flex items-center justify-between mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Notes
               </span>
               
+              {/* Delete Trash Button with 'Delete item' Title */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeleteItem(item);
                 }}
-                className="p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white z-20"
+                className="px-2 py-1 rounded-lg backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white z-20 flex items-center gap-1 text-[10px] font-mono"
                 title="Delete Item Permanently"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete item</span>
+                <Trash2 className="w-3 h-3" />
               </button>
             </div>
 
+            {/* Notes Display Box */}
             <div className="pt-1">
               <div className="text-slate-100 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px] w-full">
                 {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit below to add notes!</span>}
               </div>
 
+              {/* Edit Button Sitting Under Notes Field on Right Hand Side */}
               <div className="flex justify-end mt-2">
                 <button 
                   onClick={(e) => {
@@ -272,6 +291,18 @@ export default function TackleVault() {
   const [itemToEditNotes, setItemToEditNotes] = useState<GearItem | null>(null);
   const [editedNotes, setEditedNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  // Edit Specs Modal State
+  const [itemToEditSpecs, setItemToEditSpecs] = useState<GearItem | null>(null);
+  const [editedSpecs, setEditedSpecs] = useState({
+    brand: '',
+    name: '',
+    color: '',
+    depth: '',
+    type: 'Hardbody Suspending',
+    species: ''
+  });
+  const [isSavingSpecs, setIsSavingSpecs] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -383,6 +414,53 @@ export default function TackleVault() {
       setItemToEditNotes(null);
     }
     setIsSavingNotes(false);
+  };
+
+  // Specs Edit Handlers
+  const openSpecsEditor = (item: GearItem) => {
+    setItemToEditSpecs(item);
+    setEditedSpecs({
+      brand: item.brand,
+      name: item.name,
+      color: item.color,
+      depth: item.depth || '',
+      type: item.type,
+      species: item.species.join(', ')
+    });
+  };
+
+  const saveUpdatedSpecs = async () => {
+    if (!itemToEditSpecs) return;
+    setIsSavingSpecs(true);
+
+    const speciesArray = editedSpecs.species
+      ? editedSpecs.species.split(',').map(s => s.trim())
+      : ['General'];
+
+    const updatedData = {
+      brand: editedSpecs.brand,
+      name: editedSpecs.name,
+      color: editedSpecs.color,
+      depth: editedSpecs.depth,
+      type: editedSpecs.type,
+      species: speciesArray
+    };
+
+    const { error } = await supabase
+      .from('gear_items')
+      .update(updatedData)
+      .eq('id', itemToEditSpecs.id);
+
+    if (error) {
+      console.error('Failed to update specs:', error);
+      alert('Could not update specs.');
+    } else {
+      setItems(items.map(item => 
+        item.id === itemToEditSpecs.id ? { ...item, ...updatedData } : item
+      ));
+      setItemToEditSpecs(null);
+    }
+    setIsSavingSpecs(false);
   };
 
   // Clipboard Export Handler
@@ -737,6 +815,7 @@ export default function TackleVault() {
                             <CardCarousel 
                               item={item} 
                               onEditNotes={openNotesEditor} 
+                              onEditSpecs={openSpecsEditor}
                               onToggleFavorite={toggleFavorite}
                               onDeleteItem={setItemToDelete}
                             />
@@ -835,6 +914,7 @@ export default function TackleVault() {
                             <CardCarousel 
                               item={item} 
                               onEditNotes={openNotesEditor} 
+                              onEditSpecs={openSpecsEditor}
                               onToggleFavorite={toggleFavorite}
                               onDeleteItem={setItemToDelete}
                             />
@@ -1033,6 +1113,125 @@ export default function TackleVault() {
         )}
 
       </main>
+
+      {/* Edit Specs Modal */}
+      {itemToEditSpecs && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-amber-400" />
+                <h3 className="font-bold text-slate-100 text-sm">Edit Item Specs</h3>
+              </div>
+              <button 
+                onClick={() => setItemToEditSpecs(null)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 font-mono text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Brand *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={editedSpecs.brand}
+                    onChange={(e) => setEditedSpecs({ ...editedSpecs, brand: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Item name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={editedSpecs.name}
+                    onChange={(e) => setEditedSpecs({ ...editedSpecs, name: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Colourway *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={editedSpecs.color}
+                    onChange={(e) => setEditedSpecs({ ...editedSpecs, color: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Gear Specs</label>
+                  <input 
+                    type="text" 
+                    value={editedSpecs.depth}
+                    onChange={(e) => setEditedSpecs({ ...editedSpecs, depth: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Category</label>
+                  <select 
+                    value={editedSpecs.type}
+                    onChange={(e) => setEditedSpecs({ ...editedSpecs, type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                  >
+                    <option value="Hardbody Suspending">Hardbody Suspending</option>
+                    <option value="Soft Plastic">Soft Plastic</option>
+                    <option value="Topwater / Surface">Topwater / Surface</option>
+                    <option value="Jerkbait">Jerkbait</option>
+                    <option value="Metal Jig">Metal Jig</option>
+                    <option value="Vibe / Blade">Vibe / Blade</option>
+                    <option value="Reel">Reel</option>
+                    <option value="Rod">Rod</option>
+                    <option value="Terminal tackle">Terminal tackle</option>
+                    <option value="Tool">Tool</option>
+                    <option value="Accessory">Accessory</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Species</label>
+                  <input 
+                    type="text" 
+                    value={editedSpecs.species}
+                    onChange={(e) => setEditedSpecs({ ...editedSpecs, species: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button 
+                  onClick={() => setItemToEditSpecs(null)}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs py-2.5 rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveUpdatedSpecs}
+                  disabled={isSavingSpecs}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5"
+                >
+                  {isSavingSpecs ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <span>Save Specs</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Notes Modal */}
       {itemToEditNotes && (
