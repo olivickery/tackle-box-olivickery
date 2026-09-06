@@ -42,13 +42,15 @@ interface GearItem {
   species: string[];
 }
 
-// Sub-component for Multi-Slide Carousel per Card (Touch Enabled + Specs/Notes Split)
+// Sub-component for Multi-Slide Carousel per Card
 function CardCarousel({ 
   item, 
-  onEditNotes 
+  onEditNotes,
+  onToggleFavorite
 }: { 
   item: GearItem;
   onEditNotes: (item: GearItem) => void;
+  onToggleFavorite: (id: string, currentStatus: boolean) => void;
 }) {
   const images = item.image_urls && item.image_urls.length > 0 
     ? item.image_urls 
@@ -98,6 +100,7 @@ function CardCarousel({
 
   const isSpecsSlide = currentIndex === images.length;
   const isNotesSlide = currentIndex === images.length + 1;
+  const isFirstSlide = currentIndex === 0;
 
   return (
     <div 
@@ -107,15 +110,35 @@ function CardCarousel({
       className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
     >
       
+      {/* Favourite Star Button - Restricted exclusively to Slide 1 */}
+      {isFirstSlide && (
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(item.id, item.is_favorite);
+          }}
+          className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 ${
+            item.is_favorite 
+              ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
+              : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
+          }`}
+          title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
+        >
+          <Star className="w-3.5 h-3.5 fill-current" />
+        </button>
+      )}
+
       {/* Slide Content */}
       {isSpecsSlide ? (
         /* SPECS SLIDE */
         <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block mb-1">
+            {/* Shifted Title Right to Clear Trash Icon */}
+            <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block ml-7 pt-0.5 mb-1">
               ⚙️ Specs
             </span>
-            <div className="space-y-1.5 text-slate-300 text-[11px] mt-2">
+            {/* Pushed Spec Content Down */}
+            <div className="space-y-1.5 text-slate-300 text-[11px] pt-3">
               <p><span className="text-slate-500">Brand:</span> {item.brand}</p>
               <p><span className="text-slate-500">Name:</span> {item.name}</p>
               <p><span className="text-slate-500">Color:</span> {item.color}</p>
@@ -133,8 +156,9 @@ function CardCarousel({
         /* NOTES SLIDE */
         <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block">
+            {/* Shifted Header Controls Right */}
+            <div className="flex items-center justify-between mb-2 ml-7">
+              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block pt-0.5">
                 📝 Notes
               </span>
               <button 
@@ -142,15 +166,18 @@ function CardCarousel({
                   e.stopPropagation();
                   onEditNotes(item);
                 }}
-                className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition"
+                className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition z-20"
               >
                 <Edit3 className="w-3 h-3" />
                 Edit
               </button>
             </div>
 
-            <div className="mt-2 text-slate-300 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[80px]">
-              {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add rigging tips or hook specs!</span>}
+            {/* Pushed Notes Container Down */}
+            <div className="pt-3">
+              <div className="text-slate-300 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px]">
+                {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add rigging tips or hook specs!</span>}
+              </div>
             </div>
           </div>
 
@@ -187,7 +214,7 @@ function CardCarousel({
         </>
       )}
 
-      {/* Clean Cleaned Navigation Dots (No Embedded Icons) */}
+      {/* Navigation Dots Indicator Bar */}
       <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none">
         <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
           {Array.from({ length: totalSlides }).map((_, idx) => (
@@ -646,7 +673,11 @@ export default function TackleVault() {
                           className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
                         >
                           <div className="relative">
-                            <CardCarousel item={item} onEditNotes={openNotesEditor} />
+                            <CardCarousel 
+                              item={item} 
+                              onEditNotes={openNotesEditor} 
+                              onToggleFavorite={toggleFavorite}
+                            />
 
                             <button 
                               onClick={() => setItemToDelete(item)}
@@ -654,14 +685,6 @@ export default function TackleVault() {
                               title="Delete Item Permanently"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                            
-                            <button 
-                              onClick={() => toggleFavorite(item.id, item.is_favorite)}
-                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-amber-500 text-slate-950 border-amber-400 scale-110 z-10"
-                              title="Unstar Favourite"
-                            >
-                              <Star className="w-3.5 h-3.5 fill-current" />
                             </button>
                           </div>
 
@@ -737,7 +760,11 @@ export default function TackleVault() {
                           }`}
                         >
                           <div className="relative">
-                            <CardCarousel item={item} onEditNotes={openNotesEditor} />
+                            <CardCarousel 
+                              item={item} 
+                              onEditNotes={openNotesEditor} 
+                              onToggleFavorite={toggleFavorite}
+                            />
 
                             <button 
                               onClick={() => setItemToDelete(item)}
@@ -745,14 +772,6 @@ export default function TackleVault() {
                               title="Delete Item Permanently"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button 
-                              onClick={() => toggleFavorite(item.id, item.is_favorite)}
-                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200 z-10"
-                              title="Mark as Favourite"
-                            >
-                              <Star className="w-3.5 h-3.5 fill-current" />
                             </button>
                           </div>
 
