@@ -101,6 +101,9 @@ function CardCarousel({
   const isNotesSlide = currentIndex === images.length + 1;
   const isFirstSlide = currentIndex === 0;
 
+  // Clean Spec Display (hides N/A)
+  const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
+
   return (
     <div 
       onTouchStart={handleTouchStart}
@@ -129,34 +132,37 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE (Vertically centered heading aligned with Trash Icon) */
-        <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+        /* SPECS SLIDE */
+        <div className="w-full h-full p-2.5 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <div className="h-7 flex items-center ml-7">
-              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider leading-none">
+            {/* Header Title Positioned High & Aligned Top with Trash Icon */}
+            <div className="h-6 flex items-center ml-8 pt-0.5">
+              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Specs
               </span>
             </div>
-            <div className="space-y-1.5 text-slate-300 text-[11px] pt-3">
-              <p><span className="text-slate-500">Brand:</span> {item.brand}</p>
-              <p><span className="text-slate-500">Name:</span> {item.name}</p>
-              <p><span className="text-slate-500">Colour:</span> {item.color}</p>
-              <p><span className="text-slate-500">Specs:</span> {item.depth}</p>
-              <p><span className="text-slate-500">Type:</span> {item.type}</p>
-              <p><span className="text-slate-500">Species:</span> {item.species.join(', ')}</p>
+            {/* Spec List with White Values */}
+            <div className="space-y-1.5 text-[11px] pt-2 px-1">
+              <p><span className="text-slate-500">Brand:</span> <span className="text-slate-100">{item.brand}</span></p>
+              <p><span className="text-slate-500">Name:</span> <span className="text-slate-100">{item.name}</span></p>
+              <p><span className="text-slate-500">Colour:</span> <span className="text-slate-100">{item.color}</span></p>
+              {displaySpec && <p><span className="text-slate-500">Specs:</span> <span className="text-slate-100">{displaySpec}</span></p>}
+              <p><span className="text-slate-500">Type:</span> <span className="text-slate-100">{item.type}</span></p>
+              <p><span className="text-slate-500">Species:</span> <span className="text-slate-100">{item.species.join(', ')}</span></p>
             </div>
           </div>
 
-          <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-3">
+          <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-1">
             Swipe for Notes
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (Vertically centered heading aligned with Trash Icon) */
-        <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+        /* NOTES SLIDE */
+        <div className="w-full h-full p-2.5 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <div className="h-7 flex items-center justify-between ml-7">
-              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider leading-none">
+            {/* Header Container Aligned Top with Trash Icon */}
+            <div className="h-6 flex items-center justify-between ml-8">
+              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Notes
               </span>
               <button 
@@ -171,14 +177,15 @@ function CardCarousel({
               </button>
             </div>
 
-            <div className="pt-3">
-              <div className="text-slate-300 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px]">
+            {/* Notes Container Stretched to Match Edge Buttons */}
+            <div className="pt-2 mx-1">
+              <div className="text-slate-200 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[95px] w-full">
                 {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add notes!</span>}
               </div>
             </div>
           </div>
 
-          <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-3">
+          <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-1">
             Swipe or tap arrows
           </div>
         </div>
@@ -240,7 +247,7 @@ export default function TackleVault() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   
-  // Filter States (Category & Brand)
+  // Filter States
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
   const [activeBrandFilter, setActiveBrandFilter] = useState<string | null>(null);
 
@@ -502,7 +509,7 @@ export default function TackleVault() {
       name: formData.name,
       brand: formData.brand,
       type: formData.type,
-      depth: formData.depth || 'N/A',
+      depth: formData.depth || '',
       color: formData.color,
       is_favorite: false,
       is_ghost: false,
@@ -543,14 +550,12 @@ export default function TackleVault() {
     setIsSubmitting(false);
   };
 
-  // List of Unique Brands for Filter Dropdown
   const uniqueBrands = Array.from(new Set(items.map(item => item.brand))).filter(Boolean).sort();
 
   const ghostItems = items.filter(item => item.is_ghost);
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost);
   const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
 
-  // Apply Category and Brand Filters
   const myGearItems = baseMyGearItems.filter(item => {
     const matchesCategory = activeCategoryFilter ? item.type === activeCategoryFilter : true;
     const matchesBrand = activeBrandFilter ? item.brand === activeBrandFilter : true;
@@ -708,7 +713,7 @@ export default function TackleVault() {
                               >
                                 {item.brand}
                               </button>
-                              <span className="text-amber-400/80">{item.depth}</span>
+                              <span className="text-amber-400/80">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                             <p className="text-xs text-slate-400">{item.color}</p>
@@ -749,7 +754,6 @@ export default function TackleVault() {
                           <Package className="w-4 h-4 text-slate-400" /> My gear
                         </span>
 
-                        {/* Active Filter Badges */}
                         {activeCategoryFilter && (
                           <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
                             <Tag className="w-3 h-3" />
@@ -777,7 +781,6 @@ export default function TackleVault() {
                         )}
                       </div>
 
-                      {/* Brand Filter Selector */}
                       <div className="flex items-center gap-2 font-mono text-xs">
                         <select 
                           value={activeBrandFilter || ''}
@@ -827,7 +830,7 @@ export default function TackleVault() {
                               >
                                 {item.brand}
                               </button>
-                              <span className="text-amber-400/80">{item.depth}</span>
+                              <span className="text-amber-400/80">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                             <p className="text-xs text-slate-400">{item.color}</p>
@@ -900,14 +903,13 @@ export default function TackleVault() {
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                               <span>{item.brand}</span>
-                              <span className="text-amber-400/80">{item.depth}</span>
+                              <span className="text-amber-400/80">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                            {/* Standardized Replace/Replaced Repeat Icon */}
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
                               className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
@@ -972,7 +974,7 @@ export default function TackleVault() {
                       <tr key={item.id} className="hover:bg-slate-800/30 transition">
                         <td className="p-3 font-sans font-semibold text-slate-200">{item.brand} - {item.name}</td>
                         <td className="p-3 text-slate-400">{item.type}</td>
-                        <td className="p-3 text-amber-400">{item.depth}</td>
+                        <td className="p-3 text-slate-100">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</td>
                         <td className="p-3 text-slate-400">{item.color}</td>
                         <td className="p-3">
                           {item.is_ghost ? (
@@ -1125,7 +1127,7 @@ export default function TackleVault() {
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
       </button>
 
-      {/* Add New Gear Modal (Updated Copy) */}
+      {/* Add New Gear Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -1382,7 +1384,7 @@ export default function TackleVault() {
                     <div>
                       <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
                       <h4 className="font-semibold text-sm text-slate-200">{item.name}</h4>
-                      <p className="text-xs text-slate-400 font-mono">Color: {item.color} | {item.depth}</p>
+                      <p className="text-xs text-slate-400 font-mono">Colour: {item.color} | {item.depth && item.depth !== 'N/A' ? item.depth : ''}</p>
                     </div>
                     <button 
                       onClick={() => toggleGhost(item.id, item.is_ghost)}
