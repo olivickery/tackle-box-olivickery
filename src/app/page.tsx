@@ -42,7 +42,7 @@ interface GearItem {
   species: string[];
 }
 
-// Sub-component for Multi-Slide Carousel per Card
+// Sub-component for Multi-Slide Carousel per Card (Hover arrows on desktop, hidden on mobile)
 function CardCarousel({ 
   item, 
   onEditNotes,
@@ -56,7 +56,6 @@ function CardCarousel({
     ? item.image_urls 
     : [item.image_url];
   
-  // Total slides = images + 1 (Specs slide) + 1 (Notes slide)
   const totalSlides = images.length + 2;
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -130,14 +129,12 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE */
+        /* SPECS SLIDE (Clean text-only header) */
         <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            {/* Shifted Title Right to Clear Trash Icon */}
             <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block ml-7 pt-0.5 mb-1">
-              ⚙️ Specs
+              Specs
             </span>
-            {/* Pushed Spec Content Down */}
             <div className="space-y-1.5 text-slate-300 text-[11px] pt-3">
               <p><span className="text-slate-500">Brand:</span> {item.brand}</p>
               <p><span className="text-slate-500">Name:</span> {item.name}</p>
@@ -153,13 +150,12 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE */
+        /* NOTES SLIDE (Clean text-only header) */
         <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            {/* Shifted Header Controls Right */}
             <div className="flex items-center justify-between mb-2 ml-7">
               <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block pt-0.5">
-                📝 Notes
+                Notes
               </span>
               <button 
                 onClick={(e) => {
@@ -173,7 +169,6 @@ function CardCarousel({
               </button>
             </div>
 
-            {/* Pushed Notes Container Down */}
             <div className="pt-3">
               <div className="text-slate-300 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px]">
                 {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add rigging tips or hook specs!</span>}
@@ -194,19 +189,19 @@ function CardCarousel({
         />
       )}
 
-      {/* Navigation Arrows */}
+      {/* Navigation Arrows - Desktop Hover Only (Hidden on Mobile) */}
       {totalSlides > 1 && (
         <>
           <button 
             onClick={prevSlide}
-            className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md active:scale-95 transition z-10"
+            className="hidden sm:block absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
             aria-label="Previous Slide"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
           <button 
             onClick={nextSlide}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md active:scale-95 transition z-10"
+            className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
             aria-label="Next Slide"
           >
             <ChevronRight className="w-3.5 h-3.5" />
