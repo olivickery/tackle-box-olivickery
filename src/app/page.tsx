@@ -132,38 +132,22 @@ function CardCarousel({
       className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
     >
       
-      {/* Top Bar Controls for Slide 1 (Cover Photo) */}
+      {/* Favourite Star Button - Slide 1 Only */}
       {isFirstSlide && (
-        <>
-          {/* Edit Photos Trigger Button (Top Left) */}
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditPhotos(item);
-            }}
-            className="absolute top-2 left-2 px-2 py-1 rounded-full backdrop-blur-md bg-slate-900/80 text-slate-200 border border-slate-700/80 hover:bg-slate-800 text-[10px] font-mono flex items-center gap-1 transition z-20"
-            title="Manage or Add Photos"
-          >
-            <Camera className="w-3 h-3 text-amber-400" />
-            <span>Edit Photos</span>
-          </button>
-
-          {/* Favourite Star Button (Top Right) */}
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(item.id, item.is_favorite);
-            }}
-            className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 ${
-              item.is_favorite 
-                ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
-                : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
-            }`}
-            title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
-          >
-            <Star className="w-3.5 h-3.5 fill-current" />
-          </button>
-        </>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(item.id, item.is_favorite);
+          }}
+          className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 ${
+            item.is_favorite 
+              ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
+              : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
+          }`}
+          title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
+        >
+          <Star className="w-3.5 h-3.5 fill-current" />
+        </button>
       )}
 
       {/* Slide Content */}
@@ -200,9 +184,10 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE */
+        /* NOTES SLIDE (Side-by-side Edit images & Edit Notes buttons underneath) */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
           <div>
+            {/* Header Row */}
             <div className="h-6 flex items-center justify-between mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Notes
@@ -223,19 +208,31 @@ function CardCarousel({
 
             <div className="pt-1">
               <div className="text-slate-100 text-[11px] leading-relaxed bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px] w-full">
-                {item.notes ? item.notes : <span className="text-slate-500">No custom notes logged yet. Tap Edit below to add notes!</span>}
+                {item.notes ? item.notes : <span className="text-slate-500">No custom notes logged yet. Tap Edit Notes below to add notes!</span>}
               </div>
 
-              <div className="flex justify-end mt-2">
+              {/* Edit images & Edit Notes side-by-side on the right */}
+              <div className="flex justify-end gap-1.5 mt-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditPhotos(item);
+                  }}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
+                >
+                  <Camera className="w-3 h-3 text-slate-100" />
+                  <span>Edit images</span>
+                </button>
+
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     onEditNotes(item);
                   }}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2.5 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
                 >
                   <Edit3 className="w-3 h-3 text-slate-100" />
-                  <span>Edit</span>
+                  <span>Edit Notes</span>
                 </button>
               </div>
             </div>
@@ -320,7 +317,7 @@ export default function TackleVault() {
     name: '',
     color: '',
     depth: '',
-    type: 'Hardbody Suspending',
+    type: 'Hardbody',
     species: ''
   });
   const [isSavingSpecs, setIsSavingSpecs] = useState(false);
@@ -334,7 +331,7 @@ export default function TackleVault() {
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
-    type: 'Hardbody Suspending',
+    type: 'Hardbody',
     depth: '',
     color: '',
     species: '',
@@ -358,6 +355,7 @@ export default function TackleVault() {
     } else if (data) {
       const formattedItems = data.map((item: any) => ({
         ...item,
+        type: item.type === 'Hardbody Suspending' ? 'Hardbody' : item.type,
         image_urls: item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]
       }));
       setItems(formattedItems as GearItem[]);
@@ -449,7 +447,7 @@ export default function TackleVault() {
       name: item.name,
       color: item.color,
       depth: item.depth || '',
-      type: item.type,
+      type: item.type === 'Hardbody Suspending' ? 'Hardbody' : item.type,
       species: item.species.join(', ')
     });
   };
@@ -488,7 +486,6 @@ export default function TackleVault() {
     setIsSavingSpecs(false);
   };
 
-  // Photo Management Handlers
   const openPhotosEditor = (item: GearItem) => {
     setItemToEditPhotos(item);
     setModalPhotos(item.image_urls && item.image_urls.length > 0 ? [...item.image_urls] : [item.image_url]);
@@ -702,7 +699,7 @@ export default function TackleVault() {
           name: result.data.name || prev.name,
           color: result.data.color || prev.color,
           depth: result.data.depth || prev.depth,
-          type: result.data.type || prev.type,
+          type: result.data.type === 'Hardbody Suspending' ? 'Hardbody' : (result.data.type || prev.type),
           species: result.data.species ? result.data.species.join(', ') : prev.species
         }));
       } else {
@@ -754,6 +751,7 @@ export default function TackleVault() {
     } else if (data && data[0]) {
       const insertedItem = {
         ...data[0],
+        type: data[0].type === 'Hardbody Suspending' ? 'Hardbody' : data[0].type,
         image_urls: data[0].image_urls && data[0].image_urls.length > 0 ? data[0].image_urls : [data[0].image_url]
       } as GearItem;
 
@@ -761,7 +759,7 @@ export default function TackleVault() {
       setFormData({
         name: '',
         brand: '',
-        type: 'Hardbody Suspending',
+        type: 'Hardbody',
         depth: '',
         color: '',
         species: '',
@@ -1392,7 +1390,7 @@ export default function TackleVault() {
                     onChange={(e) => setEditedSpecs({ ...editedSpecs, type: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
                   >
-                    <option value="Hardbody Suspending">Hardbody Suspending</option>
+                    <option value="Hardbody">Hardbody</option>
                     <option value="Soft Plastic">Soft Plastic</option>
                     <option value="Topwater / Surface">Topwater / Surface</option>
                     <option value="Jerkbait">Jerkbait</option>
@@ -1724,7 +1722,7 @@ export default function TackleVault() {
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
                   >
-                    <option value="Hardbody Suspending">Hardbody Suspending</option>
+                    <option value="Hardbody">Hardbody</option>
                     <option value="Soft Plastic">Soft Plastic</option>
                     <option value="Topwater / Surface">Topwater / Surface</option>
                     <option value="Jerkbait">Jerkbait</option>
