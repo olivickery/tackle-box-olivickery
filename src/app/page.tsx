@@ -47,11 +47,13 @@ interface GearItem {
 function CardCarousel({ 
   item, 
   onEditNotes,
-  onToggleFavorite
+  onToggleFavorite,
+  onDeleteItem
 }: { 
   item: GearItem;
   onEditNotes: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
+  onDeleteItem: (item: GearItem) => void;
 }) {
   const images = item.image_urls && item.image_urls.length > 0 
     ? item.image_urls 
@@ -132,15 +134,15 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE */
-        <div className="w-full h-full p-2.5 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+        /* SPECS SLIDE (Title Top-Left) */
+        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <div className="h-6 flex items-center ml-8 pt-0.5">
+            <div className="h-6 flex items-center">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Specs
               </span>
             </div>
-            <div className="space-y-1.5 text-[11px] pt-2 px-1">
+            <div className="space-y-1.5 text-[11px] pt-2">
               <p><span className="text-slate-500">Brand:</span> <span className="text-slate-100">{item.brand}</span></p>
               <p><span className="text-slate-500">Name:</span> <span className="text-slate-100">{item.name}</span></p>
               <p><span className="text-slate-500">Colour:</span> <span className="text-slate-100">{item.color}</span></p>
@@ -155,28 +157,46 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE */
-        <div className="w-full h-full p-2.5 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+        /* NOTES SLIDE (Title Top-Left, Delete Button Top-Right, Edit Button Bottom-Right of Notes Field) */
+        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
           <div>
-            <div className="h-6 flex items-center justify-between ml-8">
+            {/* Header Row */}
+            <div className="h-6 flex items-center justify-between mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Notes
               </span>
+              
+              {/* Delete Trash Button - Exclusive to Notes Slide Top-Right */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEditNotes(item);
+                  onDeleteItem(item);
                 }}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition z-20"
+                className="p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white z-20"
+                title="Delete Item Permanently"
               >
-                <Edit3 className="w-3 h-3 text-slate-100" />
-                <span>Edit</span>
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="pt-2 mx-1">
-              <div className="text-slate-100 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[95px] w-full">
-                {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add notes!</span>}
+            {/* Notes Display Box */}
+            <div className="pt-1">
+              <div className="text-slate-100 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px] w-full">
+                {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit below to add notes!</span>}
+              </div>
+
+              {/* Edit Button Sitting Under Notes Field on Right Hand Side */}
+              <div className="flex justify-end mt-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditNotes(item);
+                  }}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2.5 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
+                >
+                  <Edit3 className="w-3 h-3 text-slate-100" />
+                  <span>Edit</span>
+                </button>
               </div>
             </div>
           </div>
@@ -369,7 +389,7 @@ export default function TackleVault() {
     setIsSavingNotes(false);
   };
 
-  // Clean Clipboard Export Handler
+  // Clipboard Export Handler
   const handleExportRestockList = async () => {
     if (ghostItems.length === 0) return;
 
@@ -652,7 +672,7 @@ export default function TackleVault() {
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 pt-6">
         
-        {/* Quick Stats Bar - Reduced Font Size to Fit 3 Digits on Mobile */}
+        {/* Quick Stats Bar */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 font-mono text-[10px] sm:text-xs">
           <button 
             onClick={() => {
@@ -724,15 +744,8 @@ export default function TackleVault() {
                               item={item} 
                               onEditNotes={openNotesEditor} 
                               onToggleFavorite={toggleFavorite}
+                              onDeleteItem={setItemToDelete}
                             />
-
-                            <button 
-                              onClick={() => setItemToDelete(item)}
-                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white z-10"
-                              title="Delete Item Permanently"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
                           </div>
 
                           <div className="space-y-1">
@@ -841,15 +854,8 @@ export default function TackleVault() {
                               item={item} 
                               onEditNotes={openNotesEditor} 
                               onToggleFavorite={toggleFavorite}
+                              onDeleteItem={setItemToDelete}
                             />
-
-                            <button 
-                              onClick={() => setItemToDelete(item)}
-                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
-                              title="Delete Item Permanently"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
                           </div>
 
                           <div className="space-y-1">
@@ -1392,7 +1398,7 @@ export default function TackleVault() {
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100">Restock Radar</h2>
+                <h2 className="font-bold text-lg text-slate-100">Gear to replace:</h2>
               </div>
               <button 
                 onClick={() => setIsRestockOpen(false)}
@@ -1447,7 +1453,7 @@ export default function TackleVault() {
                     <span>Copied to Clipboard!</span>
                   </>
                 ) : (
-                  <span>Export Tackle Shop List</span>
+                  <span>Export list of gear to replace</span>
                 )}
               </button>
             </div>
