@@ -187,7 +187,12 @@ export default function TackleVault() {
     if (error) {
       console.error('Error fetching gear from Supabase:', error);
     } else if (data) {
-      setItems(data as GearItem[]);
+      // Format items to guarantee image_urls array fallback
+      const formattedItems = data.map((item: any) => ({
+        ...item,
+        image_urls: item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]
+      }));
+      setItems(formattedItems as GearItem[]);
     }
     setLoading(false);
   };
@@ -345,6 +350,7 @@ export default function TackleVault() {
     setIsExtracting(false);
   };
 
+  // Save Item Handler
   const handleAddLure = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.brand || !formData.color) return;
@@ -355,6 +361,7 @@ export default function TackleVault() {
       : ['General'];
 
     const fallbackImage = formData.image_urls[0] || 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=400&q=80';
+    const finalImageUrls = formData.image_urls.length > 0 ? formData.image_urls : [fallbackImage];
 
     const newItem = {
       name: formData.name,
@@ -365,8 +372,8 @@ export default function TackleVault() {
       is_favorite: false,
       is_ghost: false,
       image_url: fallbackImage,
-      image_urls: formData.image_urls.length > 0 ? formData.image_urls : [fallbackImage],
-      notes: formData.notes,
+      image_urls: finalImageUrls,
+      notes: formData.notes || '',
       species: speciesArray
     };
 
@@ -377,9 +384,15 @@ export default function TackleVault() {
 
     if (error) {
       console.error('Error inserting new lure:', error);
-      alert('Failed to add lure. Please try again.');
-    } else if (data) {
-      setItems([data[0] as GearItem, ...items]);
+      alert(`Failed to add lure: ${error.message}`);
+    } else if (data && data[0]) {
+      // Ensure local state receives formatted array
+      const insertedItem = {
+        ...data[0],
+        image_urls: data[0].image_urls && data[0].image_urls.length > 0 ? data[0].image_urls : [data[0].image_url]
+      } as GearItem;
+
+      setItems([insertedItem, ...items]);
       setFormData({
         name: '',
         brand: '',
