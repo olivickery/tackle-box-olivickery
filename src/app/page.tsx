@@ -24,7 +24,7 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  FileText
+  Edit3
 } from 'lucide-react';
 
 interface GearItem {
@@ -42,20 +42,27 @@ interface GearItem {
   species: string[];
 }
 
-// Sub-component for Multi-Slide Carousel per Card (Touch & Mobile Enabled)
-function CardCarousel({ item }: { item: GearItem }) {
+// Sub-component for Multi-Slide Carousel per Card (Touch Enabled + Specs/Notes Split)
+function CardCarousel({ 
+  item, 
+  onEditNotes 
+}: { 
+  item: GearItem;
+  onEditNotes: (item: GearItem) => void;
+}) {
   const images = item.image_urls && item.image_urls.length > 0 
     ? item.image_urls 
     : [item.image_url];
   
-  const totalSlides = images.length + 1;
+  // Total slides = images + 1 (Specs slide) + 1 (Notes slide)
+  const totalSlides = images.length + 2;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Touch Swipe State
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const minSwipeDistance = 40; // minimum pixels moved to trigger swipe
+  const minSwipeDistance = 40;
 
   const prevSlide = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -67,7 +74,6 @@ function CardCarousel({ item }: { item: GearItem }) {
     setCurrentIndex((prev) => (prev === totalSlides - 1 ? 0 : prev + 1));
   };
 
-  // Mobile Touch Event Handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
@@ -90,7 +96,8 @@ function CardCarousel({ item }: { item: GearItem }) {
     }
   };
 
-  const isInfoSlide = currentIndex === images.length;
+  const isSpecsSlide = currentIndex === images.length;
+  const isNotesSlide = currentIndex === images.length + 1;
 
   return (
     <div 
@@ -101,13 +108,14 @@ function CardCarousel({ item }: { item: GearItem }) {
     >
       
       {/* Slide Content */}
-      {isInfoSlide ? (
+      {isSpecsSlide ? (
+        /* SPECS SLIDE */
         <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block mb-1">
-              📝 Specs & Notes
+              ⚙️ Specs
             </span>
-            <div className="space-y-1 text-slate-300 text-[11px] mt-2">
+            <div className="space-y-1.5 text-slate-300 text-[11px] mt-2">
               <p><span className="text-slate-500">Brand:</span> {item.brand}</p>
               <p><span className="text-slate-500">Name:</span> {item.name}</p>
               <p><span className="text-slate-500">Color:</span> {item.color}</p>
@@ -115,13 +123,35 @@ function CardCarousel({ item }: { item: GearItem }) {
               <p><span className="text-slate-500">Type:</span> {item.type}</p>
               <p><span className="text-slate-500">Species:</span> {item.species.join(', ')}</p>
             </div>
+          </div>
 
-            {item.notes && (
-              <div className="mt-2 pt-1.5 border-t border-slate-800 text-[10px] text-slate-400">
-                <span className="text-amber-400/80 font-bold block mb-0.5">Notes:</span>
-                <p className="italic leading-relaxed">{item.notes}</p>
-              </div>
-            )}
+          <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-3">
+            Swipe for Notes
+          </div>
+        </div>
+      ) : isNotesSlide ? (
+        /* NOTES SLIDE */
+        <div className="w-full h-full p-4 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block">
+                📝 Notes
+              </span>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditNotes(item);
+                }}
+                className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition"
+              >
+                <Edit3 className="w-3 h-3" />
+                Edit
+              </button>
+            </div>
+
+            <div className="mt-2 text-slate-300 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[80px]">
+              {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit to add rigging tips or hook specs!</span>}
+            </div>
           </div>
 
           <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-3">
@@ -129,6 +159,7 @@ function CardCarousel({ item }: { item: GearItem }) {
           </div>
         </div>
       ) : (
+        /* PHOTO SLIDES */
         <img 
           src={images[currentIndex]} 
           alt={`${item.name} slide ${currentIndex + 1}`} 
@@ -136,7 +167,7 @@ function CardCarousel({ item }: { item: GearItem }) {
         />
       )}
 
-      {/* Navigation Arrows - Permanently Visible on Mobile & Desktop */}
+      {/* Navigation Arrows */}
       {totalSlides > 1 && (
         <>
           <button 
@@ -156,10 +187,10 @@ function CardCarousel({ item }: { item: GearItem }) {
         </>
       )}
 
-      {/* Navigation Dots Indicator Bar - Elevated with Background Pill */}
+      {/* Clean Cleaned Navigation Dots (No Embedded Icons) */}
       <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none">
         <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
-          {images.map((_, idx) => (
+          {Array.from({ length: totalSlides }).map((_, idx) => (
             <span 
               key={idx} 
               className={`h-1.5 rounded-full transition-all ${
@@ -167,13 +198,6 @@ function CardCarousel({ item }: { item: GearItem }) {
               }`}
             />
           ))}
-          <span 
-            className={`h-1.5 rounded-full transition-all flex items-center justify-center ${
-              isInfoSlide ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-600'
-            }`}
-          >
-            <FileText className="w-2 h-2 text-slate-950" />
-          </span>
         </div>
       </div>
 
@@ -196,6 +220,11 @@ export default function TackleVault() {
   // Deletion Modal State
   const [itemToDelete, setItemToDelete] = useState<GearItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Edit Notes Modal State
+  const [itemToEditNotes, setItemToEditNotes] = useState<GearItem | null>(null);
+  const [editedNotes, setEditedNotes] = useState('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   // Form State with Multi-Photo support
   const [formData, setFormData] = useState({
@@ -283,6 +312,33 @@ export default function TackleVault() {
     setIsDeleting(false);
   };
 
+  // Notes Edit Handler
+  const openNotesEditor = (item: GearItem) => {
+    setItemToEditNotes(item);
+    setEditedNotes(item.notes || '');
+  };
+
+  const saveUpdatedNotes = async () => {
+    if (!itemToEditNotes) return;
+    setIsSavingNotes(true);
+
+    const { error } = await supabase
+      .from('gear_items')
+      .update({ notes: editedNotes })
+      .eq('id', itemToEditNotes.id);
+
+    if (error) {
+      console.error('Failed to update notes:', error);
+      alert('Could not update notes.');
+    } else {
+      setItems(items.map(item => 
+        item.id === itemToEditNotes.id ? { ...item, notes: editedNotes } : item
+      ));
+      setItemToEditNotes(null);
+    }
+    setIsSavingNotes(false);
+  };
+
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -301,7 +357,7 @@ export default function TackleVault() {
     }
   };
 
-  // Upload Multi-Photos to Supabase Storage
+  // Upload Multi-Photos
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -330,12 +386,10 @@ export default function TackleVault() {
 
     const publicUrl = publicUrlData.publicUrl;
     
-    // Append photo to array
     const updatedUrls = [...formData.image_urls, publicUrl];
     setFormData(prev => ({ ...prev, image_urls: updatedUrls }));
     setIsUploading(false);
 
-    // If it's the first photo, trigger AI Vision scan automatically
     if (updatedUrls.length === 1) {
       extractMetadataFromImage(publicUrl);
     }
@@ -348,7 +402,6 @@ export default function TackleVault() {
     }));
   };
 
-  // Pin Image as Hero (Moves selected image to index 0)
   const pinAsHero = (indexToPin: number) => {
     setFormData(prev => {
       const selectedImage = prev.image_urls[indexToPin];
@@ -592,9 +645,8 @@ export default function TackleVault() {
                           key={item.id}
                           className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
                         >
-                          {/* Multi-Slide Carousel Box */}
                           <div className="relative">
-                            <CardCarousel item={item} />
+                            <CardCarousel item={item} onEditNotes={openNotesEditor} />
 
                             <button 
                               onClick={() => setItemToDelete(item)}
@@ -684,9 +736,8 @@ export default function TackleVault() {
                               : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
                           }`}
                         >
-                          {/* Multi-Slide Carousel Box */}
                           <div className="relative">
-                            <CardCarousel item={item} />
+                            <CardCarousel item={item} onEditNotes={openNotesEditor} />
 
                             <button 
                               onClick={() => setItemToDelete(item)}
@@ -894,6 +945,60 @@ export default function TackleVault() {
 
       </main>
 
+      {/* Edit Notes Modal */}
+      {itemToEditNotes && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-amber-400" />
+                <h3 className="font-bold text-slate-100 text-sm">Edit Custom Notes</h3>
+              </div>
+              <button 
+                onClick={() => setItemToEditNotes(null)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 font-mono text-xs">
+              <p className="text-slate-400">
+                Updating notes for <span className="text-slate-200 font-bold">{itemToEditNotes.brand} - {itemToEditNotes.name}</span>:
+              </p>
+
+              <textarea 
+                rows={4}
+                value={editedNotes}
+                onChange={(e) => setEditedNotes(e.target.value)}
+                placeholder="Log hook sizes, leader line recommendations, brackish water action, or field tests..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none resize-none leading-relaxed"
+              />
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => setItemToEditNotes(null)}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs py-2.5 rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveUpdatedNotes}
+                  disabled={isSavingNotes}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5"
+                >
+                  {isSavingNotes ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <span>Save Notes</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Deletion Confirmation Modal */}
       {itemToDelete && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -951,7 +1056,7 @@ export default function TackleVault() {
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
       </button>
 
-      {/* Add Lure Modal with Multi-Photo Upload & Pin Hero Feature */}
+      {/* Add Lure Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -970,7 +1075,7 @@ export default function TackleVault() {
 
             <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
               
-              {/* Multi-Photo Camera Strip with Pin as Hero */}
+              {/* Multi-Photo Camera Strip */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-slate-400 font-bold uppercase text-[10px]">
@@ -986,7 +1091,6 @@ export default function TackleVault() {
                       <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-amber-500/40 group">
                         <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
                         
-                        {/* Delete Photo Button */}
                         <button 
                           type="button" 
                           onClick={() => removeImage(idx)}
@@ -996,7 +1100,6 @@ export default function TackleVault() {
                           <X className="w-3 h-3" />
                         </button>
 
-                        {/* Hero Pin Indicator / Action Button */}
                         {idx === 0 ? (
                           <span className="absolute bottom-1 left-1 right-1 bg-amber-500 text-slate-950 text-[8px] font-bold py-0.5 rounded text-center shadow">
                             ★ HERO COVER
