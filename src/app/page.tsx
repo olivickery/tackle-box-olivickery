@@ -153,7 +153,7 @@ function CardCarousel({
       {/* Slide Content */}
       {isSpecsSlide ? (
         /* SPECS SLIDE */
-        <div className="w-full h-full p-3 pb-8 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center justify-between mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
@@ -184,8 +184,8 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (Edit images on left, Edit Notes on right) */
-        <div className="w-full h-full p-3 pb-8 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
+        /* NOTES SLIDE (Deeper Notes Box + Lower Button Placement) */
+        <div className="w-full h-full p-3 pb-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
           <div>
             {/* Header Row */}
             <div className="h-6 flex items-center justify-between mb-1">
@@ -207,18 +207,19 @@ function CardCarousel({
             </div>
 
             <div className="pt-1">
-              <div className="text-slate-100 text-[11px] leading-relaxed bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[90px] max-h-[130px] overflow-y-auto w-full">
+              {/* Expanded Notes Box Height */}
+              <div className="text-slate-100 text-[11px] leading-relaxed bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[145px] max-h-[155px] overflow-y-auto w-full">
                 {item.notes ? item.notes : <span className="text-slate-500">No custom notes logged yet. Tap Edit Notes below to add notes!</span>}
               </div>
 
-              {/* Edit images on Left, Edit Notes on Right */}
+              {/* Action Buttons Sitting Near Green Line */}
               <div className="flex items-center justify-between mt-2.5">
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     onEditPhotos(item);
                   }}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2.5 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
                 >
                   <Camera className="w-3 h-3 text-slate-100" />
                   <span>Edit images</span>
@@ -229,7 +230,7 @@ function CardCarousel({
                     e.stopPropagation();
                     onEditNotes(item);
                   }}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2.5 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
                 >
                   <Edit3 className="w-3 h-3 text-slate-100" />
                   <span>Edit Notes</span>
@@ -267,7 +268,7 @@ function CardCarousel({
         </>
       )}
 
-      {/* Navigation Dots Indicator Bar - Active Dot Changed to White */}
+      {/* Navigation Dots Indicator Bar */}
       <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none">
         <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
           {Array.from({ length: totalSlides }).map((_, idx) => (
@@ -787,7 +788,7 @@ export default function TackleVault() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
       
-      {/* Header Bar - Clicking Logo/Title Returns to Grid View */}
+      {/* Header Bar */}
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button 
@@ -852,7 +853,7 @@ export default function TackleVault() {
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 pt-6">
         
-        {/* Quick Stats Bar - All Buttons Switch View Back to Grid View */}
+        {/* Quick Stats Bar */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 font-mono text-[10px] sm:text-xs">
           <button 
             onClick={() => {
@@ -1170,7 +1171,7 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* List View - Status Shows ONLY Available or Needs Replacement */}
+            {/* List View */}
             {viewMode === 'list' && (
               <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden font-mono text-xs">
                 <table className="w-full text-left">
