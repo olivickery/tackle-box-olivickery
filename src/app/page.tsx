@@ -42,30 +42,63 @@ interface GearItem {
   species: string[];
 }
 
-// Sub-component for Multi-Slide Carousel per Card
+// Sub-component for Multi-Slide Carousel per Card (Touch & Mobile Enabled)
 function CardCarousel({ item }: { item: GearItem }) {
   const images = item.image_urls && item.image_urls.length > 0 
     ? item.image_urls 
     : [item.image_url];
   
-  // Total slides = images count + 1 (the Info/Notes slide)
   const totalSlides = images.length + 1;
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const prevSlide = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  // Touch Swipe State
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const minSwipeDistance = 40; // minimum pixels moved to trigger swipe
+
+  const prevSlide = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setCurrentIndex((prev) => (prev === 0 ? totalSlides - 1 : prev - 1));
   };
 
-  const nextSlide = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const nextSlide = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setCurrentIndex((prev) => (prev === totalSlides - 1 ? 0 : prev + 1));
+  };
+
+  // Mobile Touch Event Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      nextSlide();
+    } else if (isRightSwipe) {
+      prevSlide();
+    }
   };
 
   const isInfoSlide = currentIndex === images.length;
 
   return (
-    <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group">
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
+    >
       
       {/* Slide Content */}
       {isInfoSlide ? (
@@ -74,7 +107,7 @@ function CardCarousel({ item }: { item: GearItem }) {
             <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider block mb-1">
               📝 Specs & Notes
             </span>
-            <div className="space-y-1.5 text-slate-300 text-[11px] mt-2">
+            <div className="space-y-1 text-slate-300 text-[11px] mt-2">
               <p><span className="text-slate-500">Brand:</span> {item.brand}</p>
               <p><span className="text-slate-500">Name:</span> {item.name}</p>
               <p><span className="text-slate-500">Color:</span> {item.color}</p>
@@ -84,61 +117,64 @@ function CardCarousel({ item }: { item: GearItem }) {
             </div>
 
             {item.notes && (
-              <div className="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
-                <span className="text-amber-400/80 font-bold block mb-0.5">Rigging / Notes:</span>
+              <div className="mt-2 pt-1.5 border-t border-slate-800 text-[10px] text-slate-400">
+                <span className="text-amber-400/80 font-bold block mb-0.5">Notes:</span>
                 <p className="italic leading-relaxed">{item.notes}</p>
               </div>
             )}
           </div>
 
-          <div className="text-[9px] text-slate-500 text-center uppercase tracking-widest pt-2">
-            Swipe or use arrows to view photos
+          <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-3">
+            Swipe or tap arrows
           </div>
         </div>
       ) : (
         <img 
           src={images[currentIndex]} 
           alt={`${item.name} slide ${currentIndex + 1}`} 
-          className="w-full h-full object-cover transition duration-500"
+          className="w-full h-full object-cover transition duration-500 pointer-events-none"
         />
       )}
 
-      {/* Navigation Arrows */}
+      {/* Navigation Arrows - Permanently Visible on Mobile & Desktop */}
       {totalSlides > 1 && (
         <>
           <button 
             onClick={prevSlide}
-            className="absolute left-1 top-1/2 -translate-y-1/2 p-1 rounded-full bg-slate-950/70 text-slate-300 opacity-0 group-hover:opacity-100 transition hover:bg-slate-900 hover:text-white"
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md active:scale-95 transition z-10"
+            aria-label="Previous Slide"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3.5 h-3.5" />
           </button>
           <button 
             onClick={nextSlide}
-            className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-full bg-slate-950/70 text-slate-300 opacity-0 group-hover:opacity-100 transition hover:bg-slate-900 hover:text-white"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md active:scale-95 transition z-10"
+            aria-label="Next Slide"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </>
       )}
 
-      {/* Navigation Dots Indicator Bar */}
-      <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1 z-10 pointer-events-none">
-        {images.map((_, idx) => (
+      {/* Navigation Dots Indicator Bar - Elevated with Background Pill */}
+      <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none">
+        <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
+          {images.map((_, idx) => (
+            <span 
+              key={idx} 
+              className={`h-1.5 rounded-full transition-all ${
+                currentIndex === idx ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-600'
+              }`}
+            />
+          ))}
           <span 
-            key={idx} 
-            className={`h-1.5 rounded-full transition-all ${
-              currentIndex === idx ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-500/60'
+            className={`h-1.5 rounded-full transition-all flex items-center justify-center ${
+              isInfoSlide ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-600'
             }`}
-          />
-        ))}
-        {/* Info Slide Indicator Icon */}
-        <span 
-          className={`h-1.5 rounded-full transition-all flex items-center justify-center ${
-            isInfoSlide ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-500/60'
-          }`}
-        >
-          <FileText className="w-2 h-2 text-slate-950" />
-        </span>
+          >
+            <FileText className="w-2 h-2 text-slate-950" />
+          </span>
+        </div>
       </div>
 
     </div>
@@ -386,7 +422,6 @@ export default function TackleVault() {
       console.error('Error inserting new lure:', error);
       alert(`Failed to add lure: ${error.message}`);
     } else if (data && data[0]) {
-      // Ensure local state receives formatted array
       const insertedItem = {
         ...data[0],
         image_urls: data[0].image_urls && data[0].image_urls.length > 0 ? data[0].image_urls : [data[0].image_url]
