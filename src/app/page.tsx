@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { VaultIcon } from './components/VaultIcon';
 import { 
@@ -46,7 +46,7 @@ interface GearItem {
   created_at?: string;
 }
 
-// Sub-component for Multi-Slide Carousel per Card
+// Sub-component for Multi-Slide Carousel per Card (Auto-resets to Slide 0 on Scroll Away)
 function CardCarousel({ 
   item, 
   onEditNotes,
@@ -66,8 +66,35 @@ function CardCarousel({
     ? item.image_urls 
     : [item.image_url];
   
+  // Total slides = images + 1 (Specs) + 1 (Notes) + 1 (Manage Item)
   const totalSlides = images.length + 3;
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Ref to track card visibility in viewport
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer to reset carousel back to hero image (Slide 0) when scrolled off-screen
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          setCurrentIndex(0);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = cardRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, []);
 
   // Touch Swipe State
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -128,6 +155,7 @@ function CardCarousel({
 
   return (
     <div 
+      ref={cardRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
