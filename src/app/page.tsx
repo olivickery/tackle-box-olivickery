@@ -41,6 +41,7 @@ interface GearItem {
   image_urls: string[];
   notes?: string;
   species: string[];
+  created_at?: string;
 }
 
 // Sub-component for Multi-Slide Carousel per Card
@@ -108,6 +109,19 @@ function CardCarousel({
 
   const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
 
+  // Format Date Added (e.g. "06 Sep 2026")
+  const formattedDate = item.created_at 
+    ? new Date(item.created_at).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    : new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+
   return (
     <div 
       onTouchStart={handleTouchStart}
@@ -136,7 +150,7 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE (With Edit Specs Button) */
+        /* SPECS SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center justify-between mb-1">
@@ -163,15 +177,12 @@ function CardCarousel({
               {displaySpec && <p><span className="text-slate-500">Specs:</span> <span className="text-slate-100">{displaySpec}</span></p>}
               <p><span className="text-slate-500">Type:</span> <span className="text-slate-100">{item.type}</span></p>
               <p><span className="text-slate-500">Species:</span> <span className="text-slate-100">{item.species.join(', ')}</span></p>
+              <p><span className="text-slate-500">Date added:</span> <span className="text-slate-100">{formattedDate}</span></p>
             </div>
-          </div>
-
-          <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-1">
-            Swipe for Notes
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (Delete Button with 'Delete item' title) */
+        /* NOTES SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
           <div>
             {/* Header Row */}
@@ -180,7 +191,6 @@ function CardCarousel({
                 Notes
               </span>
               
-              {/* Delete Trash Button with 'Delete item' Title */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -194,13 +204,12 @@ function CardCarousel({
               </button>
             </div>
 
-            {/* Notes Display Box */}
+            {/* Notes Display Box (Non-Italicized Regular Text) */}
             <div className="pt-1">
-              <div className="text-slate-100 text-[11px] leading-relaxed italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px] w-full">
-                {item.notes ? item.notes : <span className="text-slate-500 non-italic">No custom notes logged yet. Tap Edit below to add notes!</span>}
+              <div className="text-slate-100 text-[11px] leading-relaxed bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[85px] w-full">
+                {item.notes ? item.notes : <span className="text-slate-500">No custom notes logged yet. Tap Edit below to add notes!</span>}
               </div>
 
-              {/* Edit Button Sitting Under Notes Field on Right Hand Side */}
               <div className="flex justify-end mt-2">
                 <button 
                   onClick={(e) => {
@@ -214,10 +223,6 @@ function CardCarousel({
                 </button>
               </div>
             </div>
-          </div>
-
-          <div className="text-[8px] text-slate-500 text-center uppercase tracking-widest pb-1">
-            Swipe or tap arrows
           </div>
         </div>
       ) : (
@@ -416,7 +421,6 @@ export default function TackleVault() {
     setIsSavingNotes(false);
   };
 
-  // Specs Edit Handlers
   const openSpecsEditor = (item: GearItem) => {
     setItemToEditSpecs(item);
     setEditedSpecs({
@@ -463,7 +467,6 @@ export default function TackleVault() {
     setIsSavingSpecs(false);
   };
 
-  // Clipboard Export Handler
   const handleExportRestockList = async () => {
     if (ghostItems.length === 0) return;
 
@@ -523,7 +526,6 @@ export default function TackleVault() {
     }
   };
 
-  // Upload Multi-Photos
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -579,7 +581,6 @@ export default function TackleVault() {
     });
   };
 
-  // AI Extraction Handler
   const extractMetadataFromImage = async (url: string) => {
     if (!url) return;
     setIsExtracting(true);
@@ -616,7 +617,6 @@ export default function TackleVault() {
     setIsExtracting(false);
   };
 
-  // Save Item Handler
   const handleAddLure = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.brand || !formData.color) return;
@@ -1053,7 +1053,7 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* List View */}
+            {/* List View (Updated Label to 'Available') */}
             {viewMode === 'list' && (
               <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden font-mono text-xs">
                 <table className="w-full text-left">
@@ -1080,7 +1080,7 @@ export default function TackleVault() {
                           ) : item.is_favorite ? (
                             <span className="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Favourite</span>
                           ) : (
-                            <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">In Vault</span>
+                            <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Available</span>
                           )}
                         </td>
                         <td className="p-3 text-right">
