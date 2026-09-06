@@ -26,7 +26,8 @@ import {
   Edit3,
   Filter,
   Check,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Settings
 } from 'lucide-react';
 
 interface GearItem {
@@ -45,7 +46,7 @@ interface GearItem {
   created_at?: string;
 }
 
-// Sub-component for Multi-Slide Carousel per Card
+// Sub-component for Multi-Slide Carousel per Card (With Dedicated Management Slide)
 function CardCarousel({ 
   item, 
   onEditNotes,
@@ -65,7 +66,8 @@ function CardCarousel({
     ? item.image_urls 
     : [item.image_url];
   
-  const totalSlides = images.length + 2;
+  // Total slides = images + 1 (Specs) + 1 (Notes) + 1 (Management slide)
+  const totalSlides = images.length + 3;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Touch Swipe State
@@ -108,6 +110,7 @@ function CardCarousel({
 
   const isSpecsSlide = currentIndex === images.length;
   const isNotesSlide = currentIndex === images.length + 1;
+  const isManageSlide = currentIndex === images.length + 2;
   const isFirstSlide = currentIndex === 0;
 
   const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
@@ -152,24 +155,13 @@ function CardCarousel({
 
       {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE */
+        /* SPECS SLIDE (Completely Uncluttered) */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            <div className="h-6 flex items-center justify-between mb-1">
+            <div className="h-6 flex items-center mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Specs
               </span>
-
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditSpecs(item);
-                }}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 transition z-20"
-              >
-                <Edit3 className="w-3 h-3 text-slate-100" />
-                <span>Edit Specs</span>
-              </button>
             </div>
 
             <div className="space-y-1.5 text-[11px] pt-1">
@@ -184,58 +176,81 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (Deeper Notes Box + Lower Button Placement) */
-        <div className="w-full h-full p-3 pb-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto relative">
+        /* NOTES SLIDE (Full Height Box) */
+        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
-            {/* Header Row */}
-            <div className="h-6 flex items-center justify-between mb-1">
+            <div className="h-6 flex items-center mb-1">
               <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Notes
               </span>
-              
+            </div>
+
+            <div className="pt-1">
+              <div className="text-slate-100 text-[11px] leading-relaxed bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 min-h-[170px] max-h-[185px] overflow-y-auto w-full">
+                {item.notes ? item.notes : <span className="text-slate-500">No custom notes logged yet. Swipe to Manage Gear to add notes!</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : isManageSlide ? (
+        /* MANAGEMENT SLIDE (Houses All Change Buttons with Left Icon / Right Text) */
+        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
+          <div>
+            <div className="h-6 flex items-center mb-2">
+              <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider leading-none flex items-center gap-1.5">
+                <Settings className="w-3 h-3 text-amber-400" />
+                Manage Gear
+              </span>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              {/* 1. Edit Specs Button */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditSpecs(item);
+                }}
+                className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
+              >
+                <Edit3 className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="font-semibold">Edit specs</span>
+              </button>
+
+              {/* 2. Edit Notes Button */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditNotes(item);
+                }}
+                className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
+              >
+                <Edit3 className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="font-semibold">Edit notes</span>
+              </button>
+
+              {/* 3. Edit Images Button */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditPhotos(item);
+                }}
+                className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
+              >
+                <Camera className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="font-semibold">Edit images</span>
+              </button>
+
+              {/* 4. Delete Item Button */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeleteItem(item);
                 }}
-                className="px-2 py-1 rounded-lg backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white z-20 flex items-center gap-1 text-[10px] font-mono"
-                title="Delete Item Permanently"
+                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
               >
-                <span>Delete item</span>
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-4 h-4 text-red-400 shrink-0" />
+                <span className="font-semibold">Delete item</span>
               </button>
-            </div>
-
-            <div className="pt-1">
-              {/* Expanded Notes Box Height */}
-              <div className="text-slate-100 text-[11px] leading-relaxed bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 min-h-[145px] max-h-[155px] overflow-y-auto w-full">
-                {item.notes ? item.notes : <span className="text-slate-500">No custom notes logged yet. Tap Edit Notes below to add notes!</span>}
-              </div>
-
-              {/* Action Buttons Sitting Near Green Line */}
-              <div className="flex items-center justify-between mt-2.5">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditPhotos(item);
-                  }}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2.5 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
-                >
-                  <Camera className="w-3 h-3 text-slate-100" />
-                  <span>Edit images</span>
-                </button>
-
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditNotes(item);
-                  }}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 px-2.5 py-1 rounded text-[10px] flex items-center gap-1 transition z-20"
-                >
-                  <Edit3 className="w-3 h-3 text-slate-100" />
-                  <span>Edit Notes</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>
