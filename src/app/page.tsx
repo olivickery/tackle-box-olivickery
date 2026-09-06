@@ -223,7 +223,6 @@ export default function TackleVault() {
     if (error) {
       console.error('Error fetching gear from Supabase:', error);
     } else if (data) {
-      // Format items to guarantee image_urls array fallback
       const formattedItems = data.map((item: any) => ({
         ...item,
         image_urls: item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]
@@ -347,6 +346,18 @@ export default function TackleVault() {
       ...prev,
       image_urls: prev.image_urls.filter((_, idx) => idx !== indexToRemove)
     }));
+  };
+
+  // Pin Image as Hero (Moves selected image to index 0)
+  const pinAsHero = (indexToPin: number) => {
+    setFormData(prev => {
+      const selectedImage = prev.image_urls[indexToPin];
+      const remainingImages = prev.image_urls.filter((_, idx) => idx !== indexToPin);
+      return {
+        ...prev,
+        image_urls: [selectedImage, ...remainingImages]
+      };
+    });
   };
 
   // AI Extraction Handler
@@ -940,7 +951,7 @@ export default function TackleVault() {
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
       </button>
 
-      {/* Add Lure Modal with Multi-Photo Upload */}
+      {/* Add Lure Modal with Multi-Photo Upload & Pin Hero Feature */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -959,7 +970,7 @@ export default function TackleVault() {
 
             <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
               
-              {/* Multi-Photo Camera Strip */}
+              {/* Multi-Photo Camera Strip with Pin as Hero */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-slate-400 font-bold uppercase text-[10px]">
@@ -974,17 +985,31 @@ export default function TackleVault() {
                     {formData.image_urls.map((url, idx) => (
                       <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-amber-500/40 group">
                         <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
+                        
+                        {/* Delete Photo Button */}
                         <button 
                           type="button" 
                           onClick={() => removeImage(idx)}
-                          className="absolute top-1 right-1 bg-slate-900/80 text-red-400 p-1 rounded"
+                          className="absolute top-1 right-1 bg-slate-900/80 text-red-400 p-1 rounded z-10 hover:bg-red-500 hover:text-white transition"
+                          title="Remove Photo"
                         >
                           <X className="w-3 h-3" />
                         </button>
-                        {idx === 0 && (
-                          <span className="absolute bottom-1 left-1 bg-amber-500 text-slate-950 text-[8px] font-bold px-1 rounded">
-                            HERO
+
+                        {/* Hero Pin Indicator / Action Button */}
+                        {idx === 0 ? (
+                          <span className="absolute bottom-1 left-1 right-1 bg-amber-500 text-slate-950 text-[8px] font-bold py-0.5 rounded text-center shadow">
+                            ★ HERO COVER
                           </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => pinAsHero(idx)}
+                            className="absolute bottom-1 left-1 right-1 bg-slate-900/90 hover:bg-amber-500 text-slate-300 hover:text-slate-950 text-[8px] font-bold py-0.5 rounded text-center transition border border-slate-700 hover:border-amber-400"
+                            title="Pin as Main Card Cover"
+                          >
+                            📌 PIN HERO
+                          </button>
                         )}
                       </div>
                     ))}
@@ -1000,7 +1025,7 @@ export default function TackleVault() {
                       <>
                         <Camera className="w-6 h-6 text-amber-400" />
                         <span className="text-slate-300 font-semibold">
-                          {formData.image_urls.length === 0 ? 'Snap Package Front (Triggers AI)' : '+ Add Another Photo'}
+                          {formData.image_urls.length === 0 ? 'Snap Package Front (Triggers AI)' : '+ Add Photo'}
                         </span>
                       </>
                     )}
@@ -1015,7 +1040,7 @@ export default function TackleVault() {
                   </label>
                 )}
 
-                {/* Explicit Rescan AI Trigger */}
+                {/* Rescan AI Trigger */}
                 {formData.image_urls.length > 0 && (
                   <button
                     type="button"
@@ -1026,12 +1051,12 @@ export default function TackleVault() {
                     {isExtracting ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Gemini Vision Scanning Photo #1...</span>
+                        <span>Gemini Vision Scanning...</span>
                       </>
                     ) : (
                       <>
                         <Wand2 className="w-3.5 h-3.5" />
-                        <span>Rescan Photo #1 with AI</span>
+                        <span>Rescan Package Photo with AI</span>
                       </>
                     )}
                   </button>
