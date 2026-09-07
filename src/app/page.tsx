@@ -49,7 +49,6 @@ interface GearItem {
 // Crisp High-Definition Compressor (Preserves Packaging Text for Zooming)
 const compressImageCrisp = (file: File): Promise<Blob> => {
   return new Promise((resolve) => {
-    // If already under 1.5MB, keep raw original
     if (file.size < 1.5 * 1024 * 1024) {
       resolve(file);
       return;
@@ -62,7 +61,7 @@ const compressImageCrisp = (file: File): Promise<Blob> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_DIMENSION = 2048; // Crisp 2K resolution for pinch & zoom text
+        const MAX_DIMENSION = 2048;
         let width = img.width;
         let height = img.height;
 
@@ -93,7 +92,7 @@ const compressImageCrisp = (file: File): Promise<Blob> => {
             else resolve(file);
           },
           'image/jpeg',
-          0.88 // 88% high-detail quality
+          0.88
         );
       };
     };
@@ -580,7 +579,6 @@ export default function TackleVault() {
     setModalPhotos(item.image_urls && item.image_urls.length > 0 ? [...item.image_urls] : [item.image_url]);
   };
 
-  // Upload Photo to Manage Photos Modal (With HD Compression)
   const handleModalPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -716,7 +714,6 @@ export default function TackleVault() {
     }
   };
 
-  // Upload Multi-Photos for New Lure Modal (With HD Compression)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
