@@ -26,10 +26,11 @@ import {
   Filter,
   Check,
   Image as ImageIcon,
-  Settings
+  Settings,
+  ZoomIn
 } from 'lucide-react';
 
-// Inlined SVG VaultIcon component so no external file import is required
+// Inlined SVG VaultIcon component
 function VaultIcon({ className }: { className?: string }) {
   return (
     <svg 
@@ -127,7 +128,8 @@ function CardCarousel({
   onEditSpecs,
   onEditPhotos,
   onToggleFavorite,
-  onDeleteItem
+  onDeleteItem,
+  onZoomImage
 }: { 
   item: GearItem;
   onEditNotes: (item: GearItem) => void;
@@ -135,6 +137,7 @@ function CardCarousel({
   onEditPhotos: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
   onDeleteItem: (item: GearItem) => void;
+  onZoomImage: (imageUrl: string) => void;
 }) {
   const images = item.image_urls && item.image_urls.length > 0 
     ? item.image_urls 
@@ -208,6 +211,7 @@ function CardCarousel({
   const isNotesSlide = currentIndex === images.length + 1;
   const isManageSlide = currentIndex === images.length + 2;
   const isFirstSlide = currentIndex === 0;
+  const isImageSlide = currentIndex < images.length;
 
   const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
 
@@ -232,6 +236,20 @@ function CardCarousel({
       className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
     >
       
+      {/* Magnifier Zoom Button - Top Left on Photo Slides */}
+      {isImageSlide && (
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onZoomImage(images[currentIndex]);
+          }}
+          className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md bg-slate-900/80 text-slate-300 border border-slate-700 hover:text-white hover:bg-slate-800 transition z-20"
+          title="Zoom Image"
+        >
+          <ZoomIn className="w-3.5 h-3.5" />
+        </button>
+      )}
+
       {/* Favourite Star Button - Slide 1 Only */}
       {isFirstSlide && (
         <button 
@@ -435,6 +453,9 @@ export default function TackleVault() {
   const [itemToEditPhotos, setItemToEditPhotos] = useState<GearItem | null>(null);
   const [modalPhotos, setModalPhotos] = useState<string[]>([]);
   const [isSavingPhotos, setIsSavingPhotos] = useState(false);
+
+  // Zoom Lightbox State
+  const [zoomedImageUrl, setZoomedImageUrl] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -1045,6 +1066,7 @@ export default function TackleVault() {
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
                               onDeleteItem={setItemToDelete}
+                              onZoomImage={setZoomedImageUrl}
                             />
                           </div>
 
@@ -1145,6 +1167,7 @@ export default function TackleVault() {
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
                               onDeleteItem={setItemToDelete}
+                              onZoomImage={setZoomedImageUrl}
                             />
                           </div>
 
@@ -1188,7 +1211,7 @@ export default function TackleVault() {
                   </div>
                 )}
 
-                {/* Items To Replace Section */}
+                {/* Items To Replace Section (Trash Button in Top Right Corner) */}
                 {ghostItems.length > 0 && (
                   <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -1211,9 +1234,10 @@ export default function TackleVault() {
                               className="w-full h-full object-cover opacity-70"
                             />
 
+                            {/* Trash Button Moved to Top Right Corner */}
                             <button 
                               onClick={() => setItemToDelete(item)}
-                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
+                              className="absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
                               title="Delete Item Permanently"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1339,6 +1363,30 @@ export default function TackleVault() {
         )}
 
       </main>
+
+      {/* Full-Screen Image Zoom Lightbox Modal */}
+      {zoomedImageUrl && (
+        <div 
+          onClick={() => setZoomedImageUrl(null)}
+          className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out select-none"
+        >
+          {/* Close Button Top Right */}
+          <button 
+            onClick={() => setZoomedImageUrl(null)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-slate-900/80 text-slate-200 border border-slate-700 hover:bg-slate-800 hover:text-white transition z-50"
+            title="Close Zoom"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <img 
+            src={zoomedImageUrl} 
+            alt="Zoomed Gear View" 
+            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl border border-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {/* Edit Photos Overlay Modal */}
       {itemToEditPhotos && (
@@ -1566,413 +1614,4 @@ export default function TackleVault() {
 
       {/* Edit Notes Modal */}
       {itemToEditNotes && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Edit3 className="w-4 h-4 text-amber-400" />
-                <h3 className="font-bold text-slate-100 text-sm">Edit Custom Notes</h3>
-              </div>
-              <button 
-                onClick={() => setItemToEditNotes(null)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3 font-mono text-xs">
-              <p className="text-slate-400">
-                Updating notes for <span className="text-slate-200 font-bold">{itemToEditNotes.brand} - {itemToEditNotes.name}</span>:
-              </p>
-
-              <textarea 
-                rows={4}
-                value={editedNotes}
-                onChange={(e) => setEditedNotes(e.target.value)}
-                placeholder="Log hook sizes, leader line recommendations, brackish water action, or field tests..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none resize-none leading-relaxed"
-              />
-
-              <div className="flex gap-3 pt-2">
-                <button 
-                  onClick={() => setItemToEditNotes(null)}
-                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs py-2.5 rounded-xl transition"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={saveUpdatedNotes}
-                  disabled={isSavingNotes}
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5"
-                >
-                  {isSavingNotes ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <span>Save Notes</span>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Deletion Confirmation Modal */}
-      {itemToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl relative text-center">
-            
-            <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-
-            <h3 className="text-lg font-bold text-slate-100">Permanently delete item?</h3>
-            <p className="text-xs text-slate-400 font-mono mt-1">
-              You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand} - {itemToDelete.name}</span> from your vault.
-            </p>
-
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 my-4 font-mono text-[11px] text-red-400">
-              ⚠️ <strong>Disclaimer:</strong> Once it's gone, it's gone! This action cannot be undone.
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button 
-                onClick={() => setItemToDelete(null)}
-                className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs py-2.5 rounded-xl transition"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmPermanentDelete}
-                disabled={isDeleting}
-                className="flex-1 bg-red-600 hover:bg-red-500 text-white font-sans font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5"
-              >
-                {isDeleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* Floating Add Button */}
-      <button 
-        onClick={() => {
-          setExtractionError(null);
-          setIsAddModalOpen(true);
-        }}
-        className="fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95"
-      >
-        <Plus className="w-6 h-6 stroke-[3]" />
-        <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add gear</span>
-      </button>
-
-      {/* Add New Gear Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100">Add new gear</h2>
-              </div>
-              <button 
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
-              
-              {/* Multi-Photo Camera Strip */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-slate-400 font-bold uppercase text-[10px]">
-                    Images ({formData.image_urls.length}/4)
-                  </label>
-                  <span className="text-[9px] text-amber-400">AI scans 1st image for specs</span>
-                </div>
-
-                {/* Uploaded Thumbnails Grid */}
-                {formData.image_urls.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2 mb-2">
-                    {formData.image_urls.map((url, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-amber-500/40 group">
-                        <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
-                        
-                        <button 
-                          type="button" 
-                          onClick={() => removeImage(idx)}
-                          className="absolute top-1 right-1 bg-slate-900/80 text-red-400 p-1 rounded z-10 hover:bg-red-500 hover:text-white transition"
-                          title="Remove Photo"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-
-                        {idx === 0 ? (
-                          <span className="absolute bottom-1 left-1 right-1 bg-amber-500 text-slate-950 text-[8px] font-bold py-0.5 rounded text-center shadow">
-                            ★ HERO COVER
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => pinAsHero(idx)}
-                            className="absolute bottom-1 left-1 right-1 bg-slate-900/90 hover:bg-amber-500 text-slate-300 hover:text-slate-950 text-[8px] font-bold py-0.5 rounded text-center transition border border-slate-700 hover:border-amber-400"
-                            title="Pin as Main Card Cover"
-                          >
-                            📌 PIN HERO
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add Photo Button */}
-                {formData.image_urls.length < 4 && (
-                  <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl cursor-pointer transition">
-                    {isUploading ? (
-                      <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
-                    ) : (
-                      <>
-                        <Camera className="w-6 h-6 text-amber-400" />
-                        <span className="text-slate-300 font-semibold">
-                          {formData.image_urls.length === 0 ? 'Snap your gear' : '+ Add Photo'}
-                        </span>
-                      </>
-                    )}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      capture="environment"
-                      onChange={handleImageUpload}
-                      disabled={isUploading || isExtracting}
-                      className="hidden" 
-                    />
-                  </label>
-                )}
-
-                {/* Rescan AI Trigger */}
-                {formData.image_urls.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => extractMetadataFromImage(formData.image_urls[0])}
-                    disabled={isExtracting}
-                    className="w-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-sans font-bold py-1.5 rounded-lg transition flex items-center justify-center gap-2 text-xs"
-                  >
-                    {isExtracting ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Gemini Vision Scanning...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-3.5 h-3.5" />
-                        <span>Rescan Photo #1 with AI</span>
-                      </>
-                    )}
-                  </button>
-                )}
-
-                {extractionError && (
-                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-2 rounded-lg text-[11px] text-left">
-                    <strong>AI Error:</strong> {extractionError}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Brand *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="e.g. Chasebaits" 
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Item name *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="e.g. The Swinger" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Colourway *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="e.g. Natural Green" 
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Gear Specs</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 9g, 90mm" 
-                    value={formData.depth}
-                    onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Category dropdown</label>
-                  <select 
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
-                  >
-                    <option value="Hardbody">Hardbody</option>
-                    <option value="Soft Plastic">Soft Plastic</option>
-                    <option value="Topwater / Surface">Topwater / Surface</option>
-                    <option value="Jerkbait">Jerkbait</option>
-                    <option value="Metal Jig">Metal Jig</option>
-                    <option value="Vibe / Blade">Vibe / Blade</option>
-                    <option value="Reel">Reel</option>
-                    <option value="Rod">Rod</option>
-                    <option value="Terminal tackle">Terminal tackle</option>
-                    <option value="Tool">Tool</option>
-                    <option value="Accessory">Accessory</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Species (Comma Separated)</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Bass, Bream, Flathead" 
-                    value={formData.species}
-                    onChange={(e) => setFormData({ ...formData, species: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-1 uppercase">Add notes</label>
-                <textarea 
-                  rows={2}
-                  placeholder="e.g. Recommended hook size #1/0, best in brackish estuaries..." 
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none resize-none"
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={isSubmitting || isUploading || isExtracting}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 mt-4"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Plus className="w-5 h-5" />
-                    <span>Save to vault</span>
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Restock List Drawer */}
-      {isRestockOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
-          <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 p-6 flex flex-col h-full">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100">Gear to replace:</h2>
-              </div>
-              <button 
-                onClick={() => setIsRestockOpen(false)}
-                className="text-slate-400 hover:text-slate-200 font-mono text-xs bg-slate-800 px-2 py-1 rounded"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto py-4 space-y-3">
-              {ghostItems.length === 0 ? (
-                <div className="text-center py-12 text-slate-500 font-mono text-xs">
-                  <p>Zero items to replace.</p>
-                  <p className="mt-1">Tap "Replace" on any item to build your shopping list!</p>
-                </div>
-              ) : (
-                ghostItems.map((item) => (
-                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
-                      <h4 className="font-semibold text-sm text-slate-200">{item.name}</h4>
-                      <p className="text-xs text-slate-400 font-mono">Colour: {item.color} | {item.depth && item.depth !== 'N/A' ? item.depth : ''}</p>
-                    </div>
-                    <button 
-                      onClick={() => toggleGhost(item.id, item.is_ghost)}
-                      className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition"
-                    >
-                      Replaced
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-slate-800 font-mono text-xs text-slate-400">
-              <div className="flex justify-between mb-2">
-                <span>Items to Buy:</span>
-                <span className="text-slate-200 font-bold">{ghostItems.length} Items</span>
-              </div>
-              <button 
-                onClick={handleExportRestockList}
-                disabled={ghostItems.length === 0}
-                className={`w-full font-sans font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 ${
-                  copiedToClipboard 
-                    ? 'bg-emerald-500 text-slate-950' 
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50'
-                }`}
-              >
-                {copiedToClipboard ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Copied to Clipboard!</span>
-                  </>
-                ) : (
-                  <span>Export list of gear to replace</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-}
+        <div className="fixed inset-0 z-5
