@@ -1672,7 +1672,7 @@ export default function TackleVault() {
         className="fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95"
       >
         <Plus className="w-6 h-6 stroke-[3]" />
-        <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add Lure</span>
+        <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add gear</span>
       </button>
 
       {/* Add New Gear Modal */}
@@ -1698,9 +1698,9 @@ export default function TackleVault() {
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-slate-400 font-bold uppercase text-[10px]">
-                    Photos ({formData.image_urls.length}/4)
+                    Images ({formData.image_urls.length}/4)
                   </label>
-                  <span className="text-[9px] text-amber-400">Photo #1 triggers AI Scan</span>
+                  <span className="text-[9px] text-amber-400">AI scans 1st image for specs</span>
                 </div>
 
                 {/* Uploaded Thumbnails Grid */}
