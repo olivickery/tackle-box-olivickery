@@ -46,7 +46,61 @@ interface GearItem {
   created_at?: string;
 }
 
-// Sub-component for Multi-Slide Carousel per Card (Auto-resets to Slide 0 on Scroll Away)
+// Crisp High-Definition Compressor (Preserves Packaging Text for Zooming)
+const compressImageCrisp = (file: File): Promise<Blob> => {
+  return new Promise((resolve) => {
+    // If already under 1.5MB, keep raw original
+    if (file.size < 1.5 * 1024 * 1024) {
+      resolve(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIMENSION = 2048; // Crisp 2K resolution for pinch & zoom text
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_DIMENSION) {
+            height *= MAX_DIMENSION / width;
+            width = MAX_DIMENSION;
+          }
+        } else {
+          if (height > MAX_DIMENSION) {
+            width *= MAX_DIMENSION / height;
+            height = MAX_DIMENSION;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else resolve(file);
+          },
+          'image/jpeg',
+          0.88 // 88% high-detail quality
+        );
+      };
+    };
+  });
+};
+
+// Sub-component for Multi-Slide Carousel per Card
 function CardCarousel({ 
   item, 
   onEditNotes,
@@ -66,14 +120,11 @@ function CardCarousel({
     ? item.image_urls 
     : [item.image_url];
   
-  // Total slides = images + 1 (Specs) + 1 (Notes) + 1 (Manage Item)
   const totalSlides = images.length + 3;
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Ref to track card visibility in viewport
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Intersection Observer to reset carousel back to hero image (Slide 0) when scrolled off-screen
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -96,7 +147,6 @@ function CardCarousel({
     };
   }, []);
 
-  // Touch Swipe State
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
@@ -203,7 +253,7 @@ function CardCarousel({
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE (Maximised Text Area without Inner Black Container) */
+        /* NOTES SLIDE */
         <div className="w-full h-full p-3 pb-6 bg-slate-900/95 flex flex-col font-mono text-xs overflow-y-auto">
           <div className="h-6 flex items-center mb-2">
             <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
@@ -220,7 +270,7 @@ function CardCarousel({
           </div>
         </div>
       ) : isManageSlide ? (
-        /* MANAGE ITEM SLIDE (White Heading, White Icons, White Buttons) */
+        /* MANAGE ITEM SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center mb-2">
@@ -231,7 +281,6 @@ function CardCarousel({
             </div>
 
             <div className="space-y-2 pt-1">
-              {/* 1. Edit Specs Button */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -243,7 +292,6 @@ function CardCarousel({
                 <span className="font-semibold">Edit specs</span>
               </button>
 
-              {/* 2. Edit Notes Button */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -255,7 +303,6 @@ function CardCarousel({
                 <span className="font-semibold">Edit notes</span>
               </button>
 
-              {/* 3. Edit Images Button */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -267,7 +314,6 @@ function CardCarousel({
                 <span className="font-semibold">Edit images</span>
               </button>
 
-              {/* 4. Delete Item Button */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -534,19 +580,21 @@ export default function TackleVault() {
     setModalPhotos(item.image_urls && item.image_urls.length > 0 ? [...item.image_urls] : [item.image_url]);
   };
 
+  // Upload Photo to Manage Photos Modal (With HD Compression)
   const handleModalPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
 
+    const compressedBlob = await compressImageCrisp(file);
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('tackle-vault-images')
-      .upload(filePath, file);
+      .upload(filePath, compressedBlob);
 
     if (uploadError) {
       console.error('Error uploading image:', uploadError);
@@ -668,6 +716,7 @@ export default function TackleVault() {
     }
   };
 
+  // Upload Multi-Photos for New Lure Modal (With HD Compression)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -675,13 +724,14 @@ export default function TackleVault() {
     setIsUploading(true);
     setExtractionError(null);
 
+    const compressedBlob = await compressImageCrisp(file);
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('tackle-vault-images')
-      .upload(filePath, file);
+      .upload(filePath, compressedBlob);
 
     if (uploadError) {
       console.error('Error uploading image:', uploadError);
