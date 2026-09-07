@@ -351,7 +351,7 @@ function CardCarousel({
           </div>
         </div>
       ) : (
-        /* PHOTO SLIDES WITH ZOOM BUTTON */
+        /* PHOTO SLIDES WITH TOP-LEFT ZOOM BUTTON */
         <div className="relative w-full h-full">
           <img 
             src={images[currentIndex]} 
@@ -363,7 +363,7 @@ function CardCarousel({
               e.stopPropagation();
               onZoomImage(images[currentIndex]);
             }}
-            className="absolute bottom-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
+            className="absolute top-2 left-2 p-1.5 rounded-full bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
             title="Zoom Image"
           >
             <ZoomIn className="w-3.5 h-3.5" />
