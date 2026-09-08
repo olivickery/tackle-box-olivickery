@@ -30,51 +30,54 @@ export async function POST(req: Request) {
 
 Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
-    const modelName = 'gemini-2.5-flash';
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
+    // Try reliable free-tier model aliases in sequence
+    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
     let resultText = '';
-    let lastErrorData: any = null;
+    let lastErrorMsg = '';
 
-    // Retry up to 3 times with exponential backoff if Google returns a rate limit (429/503)
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: prompt },
-                {
-                  inline_data: {
-                    mime_type: mimeType,
-                    data: base64Data
+    for (const modelName of modelsToTry) {
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  {
+                    inline_data: {
+                      mime_type: mimeType,
+                      data: base64Data
+                    }
                   }
-                }
-              ]
-            }
-          ]
-        })
-      });
+                ]
+              }
+            ]
+          })
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-        resultText = data.candidates[0].content.parts[0].text;
-        break; // Success!
-      } else {
-        lastErrorData = data;
-        // If rate limited or busy, wait 2 seconds before retrying
-        if (attempt < 3 && (response.status === 429 || response.status === 503)) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          resultText = data.candidates[0].content.parts[0].text;
+          break; // Success!
+        } else {
+          lastErrorMsg = data?.error?.message || `Model ${modelName} returned status ${response.status}`;
+          console.warn(`Model ${modelName} failed:`, lastErrorMsg);
         }
+      } catch (err: any) {
+        lastErrorMsg = err?.message || 'Network fetch failed';
+        console.warn(`Model ${modelName} fetch exception:`, lastErrorMsg);
       }
     }
 
     if (!resultText) {
-      const msg = lastErrorData?.error?.message || 'AI service unavailable';
-      throw new Error(msg);
+      return NextResponse.json({ 
+        success: false, 
+        error: lastErrorMsg || 'All Gemini AI models returned an error' 
+      }, { status: 500 });
     }
 
     // Clean JSON output
@@ -83,17 +86,10 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
     return NextResponse.json({ success: true, data: extractedData });
   } catch (error: any) {
-    console.error('AI Extraction Error:', error);
-    
-    const rawMsg = error?.message || '';
-    let userMessage = 'Failed to analyze image with AI';
-
-    if (rawMsg.includes('quota') || rawMsg.includes('429') || rawMsg.includes('exceeded')) {
-      userMessage = 'Gemini free rate limit reached. Please wait ~30 seconds and tap "Rescan Photo #1".';
-    } else if (rawMsg.includes('503') || rawMsg.includes('demand')) {
-      userMessage = 'Gemini AI servers are temporarily busy. Tap "Rescan Photo #1" in a few seconds.';
-    }
-
-    return NextResponse.json({ success: false, error: userMessage }, { status: 500 });
+    console.error('AI Extraction Global Error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error?.message || 'Server error processing AI scan' 
+    }, { status: 500 });
   }
 }
