@@ -20,15 +20,13 @@ export async function POST(req: Request) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = imageResp.headers.get('content-type') || 'image/jpeg';
 
-    const prompt = `Analyze this fishing lure/gear packaging photo and extract the following details as a clean JSON object:
+    const prompt = `Analyze this fishing lure/gear packaging photo and extract the following details as a JSON object:
 - "brand": string (e.g., Chasebaits, Berkley, Daiwa)
 - "name": string (e.g., The Swinger, Money Badger)
 - "color": string (e.g., Natural Green, Firetail)
 - "depth": string (e.g., 2m, 9g, 90mm, or N/A)
 - "type": string (choose best fit: "Hardbody", "Soft Plastic", "Topwater / Surface", "Jerkbait", "Metal Jig", "Vibe / Blade", "Reel", "Rod", "Terminal tackle", "Tool", "Accessory")
-- "species": array of strings (e.g., ["Bass", "Bream"])
-
-Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
+- "species": array of strings (e.g., ["Bass", "Bream"])`;
 
     const modelName = 'gemini-3.6-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -36,7 +34,6 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
     let resultText = '';
     let lastErrorData: any = null;
 
-    // Retry up to 3 times with backoff if hit by rate limits (429 / 503)
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const response = await fetch(endpoint, {
@@ -55,7 +52,10 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
                   }
                 ]
               }
-            ]
+            ],
+            generationConfig: {
+              response_mime_type: 'application/json'
+            }
           })
         });
 
@@ -93,8 +93,13 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
       return NextResponse.json({ success: false, error: userMsg }, { status: 500 });
     }
 
-    // Clean JSON output
-    const cleanJsonString = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Sanitize and parse JSON output safely
+    const cleanJsonString = resultText
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+
     const extractedData = JSON.parse(cleanJsonString);
 
     return NextResponse.json({ success: true, data: extractedData });
