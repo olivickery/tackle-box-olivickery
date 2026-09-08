@@ -30,14 +30,15 @@ export async function POST(req: Request) {
 
 Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
-    // Production-ready stable Flash models
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash'];
-    let resultText = '';
-    let lastErrorMsg = '';
+    const modelName = 'gemini-2.5-flash';
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    for (const modelName of modelsToTry) {
+    let resultText = '';
+    let lastErrorData: any = null;
+
+    // Retry up to 3 times with backoff if hit by free tier rate limits (429 / 503)
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -64,21 +65,29 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
           resultText = data.candidates[0].content.parts[0].text;
           break; // Success!
         } else {
-          lastErrorMsg = data?.error?.message || `Model ${modelName} returned status ${response.status}`;
-          console.warn(`Model ${modelName} failed:`, lastErrorMsg);
+          lastErrorData = data;
+          console.warn(`Attempt ${attempt} for ${modelName} failed:`, data);
+
+          // If rate limited or server busy, wait 2.5 seconds before retrying
+          if (attempt < 3 && (response.status === 429 || response.status === 503)) {
+            await new Promise(resolve => setTimeout(resolve, 2500));
+          }
         }
       } catch (err: any) {
-        lastErrorMsg = err?.message || 'Network fetch failed';
-        console.warn(`Model ${modelName} fetch exception:`, lastErrorMsg);
+        lastErrorData = { error: { message: err?.message || 'Network error' } };
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2500));
+        }
       }
     }
 
     if (!resultText) {
-      // Clean user messaging for rate limits
-      let userMsg = lastErrorMsg;
-      if (lastErrorMsg.includes('quota') || lastErrorMsg.includes('429')) {
-        userMsg = 'Gemini free tier rate limit reached. Please wait ~30 seconds and tap "Rescan Photo #1".';
-      } else if (lastErrorMsg.includes('503') || lastErrorMsg.includes('demand')) {
+      const rawMsg = lastErrorData?.error?.message || '';
+      let userMsg = rawMsg;
+
+      if (rawMsg.includes('quota') || rawMsg.includes('429') || rawMsg.includes('exceeded')) {
+        userMsg = 'Gemini free rate limit reached. Please wait ~20 seconds and tap "Rescan Photo #1".';
+      } else if (rawMsg.includes('503') || rawMsg.includes('demand')) {
         userMsg = 'Gemini AI servers are temporarily busy. Tap "Rescan Photo #1" in a few seconds.';
       }
 
