@@ -425,6 +425,10 @@ export default function TackleVault() {
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
   const [activeBrandFilter, setActiveBrandFilter] = useState<string | null>(null);
 
+  // Sort States for List View
+  const [sortField, setSortField] = useState<'name' | 'type' | 'brand'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
   // Zoom Lightbox State
   const [zoomedImageUrl, setZoomedImageUrl] = useState<string | null>(null);
 
@@ -488,6 +492,15 @@ export default function TackleVault() {
       setItems(formattedItems as GearItem[]);
     }
     setLoading(false);
+  };
+
+  const handleSort = (field: 'name' | 'type' | 'brand') => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
   };
 
   const toggleFavorite = async (id: string, currentStatus: boolean) => {
@@ -913,6 +926,26 @@ export default function TackleVault() {
     return matchesCategory && matchesBrand;
   });
 
+  const sortedListItems = [...items].sort((a, b) => {
+    let valA = '';
+    let valB = '';
+
+    if (sortField === 'name') {
+      valA = `${a.brand} ${a.name}`.toLowerCase();
+      valB = `${b.brand} ${b.name}`.toLowerCase();
+    } else if (sortField === 'brand') {
+      valA = a.brand.toLowerCase();
+      valB = b.brand.toLowerCase();
+    } else if (sortField === 'type') {
+      valA = a.type.toLowerCase();
+      valB = b.type.toLowerCase();
+    }
+
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
       
@@ -1302,14 +1335,38 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* List View */}
+            {/* List View with Interactive Sort Headers */}
             {viewMode === 'list' && (
               <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden font-mono text-xs">
                 <table className="w-full text-left">
-                  <thead className="bg-slate-950 border-b border-slate-800 text-slate-400">
+                  <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 select-none">
                     <tr>
-                      <th className="p-3">Item</th>
-                      <th className="p-3">Type</th>
+                      {/* Sort by Name / Brand */}
+                      <th 
+                        onClick={() => handleSort('name')} 
+                        className="p-3 cursor-pointer hover:text-amber-400 transition"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>Item</span>
+                          {sortField === 'name' && (
+                            <span className="text-amber-400 font-bold">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                          )}
+                        </div>
+                      </th>
+
+                      {/* Sort by Category Type */}
+                      <th 
+                        onClick={() => handleSort('type')} 
+                        className="p-3 cursor-pointer hover:text-amber-400 transition"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>Type</span>
+                          {sortField === 'type' && (
+                            <span className="text-amber-400 font-bold">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                          )}
+                        </div>
+                      </th>
+
                       <th className="p-3">Gear Specs</th>
                       <th className="p-3">Colourway</th>
                       <th className="p-3">Status</th>
@@ -1317,7 +1374,7 @@ export default function TackleVault() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {items.map((item) => (
+                    {sortedListItems.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-800/30 transition">
                         {/* Item Name Column with Star and Yellow Text for Favourites */}
                         <td className="p-3 font-sans font-semibold">
