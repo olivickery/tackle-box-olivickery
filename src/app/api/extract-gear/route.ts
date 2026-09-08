@@ -30,13 +30,13 @@ export async function POST(req: Request) {
 
 Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
-    const modelName = 'gemini-2.5-flash';
+    const modelName = 'gemini-3.6-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     let resultText = '';
     let lastErrorData: any = null;
 
-    // Retry up to 3 times with backoff if hit by free tier rate limits (429 / 503)
+    // Retry up to 3 times with backoff if hit by rate limits (429 / 503)
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const response = await fetch(endpoint, {
@@ -68,7 +68,6 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
           lastErrorData = data;
           console.warn(`Attempt ${attempt} for ${modelName} failed:`, data);
 
-          // If rate limited or server busy, wait 2.5 seconds before retrying
           if (attempt < 3 && (response.status === 429 || response.status === 503)) {
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
