@@ -30,8 +30,8 @@ export async function POST(req: Request) {
 
 Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
-    // Active 2026 production models
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+    // Production-ready stable Flash models
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash'];
     let resultText = '';
     let lastErrorMsg = '';
 
@@ -74,7 +74,7 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
     }
 
     if (!resultText) {
-      // User-friendly messaging for quota/rate limit
+      // Clean user messaging for rate limits
       let userMsg = lastErrorMsg;
       if (lastErrorMsg.includes('quota') || lastErrorMsg.includes('429')) {
         userMsg = 'Gemini free tier rate limit reached. Please wait ~30 seconds and tap "Rescan Photo #1".';
