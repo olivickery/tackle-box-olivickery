@@ -30,8 +30,8 @@ export async function POST(req: Request) {
 
 Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
-    // Try reliable free-tier model aliases in sequence
-    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+    // Active 2026 production models
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro'];
     let resultText = '';
     let lastErrorMsg = '';
 
@@ -74,10 +74,15 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
     }
 
     if (!resultText) {
-      return NextResponse.json({ 
-        success: false, 
-        error: lastErrorMsg || 'All Gemini AI models returned an error' 
-      }, { status: 500 });
+      // User-friendly messaging for quota/rate limit
+      let userMsg = lastErrorMsg;
+      if (lastErrorMsg.includes('quota') || lastErrorMsg.includes('429')) {
+        userMsg = 'Gemini free tier rate limit reached. Please wait ~30 seconds and tap "Rescan Photo #1".';
+      } else if (lastErrorMsg.includes('503') || lastErrorMsg.includes('demand')) {
+        userMsg = 'Gemini AI servers are temporarily busy. Tap "Rescan Photo #1" in a few seconds.';
+      }
+
+      return NextResponse.json({ success: false, error: userMsg }, { status: 500 });
     }
 
     // Clean JSON output
