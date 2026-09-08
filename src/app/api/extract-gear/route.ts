@@ -30,8 +30,8 @@ export async function POST(req: Request) {
 
 Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
-    // Try primary model first, fallback to secondary if 503 or busy
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+    // Active model fallback chain
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-3.1-pro-preview'];
     let resultText = '';
     let lastError = null;
 
