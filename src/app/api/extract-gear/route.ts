@@ -67,7 +67,7 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
         lastErrorData = data;
         // If rate limited or busy, wait 2 seconds before retrying
         if (attempt < 3 && (response.status === 429 || response.status === 503)) {
-          await new Promise(res => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
     }
