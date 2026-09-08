@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const apiKey = process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
 
 export async function POST(req: Request) {
   try {
@@ -10,6 +8,10 @@ export async function POST(req: Request) {
 
     if (!imageUrl) {
       return NextResponse.json({ success: false, error: 'No image URL provided' }, { status: 400 });
+    }
+
+    if (!apiKey) {
+      return NextResponse.json({ success: false, error: 'GEMINI_API_KEY environment variable is not set' }, { status: 500 });
     }
 
     // Fetch image and convert to base64
@@ -26,29 +28,47 @@ export async function POST(req: Request) {
 - "type": string (choose best fit: "Hardbody", "Soft Plastic", "Topwater / Surface", "Jerkbait", "Metal Jig", "Vibe / Blade", "Reel", "Rod", "Terminal tackle", "Tool", "Accessory")
 - "species": array of strings (e.g., ["Bass", "Bream"])
 
-Return ONLY valid raw JSON with no Markdown or text wrapping.`;
+Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
-    // Try primary model first, fallback to secondary if 503 / unavailable
+    // Try primary model first, fallback to secondary if 503 or busy
     const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro'];
     let resultText = '';
     let lastError = null;
 
     for (const modelName of modelsToTry) {
       try {
-        const model = genAI.getGenerativeModel({ model: modelName });
-        const response = await model.generateContent([
-          prompt,
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType
-            }
-          }
-        ]);
-        resultText = response.response.text();
-        if (resultText) break; // Success!
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  {
+                    inline_data: {
+                      mime_type: mimeType,
+                      data: base64Data
+                    }
+                  }
+                ]
+              }
+            ]
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          resultText = data.candidates[0].content.parts[0].text;
+          break; // Success!
+        } else {
+          console.warn(`Model ${modelName} returned status ${response.status}:`, data);
+          lastError = data?.error || new Error(`Status ${response.status}`);
+        }
       } catch (err: any) {
-        console.warn(`Model ${modelName} failed or unavailable:`, err?.message);
+        console.warn(`Model ${modelName} fetch failed:`, err?.message);
         lastError = err;
       }
     }
@@ -65,8 +85,7 @@ Return ONLY valid raw JSON with no Markdown or text wrapping.`;
   } catch (error: any) {
     console.error('AI Extraction Error:', error);
     
-    // Provide clean user-friendly messaging
-    const isServerBusy = error?.status === 503 || error?.message?.includes('demand') || error?.message?.includes('503');
+    const isServerBusy = error?.code === 503 || error?.status === 503 || error?.message?.includes('demand') || error?.message?.includes('503');
     const errorMessage = isServerBusy 
       ? 'Gemini AI servers are temporarily busy. Tap "Rescan Photo #1" in a few seconds.'
       : (error?.message || 'Failed to analyze image with AI');
