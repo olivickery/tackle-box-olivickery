@@ -30,7 +30,7 @@ import {
   ZoomIn
 } from 'lucide-react';
 
-// Inlined SVG VaultIcon component so no external file import is required
+// Inlined SVG VaultIcon component styled in crisp amber
 function VaultIcon({ className }: { className?: string }) {
   return (
     <svg 
@@ -926,10 +926,11 @@ export default function TackleVault() {
               setActiveBrandFilter(null);
               scrollToTop();
             }}
-            className="flex items-center gap-2 text-left group cursor-pointer"
+            className="flex items-center gap-2.5 text-left group cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-amber-500/10 border border-amber-500/20 p-1 group-hover:border-amber-500/50 transition">
-              <VaultIcon className="w-full h-full object-contain filter invert" />
+            {/* Bright Amber Header Icon Container */}
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-amber-500/10 border border-amber-500/30 p-1.5 group-hover:border-amber-500/60 transition">
+              <VaultIcon className="w-full h-full text-amber-400" />
             </div>
             <div>
               <h1 className="font-bold text-lg leading-none tracking-wide text-slate-100 uppercase group-hover:text-amber-400 transition">Tackle Vault</h1>
@@ -2018,4 +2019,4 @@ export default function TackleVault() {
 
     </div>
   );
-} 
+}
