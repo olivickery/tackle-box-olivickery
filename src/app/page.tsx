@@ -2018,4 +2018,4 @@ export default function TackleVault() {
 
     </div>
   );
-}
+} 

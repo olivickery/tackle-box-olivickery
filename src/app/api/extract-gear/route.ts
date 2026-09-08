@@ -30,51 +30,51 @@ export async function POST(req: Request) {
 
 Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
 
-    // Active model fallback chain
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-3.1-pro-preview'];
+    const modelName = 'gemini-2.5-flash';
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
     let resultText = '';
-    let lastError = null;
+    let lastErrorData: any = null;
 
-    for (const modelName of modelsToTry) {
-      try {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: prompt },
-                  {
-                    inline_data: {
-                      mime_type: mimeType,
-                      data: base64Data
-                    }
+    // Retry up to 3 times with exponential backoff if Google returns a rate limit (429/503)
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64Data
                   }
-                ]
-              }
-            ]
-          })
-        });
+                }
+              ]
+            }
+          ]
+        })
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          resultText = data.candidates[0].content.parts[0].text;
-          break; // Success!
-        } else {
-          console.warn(`Model ${modelName} returned status ${response.status}:`, data);
-          lastError = data?.error || new Error(`Status ${response.status}`);
+      if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        resultText = data.candidates[0].content.parts[0].text;
+        break; // Success!
+      } else {
+        lastErrorData = data;
+        // If rate limited or busy, wait 2 seconds before retrying
+        if (attempt < 3 && (response.status === 429 || response.status === 503)) {
+          await new Promise(res => setTimeout(resolve, 2000));
         }
-      } catch (err: any) {
-        console.warn(`Model ${modelName} fetch failed:`, err?.message);
-        lastError = err;
       }
     }
 
     if (!resultText) {
-      throw lastError || new Error('All AI models unavailable');
+      const msg = lastErrorData?.error?.message || 'AI service unavailable';
+      throw new Error(msg);
     }
 
     // Clean JSON output
@@ -85,11 +85,15 @@ Return ONLY valid raw JSON with no Markdown formatting or text wrapping.`;
   } catch (error: any) {
     console.error('AI Extraction Error:', error);
     
-    const isServerBusy = error?.code === 503 || error?.status === 503 || error?.message?.includes('demand') || error?.message?.includes('503');
-    const errorMessage = isServerBusy 
-      ? 'Gemini AI servers are temporarily busy. Tap "Rescan Photo #1" in a few seconds.'
-      : (error?.message || 'Failed to analyze image with AI');
+    const rawMsg = error?.message || '';
+    let userMessage = 'Failed to analyze image with AI';
 
-    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+    if (rawMsg.includes('quota') || rawMsg.includes('429') || rawMsg.includes('exceeded')) {
+      userMessage = 'Gemini free rate limit reached. Please wait ~30 seconds and tap "Rescan Photo #1".';
+    } else if (rawMsg.includes('503') || rawMsg.includes('demand')) {
+      userMessage = 'Gemini AI servers are temporarily busy. Tap "Rescan Photo #1" in a few seconds.';
+    }
+
+    return NextResponse.json({ success: false, error: userMessage }, { status: 500 });
   }
 }
