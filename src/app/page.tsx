@@ -1319,7 +1319,17 @@ export default function TackleVault() {
                   <tbody className="divide-y divide-slate-800/60">
                     {items.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-800/30 transition">
-                        <td className="p-3 font-sans font-semibold text-slate-200">{item.brand} - {item.name}</td>
+                        {/* Item Name Column with Star and Yellow Text for Favourites */}
+                        <td className="p-3 font-sans font-semibold">
+                          <div className="flex items-center gap-1.5">
+                            {item.is_favorite && (
+                              <Star className="w-3.5 h-3.5 fill-current text-amber-400 shrink-0" />
+                            )}
+                            <span className={item.is_favorite ? 'text-amber-400 font-bold' : 'text-slate-200'}>
+                              {item.brand} - {item.name}
+                            </span>
+                          </div>
+                        </td>
                         <td className="p-3 text-slate-400">{item.type}</td>
                         <td className="p-3 text-slate-100">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</td>
                         <td className="p-3 text-slate-400">{item.color}</td>
