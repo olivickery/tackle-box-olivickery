@@ -1,78 +1,104 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI, Type, Schema } from '@google/genai';
 
-export const runtime = 'nodejs';
+// Helper function to retry API calls automatically on 503/429 spikes
+async function fetchWithRetry(url: string, options: any, retries = 3, backoff = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
 
-export async function POST(request: Request) {
+      // If Gemini is temporarily busy (503 or 429), wait and retry
+      if ((response.status === 503 || response.status === 429) && i < retries - 1) {
+        console.log(`Gemini busy (Status ${response.status}). Retrying in ${backoff}ms... (Attempt ${i + 1}/${retries})`);
+        await new Promise((resolve) => setTimeout(resolve, backoff));
+        backoff *= 2; // Exponential backoff: 1s, 2s, 4s
+        continue;
+      }
+
+      return response;
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, backoff));
+      backoff *= 2;
+    }
+  }
+  throw new Error('Max retries reached');
+}
+
+export async function POST(req: Request) {
   try {
-    const { imageUrl } = await request.json();
+    const { imageUrl } = await req.json();
 
     if (!imageUrl) {
-      return NextResponse.json({ error: 'Image URL is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'No image URL provided' }, { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY missing from environment variables' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'Gemini API key is not configured' }, { status: 500 });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    // Fetch image as arrayBuffer to convert to Base64 for Gemini Vision
+    const imageRes = await fetch(imageUrl);
+    const imageBuffer = await imageRes.arrayBuffer();
+    const base64Data = Buffer.from(imageBuffer).toString('base64');
+    const mimeType = imageRes.headers.get('content-type') || 'image/jpeg';
 
-    // Download photo from Supabase Storage
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      return NextResponse.json({ error: 'Failed to download image from storage' }, { status: 400 });
-    }
+    const prompt = `Analyze this fishing gear image and return a raw valid JSON object with these keys:
+    - "brand": Brand name (e.g. Megabass, Daiwa, Shimano, Rapala)
+    - "name": Item name
+    - "color": Colourway name
+    - "depth": Diving depth or specs if written on packaging (e.g. "1.5m", "9g", "70mm")
+    - "type": Choose EXACTLY ONE from: "Hardbody", "Soft Plastic", "Topwater / Surface", "Jerkbait", "Metal Jig", "Vibe / Blade", "Reel", "Rod", "Terminal tackle", "Tool", "Accessory"
+    - "species": Array of strings representing target fish species (e.g. ["Bass", "Bream"])
 
-    const arrayBuffer = await imageResponse.arrayBuffer();
-    const base64Data = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+    Return ONLY the raw JSON object without markdown formatting or code blocks.`;
 
-    // JSON Output Schema
-    const gearSchema: Schema = {
-      type: Type.OBJECT,
-      properties: {
-        brand: { type: Type.STRING, description: 'Brand name found on package (e.g. Chasebaits)' },
-        name: { type: Type.STRING, description: 'Lure or product name (e.g. The Swinger)' },
-        color: { type: Type.STRING, description: 'Visible colorway (e.g. Natural Green)' },
-        depth: { type: Type.STRING, description: 'Weight or length spec (e.g. 9g, 90mm)' },
-        type: { 
-          type: Type.STRING, 
-          description: 'Must match one: Hardbody Suspending, Soft Plastic, Topwater / Surface, Jerkbait, Metal Jig, Vibe / Blade, Reel, Rod, Terminal tackle, Tool, Accessory' 
-        },
-        species: { 
-          type: Type.ARRAY, 
-          items: { type: Type.STRING },
-          description: 'Target fish species' 
-        }
-      },
-      required: ['brand', 'name', 'color', 'depth', 'type', 'species']
-    };
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-    // Use gemini-3.6-flash as requested by the API error response
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+    const geminiPayload = {
       contents: [
         {
-          inlineData: {
-            mimeType: mimeType,
-            data: base64Data
-          }
-        },
-        'Analyze this fishing lure packaging photo in detail. Extract the brand name, product model name, size/weight/depth specs, colorway, and gear type from the text on the package.'
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: gearSchema
-      }
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: base64Data
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    // Execute request with automatic 503 retry backoff
+    const response = await fetchWithRetry(geminiEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiPayload)
     });
 
-    const textResponse = response.text || '{}';
-    const extractedData = JSON.parse(textResponse);
+    const result = await response.json();
 
-    return NextResponse.json({ success: true, data: extractedData });
+    if (!response.ok) {
+      return NextResponse.json(
+        { success: false, error: 'AI server is temporarily busy. Tap rescan to try again.' },
+        { status: response.status }
+      );
+    }
+
+    // Parse returned JSON from Gemini
+    const textResponse = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleanJsonText = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsedData = JSON.parse(cleanJsonText);
+
+    return NextResponse.json({ success: true, data: parsedData });
+
   } catch (error: any) {
-    console.error('Gemini Vision Error:', error);
-    return NextResponse.json({ error: error?.message || 'Vision extraction failed' }, { status: 500 });
+    console.error('API Error in extract-gear:', error);
+    return NextResponse.json(
+      { success: false, error: 'AI scan temporary timeout. Tap rescan to try again.' },
+      { status: 500 }
+    );
   }
 }
