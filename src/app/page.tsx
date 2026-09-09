@@ -27,10 +27,18 @@ import {
   Check,
   Image as ImageIcon,
   Settings,
-  ZoomIn
+  ZoomIn,
+  Compass
 } from 'lucide-react';
 
-// Inlined SVG VaultIcon component styled in crisp amber
+const PRESET_ENVIRONMENTS = [
+  'Estuary & River',
+  'Surf & Rock',
+  'Freshwater & Dam',
+  'Offshore & Reef',
+  'Pond & Canal'
+];
+
 function VaultIcon({ className }: { className?: string }) {
   return (
     <svg 
@@ -69,7 +77,6 @@ interface GearItem {
   created_at?: string;
 }
 
-// Crisp High-Definition Compressor (Preserves Packaging Text for Zooming)
 const compressImageCrisp = (file: File): Promise<Blob> => {
   return new Promise((resolve) => {
     if (file.size < 1.5 * 1024 * 1024) {
@@ -122,7 +129,6 @@ const compressImageCrisp = (file: File): Promise<Blob> => {
   });
 };
 
-// Sub-component for Multi-Slide Carousel per Card
 function CardCarousel({ 
   item, 
   onEditNotes,
@@ -237,8 +243,6 @@ function CardCarousel({
       onTouchEnd={handleTouchEnd}
       className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
     >
-      
-      {/* Favourite Star Button - Slide 1 Only */}
       {isFirstSlide && (
         <button 
           onClick={(e) => {
@@ -256,9 +260,7 @@ function CardCarousel({
         </button>
       )}
 
-      {/* Slide Content */}
       {isSpecsSlide ? (
-        /* SPECS SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center mb-1">
@@ -274,12 +276,14 @@ function CardCarousel({
               {displaySpec && <p><span className="text-slate-500">Specs:</span> <span className="text-slate-100">{displaySpec}</span></p>}
               <p><span className="text-slate-500">Type:</span> <span className="text-slate-100">{item.type}</span></p>
               <p><span className="text-slate-500">Species:</span> <span className="text-slate-100">{item.species.join(', ')}</span></p>
+              {item.environment_tags && item.environment_tags.length > 0 && (
+                <p><span className="text-slate-500">Locations:</span> <span className="text-amber-400">{item.environment_tags.join(', ')}</span></p>
+              )}
               <p><span className="text-slate-500">Date added:</span> <span className="text-slate-100">{formattedDate}</span></p>
             </div>
           </div>
         </div>
       ) : isNotesSlide ? (
-        /* NOTES SLIDE */
         <div className="w-full h-full p-3 pb-6 bg-slate-900/95 flex flex-col font-mono text-xs overflow-y-auto">
           <div className="h-6 flex items-center mb-2">
             <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
@@ -296,7 +300,6 @@ function CardCarousel({
           </div>
         </div>
       ) : isManageSlide ? (
-        /* MANAGE ITEM SLIDE */
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center mb-2">
@@ -306,7 +309,6 @@ function CardCarousel({
             </div>
 
             <div className="space-y-2 pt-1 font-mono text-[10px]">
-              {/* Row 1: Specs + Notes */}
               <div className="grid grid-cols-2 gap-2">
                 <button 
                   onClick={(e) => {
@@ -331,7 +333,6 @@ function CardCarousel({
                 </button>
               </div>
 
-              {/* Row 2: Images + Replace Toggle */}
               <div className="grid grid-cols-2 gap-2">
                 <button 
                   onClick={(e) => {
@@ -360,7 +361,6 @@ function CardCarousel({
                 </button>
               </div>
 
-              {/* Row 3: Full Width Delete */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -375,7 +375,6 @@ function CardCarousel({
           </div>
         </div>
       ) : (
-        /* PHOTO SLIDES WITH TOP-LEFT ZOOM BUTTON */
         <div className="relative w-full h-full">
           <img 
             src={images[currentIndex]} 
@@ -395,7 +394,6 @@ function CardCarousel({
         </div>
       )}
 
-      {/* Navigation Arrows */}
       {totalSlides > 1 && (
         <>
           <button 
@@ -415,7 +413,6 @@ function CardCarousel({
         </>
       )}
 
-      {/* Navigation Dots Indicator Bar */}
       <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none">
         <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
           {Array.from({ length: totalSlides }).map((_, idx) => (
@@ -448,6 +445,7 @@ export default function TackleVault() {
   // Filter States
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
   const [activeBrandFilter, setActiveBrandFilter] = useState<string | null>(null);
+  const [activeEnvFilter, setActiveEnvFilter] = useState<string | null>(null);
 
   // Sort States for List View
   const [sortField, setSortField] = useState<'name' | 'type' | 'brand'>('name');
@@ -473,7 +471,8 @@ export default function TackleVault() {
     color: '',
     depth: '',
     type: 'Hardbody',
-    species: ''
+    species: '',
+    environment_tags: [] as string[]
   });
   const [isSavingSpecs, setIsSavingSpecs] = useState(false);
 
@@ -491,7 +490,8 @@ export default function TackleVault() {
     color: '',
     species: '',
     notes: '',
-    image_urls: [] as string[]
+    image_urls: [] as string[],
+    environment_tags: [] as string[]
   });
 
   useEffect(() => {
@@ -511,6 +511,7 @@ export default function TackleVault() {
       const formattedItems = data.map((item: any) => ({
         ...item,
         type: item.type === 'Hardbody Suspending' ? 'Hardbody' : item.type,
+        environment_tags: item.environment_tags || [],
         image_urls: item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]
       }));
       setItems(formattedItems as GearItem[]);
@@ -612,7 +613,32 @@ export default function TackleVault() {
       color: item.color,
       depth: item.depth || '',
       type: item.type === 'Hardbody Suspending' ? 'Hardbody' : item.type,
-      species: item.species.join(', ')
+      species: item.species.join(', '),
+      environment_tags: item.environment_tags || []
+    });
+  };
+
+  const toggleModalEnvTag = (tag: string) => {
+    setEditedSpecs(prev => {
+      const exists = prev.environment_tags.includes(tag);
+      return {
+        ...prev,
+        environment_tags: exists 
+          ? prev.environment_tags.filter(t => t !== tag)
+          : [...prev.environment_tags, tag]
+      };
+    });
+  };
+
+  const toggleAddFormEnvTag = (tag: string) => {
+    setFormData(prev => {
+      const exists = prev.environment_tags.includes(tag);
+      return {
+        ...prev,
+        environment_tags: exists 
+          ? prev.environment_tags.filter(t => t !== tag)
+          : [...prev.environment_tags, tag]
+      };
     });
   };
 
@@ -630,7 +656,8 @@ export default function TackleVault() {
       color: editedSpecs.color,
       depth: editedSpecs.depth,
       type: editedSpecs.type,
-      species: speciesArray
+      species: speciesArray,
+      environment_tags: editedSpecs.environment_tags
     };
 
     const { error } = await supabase
@@ -905,7 +932,8 @@ export default function TackleVault() {
       image_url: fallbackImage,
       image_urls: finalImageUrls,
       notes: formData.notes || '',
-      species: speciesArray
+      species: speciesArray,
+      environment_tags: formData.environment_tags
     };
 
     const { data, error } = await supabase
@@ -920,6 +948,7 @@ export default function TackleVault() {
       const insertedItem = {
         ...data[0],
         type: data[0].type === 'Hardbody Suspending' ? 'Hardbody' : data[0].type,
+        environment_tags: data[0].environment_tags || [],
         image_urls: data[0].image_urls && data[0].image_urls.length > 0 ? data[0].image_urls : [data[0].image_url]
       } as GearItem;
 
@@ -932,7 +961,8 @@ export default function TackleVault() {
         color: '',
         species: '',
         notes: '',
-        image_urls: []
+        image_urls: [],
+        environment_tags: []
       });
       setIsAddModalOpen(false);
     }
@@ -947,7 +977,10 @@ export default function TackleVault() {
   const myGearItems = baseMyGearItems.filter(item => {
     const matchesCategory = activeCategoryFilter ? item.type === activeCategoryFilter : true;
     const matchesBrand = activeBrandFilter ? item.brand === activeBrandFilter : true;
-    return matchesCategory && matchesBrand;
+    const matchesEnv = activeEnvFilter 
+      ? item.environment_tags?.includes(activeEnvFilter) 
+      : true;
+    return matchesCategory && matchesBrand && matchesEnv;
   });
 
   const sortedListItems = [...items].sort((a, b) => {
@@ -973,7 +1006,6 @@ export default function TackleVault() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
       
-      {/* Header Bar */}
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button 
@@ -981,11 +1013,11 @@ export default function TackleVault() {
               setViewMode('grid');
               setActiveCategoryFilter(null);
               setActiveBrandFilter(null);
+              setActiveEnvFilter(null);
               scrollToTop();
             }}
             className="flex items-center gap-2.5 text-left group cursor-pointer"
           >
-            {/* Bright Amber Header Icon Container */}
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-amber-500/10 border border-amber-500/30 p-1.5 group-hover:border-amber-500/60 transition">
               <VaultIcon className="w-full h-full text-amber-400" />
             </div>
@@ -1036,16 +1068,15 @@ export default function TackleVault() {
         </div>
       </header>
 
-      {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 pt-6">
         
-        {/* Quick Stats Bar */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 font-mono text-[10px] sm:text-xs">
           <button 
             onClick={() => {
               setViewMode('grid');
               setActiveCategoryFilter(null);
               setActiveBrandFilter(null);
+              setActiveEnvFilter(null);
               if (myGearItems.length > 0) scrollToSection('my-gear-section');
             }}
             className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl p-2.5 sm:p-3 text-left transition group cursor-pointer"
@@ -1093,11 +1124,9 @@ export default function TackleVault() {
           </div>
         ) : (
           <>
-            {/* Tray Grid View */}
             {viewMode === 'grid' && (
               <div className="space-y-8">
                 
-                {/* Favourites Section */}
                 {favoriteItems.length > 0 && (
                   <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -1140,7 +1169,15 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end">
+                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                            <div className="flex flex-wrap gap-1">
+                              {item.environment_tags?.map((env, idx) => (
+                                <span key={idx} className="text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                                  {env}
+                                </span>
+                              ))}
+                            </div>
+                            
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
                               className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
@@ -1158,7 +1195,6 @@ export default function TackleVault() {
                   </div>
                 )}
 
-                {/* My Gear Section */}
                 {baseMyGearItems.length > 0 && (
                   <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -1186,6 +1222,19 @@ export default function TackleVault() {
                             <span>Brand: {activeBrandFilter}</span>
                             <button 
                               onClick={() => setActiveBrandFilter(null)}
+                              className="ml-1 hover:text-slate-100"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+
+                        {activeEnvFilter && (
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                            <Compass className="w-3 h-3" />
+                            <span>Location: {activeEnvFilter}</span>
+                            <button 
+                              onClick={() => setActiveEnvFilter(null)}
                               className="ml-1 hover:text-slate-100"
                             >
                               <X className="w-3 h-3" />
@@ -1234,7 +1283,19 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end">
+                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                            <div className="flex flex-wrap gap-1">
+                              {item.environment_tags?.map((env, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => setActiveEnvFilter(env)}
+                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
+                                >
+                                  {env}
+                                </button>
+                              ))}
+                            </div>
+
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
                               className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
@@ -1252,7 +1313,6 @@ export default function TackleVault() {
                   </div>
                 )}
 
-                {/* Items To Replace Section */}
                 {ghostItems.length > 0 && (
                   <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
@@ -1319,7 +1379,6 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* Showroom View */}
             {viewMode === 'showroom' && (
               <div className="bg-black p-8 rounded-2xl border border-slate-800 min-h-[400px] flex flex-col items-center justify-center">
                 <div className="text-center mb-8">
@@ -1345,13 +1404,11 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* List View with Interactive Sort Headers */}
             {viewMode === 'list' && (
               <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden font-mono text-xs">
                 <table className="w-full text-left">
                   <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 select-none">
                     <tr>
-                      {/* Sort by Name / Brand */}
                       <th 
                         onClick={() => handleSort('name')} 
                         className="p-3 cursor-pointer hover:text-amber-400 transition"
@@ -1364,7 +1421,6 @@ export default function TackleVault() {
                         </div>
                       </th>
 
-                      {/* Sort by Category Type */}
                       <th 
                         onClick={() => handleSort('type')} 
                         className="p-3 cursor-pointer hover:text-amber-400 transition"
@@ -1386,7 +1442,6 @@ export default function TackleVault() {
                   <tbody className="divide-y divide-slate-800/60">
                     {sortedListItems.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-800/30 transition">
-                        {/* Item Name Column with Star and Yellow Text for Favourites */}
                         <td className="p-3 font-sans font-semibold">
                           <div className="flex items-center gap-1.5">
                             {item.is_favorite && (
@@ -1423,7 +1478,6 @@ export default function TackleVault() {
               </div>
             )}
 
-            {/* Return To Top */}
             <div className="mt-12 flex justify-center">
               <button 
                 onClick={scrollToTop}
@@ -1438,7 +1492,6 @@ export default function TackleVault() {
 
       </main>
 
-      {/* Full-Screen Zoom Lightbox Modal */}
       {zoomedImageUrl && (
         <div 
           onClick={() => setZoomedImageUrl(null)}
@@ -1461,7 +1514,6 @@ export default function TackleVault() {
         </div>
       )}
 
-      {/* Edit Photos Overlay Modal */}
       {itemToEditPhotos && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -1483,13 +1535,11 @@ export default function TackleVault() {
                 Photos for <span className="text-slate-200 font-bold">{itemToEditPhotos.brand} - {itemToEditPhotos.name}</span> ({modalPhotos.length}/4):
               </p>
 
-              {/* Photos Scratchpad Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {modalPhotos.map((url, idx) => (
                   <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-700 bg-slate-950 group">
                     <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                     
-                    {/* Delete Photo */}
                     <button 
                       type="button" 
                       onClick={() => removeModalPhoto(idx)}
@@ -1499,7 +1549,6 @@ export default function TackleVault() {
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
 
-                    {/* Hero Badge vs Pin Button */}
                     {idx === 0 ? (
                       <span className="absolute bottom-1 left-1 right-1 bg-amber-500 text-slate-950 text-[8px] font-bold py-1 rounded text-center shadow font-sans">
                         ★ HERO COVER
@@ -1517,7 +1566,6 @@ export default function TackleVault() {
                   </div>
                 ))}
 
-                {/* Upload New Photo Button */}
                 {modalPhotos.length < 4 && (
                   <label className="flex flex-col items-center justify-center gap-1.5 aspect-square border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl cursor-pointer transition bg-slate-950/50">
                     {isUploading ? (
@@ -1566,10 +1614,10 @@ export default function TackleVault() {
         </div>
       )}
 
-      {/* Edit Specs Modal */}
+      {/* Edit Specs Modal with Environment Tag Selection */}
       {itemToEditSpecs && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative">
+          <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-amber-400" />
@@ -1661,6 +1709,29 @@ export default function TackleVault() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-slate-400 mb-1.5 uppercase text-[10px]">Environment / Location Tags</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRESET_ENVIRONMENTS.map((envTag) => {
+                    const isSelected = editedSpecs.environment_tags.includes(envTag);
+                    return (
+                      <button
+                        type="button"
+                        key={envTag}
+                        onClick={() => toggleModalEnvTag(envTag)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition border ${
+                          isSelected 
+                            ? 'bg-amber-500 text-slate-950 font-bold border-amber-400' 
+                            : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : '+ '}{envTag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-3">
                 <button 
                   onClick={() => setItemToEditSpecs(null)}
@@ -1685,7 +1756,6 @@ export default function TackleVault() {
         </div>
       )}
 
-      {/* Edit Notes Modal */}
       {itemToEditNotes && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative">
@@ -1739,7 +1809,6 @@ export default function TackleVault() {
         </div>
       )}
 
-      {/* Deletion Confirmation Modal */}
       {itemToDelete && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-slate-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl relative text-center">
@@ -1784,7 +1853,6 @@ export default function TackleVault() {
         </div>
       )}
 
-      {/* Floating Add Button */}
       <button 
         onClick={() => {
           setExtractionError(null);
@@ -1796,7 +1864,7 @@ export default function TackleVault() {
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add gear</span>
       </button>
 
-      {/* Add New Gear Modal */}
+      {/* Add New Gear Modal with Environment Selection */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -1815,7 +1883,6 @@ export default function TackleVault() {
 
             <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
               
-              {/* Multi-Photo Camera Strip */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-slate-400 font-bold uppercase text-[10px]">
@@ -1824,7 +1891,6 @@ export default function TackleVault() {
                   <span className="text-[9px] text-amber-400">AI scans 1st image for specs</span>
                 </div>
 
-                {/* Uploaded Thumbnails Grid */}
                 {formData.image_urls.length > 0 && (
                   <div className="grid grid-cols-4 gap-2 mb-2">
                     {formData.image_urls.map((url, idx) => (
@@ -1859,7 +1925,6 @@ export default function TackleVault() {
                   </div>
                 )}
 
-                {/* Add Photo Button */}
                 {formData.image_urls.length < 4 && (
                   <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl cursor-pointer transition">
                     {isUploading ? (
@@ -1883,7 +1948,6 @@ export default function TackleVault() {
                   </label>
                 )}
 
-                {/* Rescan AI Trigger */}
                 {formData.image_urls.length > 0 && (
                   <button
                     type="button"
@@ -1995,6 +2059,29 @@ export default function TackleVault() {
               </div>
 
               <div>
+                <label className="block text-slate-400 mb-1.5 uppercase">Environment / Location Tags</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRESET_ENVIRONMENTS.map((envTag) => {
+                    const isSelected = formData.environment_tags.includes(envTag);
+                    return (
+                      <button
+                        type="button"
+                        key={envTag}
+                        onClick={() => toggleAddFormEnvTag(envTag)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition border ${
+                          isSelected 
+                            ? 'bg-amber-500 text-slate-950 font-bold border-amber-400' 
+                            : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : '+ '}{envTag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-slate-400 mb-1 uppercase">Add notes</label>
                 <textarea 
                   rows={2}
@@ -2024,7 +2111,6 @@ export default function TackleVault() {
         </div>
       )}
 
-      {/* Restock List Drawer */}
       {isRestockOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 p-6 flex flex-col h-full">
