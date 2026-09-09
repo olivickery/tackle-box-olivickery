@@ -895,7 +895,8 @@ export default function TackleVault() {
           color: result.data.color || prev.color,
           depth: result.data.depth || prev.depth,
           type: result.data.type === 'Hardbody Suspending' ? 'Hardbody' : (result.data.type || prev.type),
-          species: result.data.species ? result.data.species.join(', ') : prev.species
+          species: result.data.species ? result.data.species.join(', ') : prev.species,
+          environment_tags: result.data.environment_tags || prev.environment_tags
         }));
       } else {
         const errorMsg = result.error || 'AI Extraction returned no data';
@@ -1614,7 +1615,6 @@ export default function TackleVault() {
         </div>
       )}
 
-      {/* Edit Specs Modal with Environment Tag Selection */}
       {itemToEditSpecs && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -1864,7 +1864,6 @@ export default function TackleVault() {
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add gear</span>
       </button>
 
-      {/* Add New Gear Modal with Environment Selection */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">

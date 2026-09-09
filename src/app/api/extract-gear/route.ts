@@ -20,13 +20,14 @@ export async function POST(req: Request) {
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = imageResp.headers.get('content-type') || 'image/jpeg';
 
-    const prompt = `Analyze this fishing lure/gear packaging photo and extract the following details as a JSON object:
+    const prompt = `Analyze this fishing lure/gear packaging photo and extract the following details as a clean JSON object:
 - "brand": string (e.g., Chasebaits, Berkley, Daiwa)
 - "name": string (e.g., The Swinger, Money Badger)
 - "color": string (e.g., Natural Green, Firetail)
 - "depth": string (e.g., 2m, 9g, 90mm, or N/A)
 - "type": string (choose best fit: "Hardbody", "Soft Plastic", "Topwater / Surface", "Jerkbait", "Metal Jig", "Vibe / Blade", "Reel", "Rod", "Terminal tackle", "Tool", "Accessory")
-- "species": array of strings (e.g., ["Bass", "Bream"])`;
+- "species": array of strings (e.g., ["Bass", "Bream"])
+- "environment_tags": array of strings (select 1 to 2 best fitting tags ONLY from this exact allowed list: ["Estuary & River", "Surf & Rock", "Freshwater & Dam", "Offshore & Reef", "Pond & Canal"])`;
 
     const modelName = 'gemini-3.6-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
     let resultText = '';
     let lastErrorData: any = null;
 
+    // Retry loop with backoff for rate limits
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const response = await fetch(endpoint, {
@@ -93,7 +95,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: userMsg }, { status: 500 });
     }
 
-    // Sanitize and parse JSON output safely
+    // Sanitize and parse JSON output
     const cleanJsonString = resultText
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')
