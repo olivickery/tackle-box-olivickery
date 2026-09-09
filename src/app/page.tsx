@@ -65,6 +65,7 @@ interface GearItem {
   image_urls: string[];
   notes?: string;
   species: string[];
+  environment_tags?: string[];
   created_at?: string;
 }
 
@@ -128,6 +129,7 @@ function CardCarousel({
   onEditSpecs,
   onEditPhotos,
   onToggleFavorite,
+  onToggleGhost,
   onDeleteItem,
   onZoomImage
 }: { 
@@ -136,6 +138,7 @@ function CardCarousel({
   onEditSpecs: (item: GearItem) => void;
   onEditPhotos: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
+  onToggleGhost: (id: string, currentStatus: boolean) => void;
   onDeleteItem: (item: GearItem) => void;
   onZoomImage: (url: string) => void;
 }) {
@@ -297,55 +300,76 @@ function CardCarousel({
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center mb-2">
-              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none flex items-center gap-1.5">
-                <Settings className="w-3.5 h-3.5 text-slate-100" />
+              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Manage Item
               </span>
             </div>
 
-            <div className="space-y-2 pt-1">
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditSpecs(item);
-                }}
-                className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
-              >
-                <Edit3 className="w-4 h-4 text-slate-100 shrink-0" />
-                <span className="font-semibold">Edit specs</span>
-              </button>
+            <div className="space-y-2 pt-1 font-mono text-[10px]">
+              {/* Row 1: Specs + Notes */}
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditSpecs(item);
+                  }}
+                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
+                >
+                  <Settings className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>SPECS</span>
+                </button>
 
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditNotes(item);
-                }}
-                className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
-              >
-                <Edit3 className="w-4 h-4 text-slate-100 shrink-0" />
-                <span className="font-semibold">Edit notes</span>
-              </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditNotes(item);
+                  }}
+                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>NOTES</span>
+                </button>
+              </div>
 
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditPhotos(item);
-                }}
-                className="w-full bg-slate-950/80 hover:bg-slate-800 text-slate-100 border border-slate-800 hover:border-slate-700 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
-              >
-                <Camera className="w-4 h-4 text-slate-100 shrink-0" />
-                <span className="font-semibold">Edit images</span>
-              </button>
+              {/* Row 2: Images + Replace Toggle */}
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditPhotos(item);
+                  }}
+                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
+                >
+                  <Camera className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>IMAGES</span>
+                </button>
 
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleGhost(item.id, item.is_ghost);
+                  }}
+                  className={`p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase border ${
+                    item.is_ghost
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                      : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
+                  }`}
+                >
+                  <Repeat className="w-3.5 h-3.5 shrink-0" />
+                  <span>{item.is_ghost ? 'REPLACED' : 'REPLACE'}</span>
+                </button>
+              </div>
+
+              {/* Row 3: Full Width Delete */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeleteItem(item);
                 }}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 p-2.5 rounded-lg flex items-center gap-2.5 transition text-left text-[11px]"
+                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
               >
-                <Trash2 className="w-4 h-4 text-red-400 shrink-0" />
-                <span className="font-semibold">Delete item</span>
+                <Trash2 className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                <span>DELETE ITEM</span>
               </button>
             </div>
           </div>
@@ -1096,6 +1120,7 @@ export default function TackleVault() {
                               onEditSpecs={openSpecsEditor}
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
+                              onToggleGhost={toggleGhost}
                               onDeleteItem={setItemToDelete}
                               onZoomImage={setZoomedImageUrl}
                             />
@@ -1115,15 +1140,7 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                            <button 
-                              onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20 flex items-center gap-1"
-                            >
-                              <Repeat className="w-3 h-3" />
-                              Replace
-                            </button>
-                            
+                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end">
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
                               className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
@@ -1197,6 +1214,7 @@ export default function TackleVault() {
                               onEditSpecs={openSpecsEditor}
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
+                              onToggleGhost={toggleGhost}
                               onDeleteItem={setItemToDelete}
                               onZoomImage={setZoomedImageUrl}
                             />
@@ -1216,15 +1234,7 @@ export default function TackleVault() {
                             <p className="text-xs text-slate-400">{item.color}</p>
                           </div>
 
-                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                            <button 
-                              onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20 flex items-center gap-1"
-                            >
-                              <Repeat className="w-3 h-3" />
-                              Replace
-                            </button>
-                            
+                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-end">
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
                               className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
