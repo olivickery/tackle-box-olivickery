@@ -277,7 +277,7 @@ function CardCarousel({
               <p><span className="text-slate-500">Type:</span> <span className="text-slate-100">{item.type}</span></p>
               <p><span className="text-slate-500">Species:</span> <span className="text-slate-100">{item.species.join(', ')}</span></p>
               {item.environment_tags && item.environment_tags.length > 0 && (
-                <p><span className="text-slate-500">Locations:</span> <span className="text-amber-400">{item.environment_tags.join(', ')}</span></p>
+                <p><span className="text-slate-500">Locations:</span> <span className="text-slate-100">{item.environment_tags.join(', ')}</span></p>
               )}
               <p><span className="text-slate-500">Date added:</span> <span className="text-slate-100">{formattedDate}</span></p>
             </div>
@@ -350,13 +350,9 @@ function CardCarousel({
                     e.stopPropagation();
                     onToggleGhost(item.id, item.is_ghost);
                   }}
-                  className={`p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase border ${
-                    item.is_ghost
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                      : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
-                  }`}
+                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
                 >
-                  <Repeat className="w-3.5 h-3.5 shrink-0" />
+                  <Repeat className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span>{item.is_ghost ? 'REPLACED' : 'REPLACE'}</span>
                 </button>
               </div>
@@ -1173,9 +1169,13 @@ export default function TackleVault() {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <div className="flex flex-wrap gap-1">
                               {item.environment_tags?.map((env, idx) => (
-                                <span key={idx} className="text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                                <button
+                                  key={idx}
+                                  onClick={() => setActiveEnvFilter(env)}
+                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
+                                >
                                   {env}
-                                </span>
+                                </button>
                               ))}
                             </div>
                             
@@ -2046,7 +2046,7 @@ export default function TackleVault() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase">Species (Comma Separated)</label>
+                  <label className="block text-slate-400 mb-1 uppercase">Species</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Bass, Bream, Flathead" 
