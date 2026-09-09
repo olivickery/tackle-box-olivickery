@@ -1710,7 +1710,7 @@ export default function TackleVault() {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1.5 uppercase text-[10px]">Environment / Location Tags</label>
+                <label className="block text-slate-400 mb-1.5 uppercase text-[10px]">Tag the places you'll use it</label>
                 <div className="flex flex-wrap gap-1.5">
                   {PRESET_ENVIRONMENTS.map((envTag) => {
                     const isSelected = editedSpecs.environment_tags.includes(envTag);
@@ -2058,7 +2058,7 @@ export default function TackleVault() {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1.5 uppercase">Environment / Location Tags</label>
+                <label className="block text-slate-400 mb-1.5 uppercase">Tag the places you'll use it</label>
                 <div className="flex flex-wrap gap-1.5">
                   {PRESET_ENVIRONMENTS.map((envTag) => {
                     const isSelected = formData.environment_tags.includes(envTag);
