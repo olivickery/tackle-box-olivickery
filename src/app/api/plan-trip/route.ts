@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const inventorySummary = inventory.map((item: any) => ({
+    const inventorySummary = (inventory || []).map((item: any) => ({
       id: item.id,
       brand: item.brand,
       name: item.name,
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
 TRIP DETAILS:
 - Location / Environment: ${location}
-- Target Species: ${targetSpecies.join(', ')}
+- Target Species: ${targetSpecies.length > 0 ? targetSpecies.join(', ') : 'General / Any'}
 - Conditions: ${conditions}
 
 AVAILABLE INVENTORY (JSON):
@@ -44,39 +44,73 @@ Generate a clean JSON response with the following keys:
    - "reason": string (short 1-sentence tip on how to use/retrieve this specific item in these conditions)
 4. "missing_recommendations": Array of strings (1-3 essential items or terminal tackle items not present in their inventory that they should consider adding for this specific trip).
 
-Respond ONLY with clean JSON.`;
+Respond ONLY with valid JSON. Do not include extra conversational text outside the JSON object.`;
 
     const modelName = 'gemini-3.6-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { response_mime_type: 'application/json' }
-      })
-    });
+    let resultText = '';
+    let lastErrorData: any = null;
 
-    const data = await response.json();
+    // Retry loop with backoff for rate limits or transient errors
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              response_mime_type: 'application/json'
+            }
+          })
+        });
 
-    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      const rawText = data.candidates[0].content.parts[0].text
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
+        const data = await response.json();
 
-      const parsedPlan = JSON.parse(rawText);
-      return NextResponse.json({ success: true, plan: parsedPlan });
-    } else {
-      return NextResponse.json(
-        { success: false, error: 'Failed to generate loadout plan.' },
-        { status: 500 }
-      );
+        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          resultText = data.candidates[0].content.parts[0].text;
+          break; // Success!
+        } else {
+          lastErrorData = data;
+          console.warn(`Trip Planner attempt ${attempt} failed:`, data);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+          }
+        }
+      } catch (err: any) {
+        lastErrorData = { error: { message: err?.message || 'Network error' } };
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+        }
+      }
     }
+
+    if (!resultText) {
+      const rawMsg = lastErrorData?.error?.message || '';
+      let userMsg = 'Failed to generate loadout plan. Please try again.';
+
+      if (rawMsg.includes('quota') || rawMsg.includes('429') || rawMsg.includes('exceeded')) {
+        userMsg = 'AI rate limit reached. Please wait ~10 seconds and tap "Generate Custom Loadout" again.';
+      } else if (rawMsg.includes('503') || rawMsg.includes('demand')) {
+        userMsg = 'AI servers are temporarily busy. Please tap "Generate Custom Loadout" again in a moment.';
+      }
+
+      return NextResponse.json({ success: false, error: userMsg }, { status: 500 });
+    }
+
+    // Clean markdown code block formatting
+    const cleanJsonString = resultText
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+
+    const parsedPlan = JSON.parse(cleanJsonString);
+    return NextResponse.json({ success: true, plan: parsedPlan });
+
   } catch (error: any) {
-    console.error('Trip Planner Error:', error);
+    console.error('Trip Planner Global Error:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Server error planning trip' },
       { status: 500 }
