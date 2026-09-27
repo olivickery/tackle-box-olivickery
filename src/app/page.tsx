@@ -454,6 +454,7 @@ export default function TackleVault() {
   const [tripSpeciesInput, setTripSpeciesInput] = useState('Flathead, Bream');
   const [tripConditions, setTripConditions] = useState('Overcast / Low Light');
   const [currentPlan, setCurrentPlan] = useState<TripPlan | null>(null);
+  const [tripPlannerError, setTripPlannerError] = useState<string | null>(null);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -536,6 +537,7 @@ export default function TackleVault() {
   const handleGenerateTripPlan = async () => {
     setIsGeneratingPlan(true);
     setCurrentPlan(null);
+    setTripPlannerError(null);
 
     const speciesArray = tripSpeciesInput
       .split(',')
@@ -558,11 +560,11 @@ export default function TackleVault() {
       if (res.ok && result.success && result.plan) {
         setCurrentPlan(result.plan);
       } else {
-        alert(result.error || 'Failed to generate trip loadout.');
+        setTripPlannerError(result.error || 'Failed to generate trip loadout. Please try again in a moment.');
       }
     } catch (err) {
       console.error('Failed to generate trip plan:', err);
-      alert('Error generating loadout plan.');
+      setTripPlannerError('Network error generating loadout plan.');
     }
     setIsGeneratingPlan(false);
   };
@@ -1093,7 +1095,10 @@ export default function TackleVault() {
           <div className="flex items-center gap-2">
             {/* AI Trip Planner Button */}
             <button
-              onClick={() => setIsTripPlannerOpen(true)}
+              onClick={() => {
+                setTripPlannerError(null);
+                setIsTripPlannerOpen(true);
+              }}
               className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono text-xs font-bold flex items-center gap-1.5 transition"
               title="AI Trip Planner"
             >
@@ -1612,6 +1617,13 @@ export default function TackleVault() {
                   <option value="Deep Water / Heavy Current">Deep Water / Fast Tide & Current</option>
                 </select>
               </div>
+
+              {/* Inline Error Notice */}
+              {tripPlannerError && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-xs font-sans">
+                  ⚠️ <strong>AI Notice:</strong> {tripPlannerError}
+                </div>
+              )}
 
               <button 
                 onClick={handleGenerateTripPlan}

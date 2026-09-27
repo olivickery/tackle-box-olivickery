@@ -13,47 +13,41 @@ export async function POST(req: Request) {
       );
     }
 
-    const inventorySummary = (inventory || []).map((item: any) => ({
-      id: item.id,
-      brand: item.brand,
-      name: item.name,
-      type: item.type,
-      color: item.color,
-      specs: item.depth || '',
-      species: item.species || [],
-      location_tags: item.environment_tags || [],
-      is_ghost: item.is_ghost
-    }));
+    // Ultra-compact text representation to minimize token load
+    const inventoryLines = (inventory || [])
+      .filter((item: any) => !item.is_ghost)
+      .map((item: any) => {
+        const specs = item.depth && item.depth !== 'N/A' ? ` Specs: ${item.depth}` : '';
+        const species = item.species?.length ? ` Species: ${item.species.join(',')}` : '';
+        const tags = item.environment_tags?.length ? ` Tags: ${item.environment_tags.join(',')}` : '';
+        return `ID[${item.id}]: ${item.brand} ${item.name} (${item.type}, ${item.color})${specs}${species}${tags}`;
+      })
+      .join('\n');
 
-    const prompt = `You are an expert fishing guide and tackle strategist. Analyze the user's available tackle inventory and create a tailored custom loadout plan.
+    const prompt = `You are an expert fishing guide and tackle strategist. Create a custom loadout plan using ONLY items from the user's inventory.
 
 TRIP DETAILS:
-- Location / Environment: ${location}
-- Target Species: ${targetSpecies.length > 0 ? targetSpecies.join(', ') : 'General / Any'}
+- Environment: ${location}
+- Target Species: ${targetSpecies.length > 0 ? targetSpecies.join(', ') : 'General'}
 - Conditions: ${conditions}
 
-AVAILABLE INVENTORY (JSON):
-${JSON.stringify(inventorySummary, null, 2)}
+USER ACTIVE INVENTORY:
+${inventoryLines}
 
 TASK:
-Generate a clean JSON response with the following keys:
-1. "trip_summary": A brief 1-2 sentence guide summary explaining the strategy for these specific conditions and location.
-2. "recommended_gear_ids": Array of item IDs from the provided inventory that are the top picks for this trip.
-3. "loadout_highlights": Array of objects, each containing:
-   - "item_id": string (matching item ID)
-   - "reason": string (short 1-sentence tip on how to use/retrieve this specific item in these conditions)
-4. "missing_recommendations": Array of strings (1-3 essential items or terminal tackle items not present in their inventory that they should consider adding for this specific trip).
+Respond ONLY with a clean JSON object containing:
+1. "trip_summary": A brief 1-2 sentence tactical advice summary for these specific conditions and location.
+2. "recommended_gear_ids": Array of item IDs (from ID[...] above) that are top picks.
+3. "loadout_highlights": Array of objects: [{"item_id": "...", "reason": "1-sentence tip on retrieve/technique"}]
+4. "missing_recommendations": Array of 1-3 strings noting essential gear gaps not present in their inventory.`;
 
-Respond ONLY with valid JSON. Do not include extra conversational text outside the JSON object.`;
-
-    const modelName = 'gemini-3.6-flash';
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
+    const modelsToTry = ['gemini-3.6-flash', 'gemini-2.5-flash'];
     let resultText = '';
-    let lastErrorData: any = null;
+    let lastErrorMsg = '';
 
-    // Retry loop with backoff for rate limits or transient errors
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (const modelName of modelsToTry) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
       try {
         const response = await fetch(endpoint, {
           method: 'POST',
@@ -61,7 +55,8 @@ Respond ONLY with valid JSON. Do not include extra conversational text outside t
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
-              response_mime_type: 'application/json'
+              response_mime_type: 'application/json',
+              temperature: 0.2
             }
           })
         });
@@ -70,36 +65,20 @@ Respond ONLY with valid JSON. Do not include extra conversational text outside t
 
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           resultText = data.candidates[0].content.parts[0].text;
-          break; // Success!
+          break;
         } else {
-          lastErrorData = data;
-          console.warn(`Trip Planner attempt ${attempt} failed:`, data);
-          if (attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
-          }
+          lastErrorMsg = data?.error?.message || response.statusText;
         }
       } catch (err: any) {
-        lastErrorData = { error: { message: err?.message || 'Network error' } };
-        if (attempt < 3) {
-          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
-        }
+        lastErrorMsg = err?.message || 'Network error';
       }
     }
 
     if (!resultText) {
-      const rawMsg = lastErrorData?.error?.message || '';
-      let userMsg = 'Failed to generate loadout plan. Please try again.';
-
-      if (rawMsg.includes('quota') || rawMsg.includes('429') || rawMsg.includes('exceeded')) {
-        userMsg = 'AI rate limit reached. Please wait ~10 seconds and tap "Generate Custom Loadout" again.';
-      } else if (rawMsg.includes('503') || rawMsg.includes('demand')) {
-        userMsg = 'AI servers are temporarily busy. Please tap "Generate Custom Loadout" again in a moment.';
-      }
-
-      return NextResponse.json({ success: false, error: userMsg }, { status: 500 });
+      let userMsg = 'AI rate limit reached. Please wait ~10 seconds before generating another plan.';
+      return NextResponse.json({ success: false, error: userMsg }, { status: 429 });
     }
 
-    // Clean markdown code block formatting
     const cleanJsonString = resultText
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')
@@ -112,7 +91,7 @@ Respond ONLY with valid JSON. Do not include extra conversational text outside t
   } catch (error: any) {
     console.error('Trip Planner Global Error:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Server error planning trip' },
+      { success: false, error: 'Error generating loadout plan. Please try again.' },
       { status: 500 }
     );
   }
