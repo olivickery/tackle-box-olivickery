@@ -1122,7 +1122,7 @@ export default function TackleVault() {
           </button>
         </div>
 
-        {/* Global Search Bar */}
+        {/* Global Search Bar - Using text-base on mobile to prevent iOS Safari auto-zoom */}
         <div className="mb-6 relative">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input 
@@ -1130,7 +1130,7 @@ export default function TackleVault() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search gear by name, brand, species, specs, colour, or location..."
-            className="w-full bg-slate-900/90 border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-9 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition"
+            className="w-full bg-slate-900/90 border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-9 py-2.5 text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition"
           />
           {searchQuery && (
             <button 
@@ -1643,7 +1643,7 @@ export default function TackleVault() {
                     required
                     value={editedSpecs.brand}
                     onChange={(e) => setEditedSpecs({ ...editedSpecs, brand: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
                 <div>
@@ -1653,7 +1653,7 @@ export default function TackleVault() {
                     required
                     value={editedSpecs.name}
                     onChange={(e) => setEditedSpecs({ ...editedSpecs, name: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
               </div>
@@ -1666,7 +1666,7 @@ export default function TackleVault() {
                     required
                     value={editedSpecs.color}
                     onChange={(e) => setEditedSpecs({ ...editedSpecs, color: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
                 <div>
@@ -1675,7 +1675,7 @@ export default function TackleVault() {
                     type="text" 
                     value={editedSpecs.depth}
                     onChange={(e) => setEditedSpecs({ ...editedSpecs, depth: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
               </div>
@@ -1686,7 +1686,7 @@ export default function TackleVault() {
                   <select 
                     value={editedSpecs.type}
                     onChange={(e) => setEditedSpecs({ ...editedSpecs, type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   >
                     <option value="Hardbody">Hardbody</option>
                     <option value="Soft Plastic">Soft Plastic</option>
@@ -1707,7 +1707,7 @@ export default function TackleVault() {
                     type="text" 
                     value={editedSpecs.species}
                     onChange={(e) => setEditedSpecs({ ...editedSpecs, species: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
               </div>
@@ -1785,7 +1785,7 @@ export default function TackleVault() {
                 value={editedNotes}
                 onChange={(e) => setEditedNotes(e.target.value)}
                 placeholder="Log hook sizes, leader line recommendations, brackish water action, or field tests..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none resize-none leading-relaxed"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none resize-none leading-relaxed"
               />
 
               <div className="flex gap-3 pt-2">
@@ -1987,7 +1987,7 @@ export default function TackleVault() {
                     placeholder="e.g. Chasebaits" 
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
                 <div>
@@ -1998,7 +1998,7 @@ export default function TackleVault() {
                     placeholder="e.g. The Swinger" 
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
               </div>
@@ -2012,7 +2012,7 @@ export default function TackleVault() {
                     placeholder="e.g. Natural Green" 
                     value={formData.color}
                     onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
                 <div>
@@ -2022,7 +2022,7 @@ export default function TackleVault() {
                     placeholder="e.g. 9g, 90mm" 
                     value={formData.depth}
                     onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
               </div>
@@ -2033,7 +2033,7 @@ export default function TackleVault() {
                   <select 
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   >
                     <option value="Hardbody">Hardbody</option>
                     <option value="Soft Plastic">Soft Plastic</option>
@@ -2055,7 +2055,7 @@ export default function TackleVault() {
                     placeholder="e.g. Bass, Bream, Flathead" 
                     value={formData.species}
                     onChange={(e) => setFormData({ ...formData, species: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none"
                   />
                 </div>
               </div>
@@ -2090,7 +2090,7 @@ export default function TackleVault() {
                   placeholder="e.g. Recommended hook size #1/0, best in brackish estuaries..." 
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none resize-none"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-100 focus:border-amber-500 outline-none resize-none"
                 />
               </div>
 
