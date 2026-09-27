@@ -8,7 +8,6 @@ import {
   ShoppingBag, 
   Grid, 
   List, 
-  Sparkles, 
   Plus, 
   Loader2,
   X,
@@ -28,7 +27,8 @@ import {
   Image as ImageIcon,
   Settings,
   ZoomIn,
-  Compass
+  Compass,
+  Search
 } from 'lucide-react';
 
 const PRESET_ENVIRONMENTS = [
@@ -429,7 +429,7 @@ function CardCarousel({
 export default function TackleVault() {
   const [items, setItems] = useState<GearItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'showroom'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -439,6 +439,7 @@ export default function TackleVault() {
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   
   // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
   const [activeBrandFilter, setActiveBrandFilter] = useState<string | null>(null);
   const [activeEnvFilter, setActiveEnvFilter] = useState<string | null>(null);
@@ -967,8 +968,21 @@ export default function TackleVault() {
     setIsSubmitting(false);
   };
 
-  const ghostItems = items.filter(item => item.is_ghost);
-  const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost);
+  const matchesSearch = (item: GearItem) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const nameMatch = item.name.toLowerCase().includes(q);
+    const brandMatch = item.brand.toLowerCase().includes(q);
+    const colorMatch = item.color.toLowerCase().includes(q);
+    const typeMatch = item.type.toLowerCase().includes(q);
+    const depthMatch = (item.depth || '').toLowerCase().includes(q);
+    const speciesMatch = item.species.some(s => s.toLowerCase().includes(q));
+    const envMatch = item.environment_tags?.some(e => e.toLowerCase().includes(q));
+    return nameMatch || brandMatch || colorMatch || typeMatch || depthMatch || speciesMatch || envMatch;
+  };
+
+  const ghostItems = items.filter(item => item.is_ghost && matchesSearch(item));
+  const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost && matchesSearch(item));
   const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
 
   const myGearItems = baseMyGearItems.filter(item => {
@@ -977,10 +991,10 @@ export default function TackleVault() {
     const matchesEnv = activeEnvFilter 
       ? item.environment_tags?.includes(activeEnvFilter) 
       : true;
-    return matchesCategory && matchesBrand && matchesEnv;
+    return matchesCategory && matchesBrand && matchesEnv && matchesSearch(item);
   });
 
-  const sortedListItems = [...items].sort((a, b) => {
+  const sortedListItems = items.filter(matchesSearch).sort((a, b) => {
     let valA = '';
     let valB = '';
 
@@ -1008,6 +1022,7 @@ export default function TackleVault() {
           <button 
             onClick={() => {
               setViewMode('grid');
+              setSearchQuery('');
               setActiveCategoryFilter(null);
               setActiveBrandFilter(null);
               setActiveEnvFilter(null);
@@ -1047,13 +1062,6 @@ export default function TackleVault() {
                 <Grid className="w-4 h-4" />
               </button>
               <button 
-                onClick={() => setViewMode('showroom')}
-                className={`p-1.5 rounded-lg transition ${viewMode === 'showroom' ? 'bg-amber-500 text-slate-950 font-semibold' : 'text-slate-400 hover:text-slate-200'}`}
-                title="Showroom View"
-              >
-                <Sparkles className="w-4 h-4" />
-              </button>
-              <button 
                 onClick={() => setViewMode('list')}
                 className={`p-1.5 rounded-lg transition ${viewMode === 'list' ? 'bg-amber-500 text-slate-950 font-semibold' : 'text-slate-400 hover:text-slate-200'}`}
                 title="List Specs View"
@@ -1067,7 +1075,7 @@ export default function TackleVault() {
 
       <main className="max-w-5xl mx-auto px-4 pt-6">
         
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 font-mono text-[10px] sm:text-xs">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 font-mono text-[10px] sm:text-xs">
           <button 
             onClick={() => {
               setViewMode('grid');
@@ -1112,6 +1120,26 @@ export default function TackleVault() {
             </div>
             <span className="text-sm sm:text-base font-bold text-red-400 whitespace-nowrap block mt-1">{ghostItems.length} Items</span>
           </button>
+        </div>
+
+        {/* Global Search Bar */}
+        <div className="mb-6 relative">
+          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input 
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search gear by name, brand, species, specs, colour, or location..."
+            className="w-full bg-slate-900/90 border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-9 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 p-0.5 rounded-md"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -1377,31 +1405,6 @@ export default function TackleVault() {
                   </div>
                 )}
 
-              </div>
-            )}
-
-            {viewMode === 'showroom' && (
-              <div className="bg-black p-8 rounded-2xl border border-slate-800 min-h-[400px] flex flex-col items-center justify-center">
-                <div className="text-center mb-8">
-                  <span className="text-xs font-mono uppercase tracking-widest text-amber-500">Showroom Presentation</span>
-                  <h2 className="text-2xl font-bold text-slate-100">The Favourites Collection</h2>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full">
-                  {favoriteItems.map((item) => (
-                    <div key={item.id} className="group relative flex flex-col items-center">
-                      <div className="w-full aspect-square rounded-2xl bg-slate-900/50 border border-slate-800/80 p-4 flex items-center justify-center group-hover:border-amber-500/40 transition">
-                        <img 
-                          src={item.image_urls?.[0] || item.image_url} 
-                          alt={item.name} 
-                          className="max-h-full max-w-full object-contain filter drop-shadow-[0_10px_8px_rgba(0,0,0,0.8)] group-hover:scale-110 transition duration-300"
-                        />
-                      </div>
-                      <span className="mt-3 text-xs font-semibold text-slate-300">{item.name}</span>
-                      <span className="text-[10px] font-mono text-slate-500">{item.brand}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 
