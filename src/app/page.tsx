@@ -1653,7 +1653,7 @@ export default function TackleVault() {
 
                   <div>
                     <h3 className="font-bold text-slate-100 text-sm font-sans mb-2 flex items-center gap-1.5">
-                      <Package className="w-4 h-4 text-amber-400" /> Top Vault Recommendations ({currentPlan.recommended_gear_ids.length})
+                      <Package className="w-4 h-4 text-amber-400" /> Top recommendations ({currentPlan.loadout_highlights.length})
                     </h3>
                     <div className="space-y-2">
                       {currentPlan.loadout_highlights.map((highlight, idx) => {
