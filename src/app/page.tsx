@@ -1120,8 +1120,8 @@ function TackleVault({ session }: { session: Session }) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
       
-      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 py-3">
+        <div className="max-w-5xl mx-auto px-4 flex items-center justify-between gap-2">
           <button 
             onClick={() => {
               setViewMode('grid');
@@ -1136,13 +1136,13 @@ function TackleVault({ session }: { session: Session }) {
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-slate-800 border border-slate-700 p-1.5 group-hover:border-slate-600 transition">
               <VaultIcon className="w-full h-full text-slate-300" />
             </div>
-            <div>
-              <h1 className="font-bold text-base leading-none tracking-wide text-slate-100 uppercase group-hover:text-slate-300 transition">Tackle Vault</h1>
-              <p className="text-xs text-slate-400 font-mono">Tracking my gear</p>
+            <div className="max-[359px]:hidden">
+              <h1 className="font-bold text-sm sm:text-base leading-none whitespace-nowrap tracking-wide text-slate-100 uppercase group-hover:text-slate-300 transition">Tackle Vault</h1>
+              <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5">Tracking my gear</p>
             </div>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* AI Trip Planner Button */}
             <button
               onClick={() => {
