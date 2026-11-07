@@ -1139,7 +1139,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             </div>
             <div className="max-[359px]:hidden">
               <h1 className="text-base sm:text-lg leading-none group-hover:opacity-80 transition"><Wordmark /></h1>
-              <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5">Tracking my gear</p>
+              <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5">Smart gear management</p>
             </div>
           </button>
 
