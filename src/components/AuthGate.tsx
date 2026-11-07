@@ -5,6 +5,7 @@ import type { Session } from '@supabase/supabase-js';
 import { Loader2, AlertTriangle, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Wordmark from './Wordmark';
+import Landing from './Landing';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'recovery';
 
@@ -13,7 +14,7 @@ const inputClass =
 
 const SUBTITLES: Record<Mode, string> = {
   signin: 'Sign in for smart gear management',
-  signup: 'Create your vault',
+  signup: 'Create your free account',
   forgot: 'Reset your password',
   recovery: 'Choose a new password',
 };
@@ -37,6 +38,8 @@ export default function AuthGate({
   const [mode, setMode] = useState<Mode>(() =>
     typeof window !== 'undefined' && window.location.hash.includes('type=recovery') ? 'recovery' : 'signin'
   );
+  // Signed-out visitors see the overview page first (not when arriving from a reset link).
+  const [showLanding, setShowLanding] = useState(() => mode !== 'recovery');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -127,6 +130,21 @@ export default function AuthGate({
     return <React.Fragment key={session.user.id}>{children(session)}</React.Fragment>;
   }
 
+  if (showLanding && mode !== 'recovery') {
+    return (
+      <Landing
+        onGetStarted={() => {
+          switchMode('signup');
+          setShowLanding(false);
+        }}
+        onSignIn={() => {
+          switchMode('signin');
+          setShowLanding(false);
+        }}
+      />
+    );
+  }
+
   const showEmail = mode !== 'recovery';
   const showPassword = mode !== 'forgot';
 
@@ -215,6 +233,15 @@ export default function AuthGate({
             className="mt-4 w-full text-center text-xs text-slate-400 hover:text-slate-200 transition"
           >
             {mode === 'signin' ? 'New here? Create an account' : mode === 'signup' ? 'Already have an account? Sign in' : 'Back to sign in'}
+          </button>
+        )}
+        {mode !== 'recovery' && (
+          <button
+            type="button"
+            onClick={() => setShowLanding(true)}
+            className="mt-3 w-full text-center text-[11px] text-slate-500 hover:text-slate-300 transition"
+          >
+            ← About Tacklebox IQ
           </button>
         )}
       </div>

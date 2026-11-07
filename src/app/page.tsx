@@ -2060,7 +2060,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
             <h3 className="text-lg font-bold text-slate-100">Permanently delete item?</h3>
             <p className="text-xs text-slate-400 font-mono mt-1">
-              You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand} - {itemToDelete.name}</span> from your vault.
+              You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand} - {itemToDelete.name}</span> from your gear.
             </p>
 
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 my-4 font-mono text-[11px] text-red-400">
@@ -2342,7 +2342,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 ) : (
                   <>
                     <Plus className="w-5 h-5" />
-                    <span>Save to vault</span>
+                    <span>Save to my gear</span>
                   </>
                 )}
               </button>
