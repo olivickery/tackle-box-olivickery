@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { Loader2, AlertTriangle, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import Wordmark from './Wordmark';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'recovery';
 
@@ -132,7 +133,7 @@ export default function AuthGate({
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-        <h1 className="font-bold text-base tracking-wide uppercase text-slate-100">Tackle Vault</h1>
+        <h1 className="text-xl leading-none mb-1"><Wordmark /></h1>
         <p className="text-xs text-slate-400 font-mono mb-6">{SUBTITLES[mode]}</p>
 
         {error && (

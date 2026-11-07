@@ -5,6 +5,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import AuthGate from '../components/AuthGate';
 import ZoomLightbox from '../components/ZoomLightbox';
+import Wordmark from '../components/Wordmark';
 import { 
   Star, 
   Trash2, 
@@ -481,10 +482,10 @@ async function authHeaders(): Promise<Record<string, string>> {
 }
 
 export default function Page() {
-  return <AuthGate>{(session) => <TackleVault session={session} />}</AuthGate>;
+  return <AuthGate>{(session) => <TackleboxIQ session={session} />}</AuthGate>;
 }
 
-function TackleVault({ session }: { session: Session }) {
+function TackleboxIQ({ session }: { session: Session }) {
   const [items, setItems] = useState<GearItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -862,7 +863,7 @@ function TackleVault({ session }: { session: Session }) {
       `${index + 1}. ${item.brand} - ${item.name} (${item.color}${item.depth && item.depth !== 'N/A' ? `, ${item.depth}` : ''})`
     ).join('\n');
 
-    const formattedExport = `TACKLE VAULT restock list:\n${listText}`;
+    const formattedExport = `Tacklebox IQ restock list:\n${listText}`;
 
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -1137,7 +1138,7 @@ function TackleVault({ session }: { session: Session }) {
               <VaultIcon className="w-full h-full text-slate-300" />
             </div>
             <div className="max-[359px]:hidden">
-              <h1 className="font-bold text-sm sm:text-base leading-none whitespace-nowrap tracking-wide text-slate-100 uppercase group-hover:text-slate-300 transition">Tackle Vault</h1>
+              <h1 className="text-base sm:text-lg leading-none group-hover:opacity-80 transition"><Wordmark /></h1>
               <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5">Tracking my gear</p>
             </div>
           </button>
@@ -1270,7 +1271,7 @@ function TackleVault({ session }: { session: Session }) {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-500 font-mono text-xs">
             <Loader2 className="w-8 h-8 animate-spin text-amber-500 mb-3" />
-            <p>Loading your Tackle Vault...</p>
+            <p>Loading your gear...</p>
           </div>
         ) : (
           <>
