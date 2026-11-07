@@ -1326,11 +1326,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition border ${
-                                    activeEnvFilter === env
-                                      ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
-                                  }`}
+                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
                                 >
                                   {env}
                                 </button>
@@ -1448,11 +1444,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition border ${
-                                    activeEnvFilter === env
-                                      ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
-                                  }`}
+                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
                                 >
                                   {env}
                                 </button>
