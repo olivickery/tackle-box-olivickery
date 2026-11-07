@@ -1,7 +1,8 @@
 import { createClient, type User } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { normalizeSupabaseUrl } from './supabase';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseUrl = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 /**
