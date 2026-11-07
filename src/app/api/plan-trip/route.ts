@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '../../../lib/requireUser';
 
 const apiKey = process.env.GEMINI_API_KEY || '';
 
 export async function POST(req: Request) {
+  const auth = await requireUser(req);
+  if (auth.response) return auth.response;
+
   try {
     const { location, targetSpecies, conditions, inventory } = await req.json();
 

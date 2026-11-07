@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
+import { requireUser, userImagePrefix } from '../../../lib/requireUser';
 
 const apiKey = process.env.GEMINI_API_KEY || '';
 
 export async function POST(req: Request) {
+  const auth = await requireUser(req);
+  if (auth.response) return auth.response;
+
   try {
     const { imageUrl } = await req.json();
 
     if (!imageUrl) {
       return NextResponse.json({ success: false, error: 'No image URL provided' }, { status: 400 });
+    }
+
+    // Only fetch images from the caller's own folder in our storage bucket.
+    if (typeof imageUrl !== 'string' || !imageUrl.startsWith(userImagePrefix(auth.user.id))) {
+      return NextResponse.json({ success: false, error: 'Image must be uploaded to your vault first' }, { status: 400 });
     }
 
     if (!apiKey) {

@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import AuthGate from '../components/AuthGate';
 import { 
   Star, 
   Trash2, 
@@ -29,7 +31,8 @@ import {
   ZoomIn,
   Compass,
   Search,
-  Sparkles
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 
 const PRESET_ENVIRONMENTS = [
@@ -434,7 +437,20 @@ function CardCarousel({
   );
 }
 
-export default function TackleVault() {
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+export default function Page() {
+  return <AuthGate>{(session) => <TackleVault session={session} />}</AuthGate>;
+}
+
+function TackleVault({ session }: { session: Session }) {
   const [items, setItems] = useState<GearItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -546,7 +562,7 @@ export default function TackleVault() {
     try {
       const res = await fetch('/api/plan-trip', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
           location: tripLocation,
           targetSpecies: speciesArray,
@@ -740,7 +756,7 @@ export default function TackleVault() {
     const compressedBlob = await compressImageCrisp(file);
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const filePath = `${session.user.id}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('tackle-vault-images')
@@ -876,7 +892,7 @@ export default function TackleVault() {
     const compressedBlob = await compressImageCrisp(file);
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const filePath = `${session.user.id}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('tackle-vault-images')
@@ -930,7 +946,7 @@ export default function TackleVault() {
     try {
       const res = await fetch('/api/extract-gear', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ imageUrl: url })
       });
 
@@ -972,6 +988,7 @@ export default function TackleVault() {
     const finalImageUrls = formData.image_urls.length > 0 ? formData.image_urls : [fallbackImage];
 
     const newItem = {
+      user_id: session.user.id,
       name: formData.name,
       brand: formData.brand,
       type: formData.type,
@@ -1135,6 +1152,14 @@ export default function TackleVault() {
                 )}
               </button>
             </div>
+
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 transition"
+              title={`Sign out (${session.user.email ?? ''})`}
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
