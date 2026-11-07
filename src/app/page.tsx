@@ -1137,7 +1137,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-slate-800 border border-slate-700 p-1.5 group-hover:border-slate-600 transition">
               <VaultIcon className="w-full h-full text-slate-300" />
             </div>
-            <div className="max-[359px]:hidden">
+            <div className="max-[359px]:hidden translate-y-[2px]">
               <h1 className="text-base sm:text-lg leading-none group-hover:opacity-80 transition"><Wordmark /></h1>
               <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[369px]:hidden">Smart gear management</p>
             </div>
@@ -1326,7 +1326,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
+                                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition border ${
+                                    activeEnvFilter === env
+                                      ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+                                  }`}
                                 >
                                   {env}
                                 </button>
@@ -1444,7 +1448,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
+                                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition border ${
+                                    activeEnvFilter === env
+                                      ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+                                  }`}
                                 >
                                   {env}
                                 </button>

@@ -12,7 +12,7 @@ const inputClass =
   'w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-base sm:text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60';
 
 const SUBTITLES: Record<Mode, string> = {
-  signin: 'Sign in to your gear',
+  signin: 'Sign in for smart gear management',
   signup: 'Create your vault',
   forgot: 'Reset your password',
   recovery: 'Choose a new password',
