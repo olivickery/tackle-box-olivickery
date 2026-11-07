@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import AuthGate from '../components/AuthGate';
+import ZoomLightbox from '../components/ZoomLightbox';
 import { 
   Star, 
   Trash2, 
@@ -167,6 +168,25 @@ function CardCarousel({
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const cardRef = useRef<HTMLDivElement>(null);
+  // Becomes true once the card is near the viewport; from then on every photo
+  // on the card is mounted (and so fetched + decoded) for instant swiping.
+  const [shouldPreload, setShouldPreload] = useState(false);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || shouldPreload) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldPreload(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '300px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [shouldPreload]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -231,6 +251,7 @@ function CardCarousel({
   const isNotesSlide = currentIndex === images.length + 1;
   const isManageSlide = currentIndex === images.length + 2;
   const isFirstSlide = currentIndex === 0;
+  const isImageSlide = currentIndex < images.length;
 
   const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
 
@@ -270,6 +291,24 @@ function CardCarousel({
           <Star className="w-3.5 h-3.5 fill-current" />
         </button>
       )}
+
+      {/* All photos stay mounted and decoded; only opacity changes on swipe. */}
+      <div className={`absolute inset-0 ${isImageSlide ? '' : 'invisible'}`} aria-hidden={!isImageSlide}>
+        {images.map((src, idx) =>
+          idx === 0 || shouldPreload ? (
+            <img
+              key={`${idx}-${src}`}
+              src={src}
+              alt={`${item.name} photo ${idx + 1}`}
+              decoding="async"
+              draggable={false}
+              className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-150 ${
+                idx === currentIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          ) : null
+        )}
+      </div>
 
       {isSpecsSlide ? (
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
@@ -383,11 +422,6 @@ function CardCarousel({
         </div>
       ) : (
         <div className="relative w-full h-full">
-          <img 
-            src={images[currentIndex]} 
-            alt={`${item.name} slide ${currentIndex + 1}`} 
-            className="w-full h-full object-cover transition duration-500 pointer-events-none"
-          />
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -1718,25 +1752,7 @@ function TackleVault({ session }: { session: Session }) {
       )}
 
       {zoomedImageUrl && (
-        <div 
-          onClick={() => setZoomedImageUrl(null)}
-          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
-        >
-          <button 
-            onClick={() => setZoomedImageUrl(null)}
-            className="absolute top-4 right-4 p-2.5 rounded-full bg-slate-900/80 text-slate-200 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition z-50 shadow-xl"
-            title="Close Zoom"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          
-          <img 
-            src={zoomedImageUrl} 
-            alt="Zoomed detail view" 
-            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()} 
-          />
-        </div>
+        <ZoomLightbox src={zoomedImageUrl} onClose={() => setZoomedImageUrl(null)} />
       )}
 
       {itemToEditPhotos && (
