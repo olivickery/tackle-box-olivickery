@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import AuthGate from '../components/AuthGate';
 import ZoomLightbox from '../components/ZoomLightbox';
 import Wordmark from '../components/Wordmark';
+import LegalFooter from '../components/LegalFooter';
 import { 
   Star, 
   Trash2, 
@@ -1661,6 +1662,8 @@ function TackleboxIQ({ session }: { session: Session }) {
         )}
 
       </main>
+
+      <LegalFooter className="mt-8" />
 
       {/* AI Trip Planner Modal */}
       {isTripPlannerOpen && (
