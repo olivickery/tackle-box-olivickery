@@ -7,12 +7,12 @@ import AuthGate from '../components/AuthGate';
 import ZoomLightbox from '../components/ZoomLightbox';
 import Wordmark from '../components/Wordmark';
 import LegalFooter from '../components/LegalFooter';
-import PackChecklist, { GapStatusTag } from '../components/PackChecklist';
+import PackChecklist, { GapStatusTag, ReAddGapButton, type PackEntry } from '../components/PackChecklist';
 import Link from 'next/link';
 import {
-  type GearItem, type TripPlan,
+  type GearItem, type TripPlan, type CustomPackItem,
   SUGGESTED_NOTE_PREFIX, normalizePlan, formatGearRow, formatPackRow, splitSpecies, defaultPackTitle,
-  buildPackEntries, buildPackGaps, addGapsToRestock,
+  buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, normalizeCustomItems, newCustomItem,
 } from '../lib/gear';
 import { 
   Star, 
@@ -81,6 +81,8 @@ interface SavedTrip {
   conditions?: string;
   checked: string[];
   addedGaps: string[];
+  hidden: string[];
+  custom: CustomPackItem[];
   packId?: string;
 }
 
@@ -96,6 +98,8 @@ function loadSavedTrip(key: string): SavedTrip | null {
       conditions: typeof saved.conditions === 'string' ? saved.conditions : undefined,
       checked: Array.isArray(saved.checked) ? saved.checked.map(String) : [],
       addedGaps: Array.isArray(saved.addedGaps) ? saved.addedGaps.map(String) : [],
+      hidden: Array.isArray(saved.hidden) ? saved.hidden.map(String) : [],
+      custom: normalizeCustomItems(saved.custom),
       packId: typeof saved.packId === 'string' ? saved.packId : undefined,
     };
   } catch {
@@ -565,6 +569,9 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [isPackChecklistOpen, setIsPackChecklistOpen] = useState(false);
   const [isAddingGaps, setIsAddingGaps] = useState(false);
   const [savedPackId, setSavedPackId] = useState<string | null>(savedTrip?.packId ?? null);
+  const [hiddenPackItems, setHiddenPackItems] = useState<string[]>(savedTrip?.hidden ?? []);
+  const [customPackItems, setCustomPackItems] = useState<CustomPackItem[]>(savedTrip?.custom ?? []);
+  const [reAddingGap, setReAddingGap] = useState<string | null>(null);
   const [isSaveFormOpen, setIsSaveFormOpen] = useState(false);
   const [packTitleInput, setPackTitleInput] = useState('');
   const [packDateInput, setPackDateInput] = useState('');
@@ -654,12 +661,14 @@ function TackleboxIQ({ session }: { session: Session }) {
         conditions: tripConditions,
         checked: packChecked,
         addedGaps: addedGapItems,
+        hidden: hiddenPackItems,
+        custom: customPackItems,
         packId: savedPackId ?? undefined,
       }));
     } catch {
       // Non-essential; ignore quota/privacy-mode errors.
     }
-  }, [tripStorageKey, currentPlan, tripLocation, tripSpeciesInput, tripConditions, packChecked, addedGapItems, savedPackId]);
+  }, [tripStorageKey, currentPlan, tripLocation, tripSpeciesInput, tripConditions, packChecked, addedGapItems, hiddenPackItems, customPackItems, savedPackId]);
 
   // If the saved list was deleted on the pack lists page, forget the link.
   useEffect(() => {
@@ -673,12 +682,47 @@ function TackleboxIQ({ session }: { session: Session }) {
     if (!savedPackId) return;
     const t = setTimeout(() => {
       supabase.from('pack_lists')
-        .update({ checked: packChecked, added_gaps: addedGapItems })
+        .update({ checked: packChecked, added_gaps: addedGapItems, hidden_items: hiddenPackItems, custom_items: customPackItems })
         .eq('id', savedPackId)
         .then(({ error }) => { if (error) console.error('Failed to sync pack list:', error); });
     }, 600);
     return () => clearTimeout(t);
-  }, [savedPackId, packChecked, addedGapItems]);
+  }, [savedPackId, packChecked, addedGapItems, hiddenPackItems, customPackItems]);
+
+  const removePackEntry = (entry: PackEntry) => {
+    if (entry.custom) setCustomPackItems(prev => prev.filter(c => c.id !== entry.id));
+    else setHiddenPackItems(prev => (prev.includes(entry.id) ? prev : [...prev, entry.id]));
+    setPackChecked(prev => prev.filter(id => id !== entry.id));
+  };
+
+  const restorePackEntry = (entry: PackEntry) => {
+    if (entry.custom) setCustomPackItems(prev => (prev.some(c => c.id === entry.id) ? prev : [...prev, { id: entry.id, name: entry.name }]));
+    else setHiddenPackItems(prev => prev.filter(id => id !== entry.id));
+  };
+
+  const addCustomPackItem = (name: string) => {
+    setCustomPackItems(prev => [...prev, newCustomItem(name)]);
+  };
+
+  const handleReAddGap = async (gapName: string) => {
+    if (!currentPlan || reAddingGap) return;
+    setReAddingGap(gapName);
+    const result = await addGapsToRestock({
+      userId: session.user.id,
+      plan: currentPlan,
+      addedGaps: addedGapItems,
+      items,
+      location: tripLocation,
+      species: splitSpecies(tripSpeciesInput),
+      only: [gapName],
+    });
+    setReAddingGap(null);
+    if (result.error) {
+      alert(`Couldn't add it back to your restock list: ${result.error}`);
+      return;
+    }
+    if (result.inserted.length) setItems(prev => [...result.inserted, ...prev]);
+  };
 
   const openSavePackForm = () => {
     setPackTitleInput(defaultPackTitle(splitSpecies(tripSpeciesInput), tripLocation));
@@ -700,6 +744,8 @@ function TackleboxIQ({ session }: { session: Session }) {
       plan: currentPlan,
       checked: packChecked,
       added_gaps: addedGapItems,
+      hidden_items: hiddenPackItems,
+      custom_items: customPackItems,
     }).select().single();
     setIsSavingPack(false);
     if (error || !data) {
@@ -744,6 +790,8 @@ function TackleboxIQ({ session }: { session: Session }) {
     setAddedGapItems([]);
     setSavedPackId(null);
     setIsSaveFormOpen(false);
+    setHiddenPackItems([]);
+    setCustomPackItems([]);
 
     const speciesArray = tripSpeciesInput
       .split(',')
@@ -1309,7 +1357,7 @@ function TackleboxIQ({ session }: { session: Session }) {
     return 0;
   });
 
-  const packEntries = buildPackEntries(currentPlan, items);
+  const packEntries = buildPackEntries(currentPlan, items, { hidden: hiddenPackItems, custom: customPackItems });
   const packCheckedSet = new Set(packChecked.filter(id => packEntries.some(e => e.id === id)));
   const planGaps = buildPackGaps(currentPlan, addedGapItems, items, loading);
   const gapsLeftToAdd = planGaps.filter(g => g.status === 'pending').length;
@@ -1962,8 +2010,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                           <li key={idx}>
                             <div className="flex items-center justify-between gap-2">
                               <span className={gap.status === 'removed' ? 'text-slate-500 line-through font-semibold' : 'text-slate-200 font-semibold'}>{gap.item}</span>
-                              <GapStatusTag status={gap.status} />
+                              {gap.status === 'removed'
+                                ? <ReAddGapButton onClick={() => handleReAddGap(gap.item)} busy={reAddingGap === gap.item} />
+                                : <GapStatusTag status={gap.status} />}
                             </div>
+                            {gap.status === 'removed' && <p className="text-[10px] font-mono text-red-400/80">Removed from restock list</p>}
                             {gap.reason && <p className="text-slate-400 leading-snug">{gap.reason}</p>}
                           </li>
                         ))}
@@ -1981,7 +2032,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                     </div>
                   )}
 
-                  {packEntries.length > 0 && (
+                  {currentPlan && (
                     <button
                       onClick={() => setIsPackChecklistOpen(true)}
                       className="w-full bg-slate-100 hover:bg-white text-slate-950 font-sans font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
@@ -2059,6 +2110,13 @@ function TackleboxIQ({ session }: { session: Session }) {
           onReset={() => setPackChecked([])}
           onAddGaps={handleAddGapsToRestock}
           isAddingGaps={isAddingGaps}
+          onReAddGap={handleReAddGap}
+          reAddingGap={reAddingGap}
+          onRemoveEntry={removePackEntry}
+          onRestoreEntry={restorePackEntry}
+          hiddenCount={countHiddenGear(currentPlan, items, hiddenPackItems)}
+          onRestoreHidden={() => setHiddenPackItems([])}
+          onAddCustom={addCustomPackItem}
           onClose={() => setIsPackChecklistOpen(false)}
         />
       )}

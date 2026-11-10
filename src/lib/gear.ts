@@ -31,6 +31,12 @@ export interface TripPlan {
   missing_recommendations: GapItem[];
 }
 
+/** Something the user added to a pack list themselves (sunscreen, bait…). */
+export interface CustomPackItem {
+  id: string;
+  name: string;
+}
+
 /** A saved pack list (row in public.pack_lists). */
 export interface PackList {
   id: string;
@@ -42,6 +48,8 @@ export interface PackList {
   plan: TripPlan;
   checked: string[];
   added_gaps: string[];
+  hidden_items: string[];
+  custom_items: CustomPackItem[];
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
@@ -101,8 +109,25 @@ export function formatPackRow(row: any): PackList {
     species: row.species || [],
     checked: row.checked || [],
     added_gaps: row.added_gaps || [],
+    hidden_items: row.hidden_items || [],
+    custom_items: normalizeCustomItems(row.custom_items),
     plan: normalizePlan(row.plan),
   } as PackList;
+}
+
+export function normalizeCustomItems(raw: unknown): CustomPackItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((c): c is { id: unknown; name: unknown } => !!c && typeof c === 'object')
+    .map(c => ({ id: String(c.id), name: String(c.name ?? '').trim() }))
+    .filter(c => c.id && c.name);
+}
+
+export function newCustomItem(name: string): CustomPackItem {
+  const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return { id: `custom:${id}`, name: name.trim() };
 }
 
 export function splitSpecies(input: string): string[] {
@@ -114,15 +139,23 @@ export function defaultPackTitle(species: string[], location: string): string {
   return [species.join(', '), location].filter(Boolean).join(' · ') || 'Trip pack list';
 }
 
-/** Gear to pack: highlighted picks first, then other recommended items, skipping restock items. */
-export function buildPackEntries(plan: TripPlan | null, items: GearItem[]): PackEntry[] {
+/**
+ * Gear to pack: highlighted picks first, then other recommended items (skipping
+ * restock items and ones the user removed), then the user's own items.
+ */
+export function buildPackEntries(
+  plan: TripPlan | null,
+  items: GearItem[],
+  edits: { hidden?: string[]; custom?: CustomPackItem[] } = {},
+): PackEntry[] {
   if (!plan) return [];
+  const hidden = new Set(edits.hidden || []);
   const reasons = new Map(plan.loadout_highlights.map(h => [h.item_id, h.reason]));
   const ids = [...plan.loadout_highlights.map(h => h.item_id), ...plan.recommended_gear_ids];
   const seen = new Set<string>();
   const entries: PackEntry[] = [];
   for (const id of ids) {
-    if (seen.has(id)) continue;
+    if (seen.has(id) || hidden.has(id)) continue;
     seen.add(id);
     const gear = items.find(i => i.id === id && !i.is_ghost);
     if (!gear) continue;
@@ -135,7 +168,17 @@ export function buildPackEntries(plan: TripPlan | null, items: GearItem[]): Pack
       reason: reasons.get(id),
     });
   }
+  for (const c of edits.custom || []) {
+    entries.push({ id: c.id, brand: '', name: c.name, detail: '', custom: true });
+  }
   return entries;
+}
+
+/** How many of the plan's tackle-box picks the user has removed from the list. */
+export function countHiddenGear(plan: TripPlan | null, items: GearItem[], hidden: string[]): number {
+  if (!plan || hidden.length === 0) return 0;
+  const recommended = new Set([...plan.loadout_highlights.map(h => h.item_id), ...plan.recommended_gear_ids]);
+  return hidden.filter(id => recommended.has(id) && items.some(i => i.id === id && !i.is_ghost)).length;
 }
 
 /** Each gap's current state, worked out from what's actually in the user's gear. */
@@ -161,8 +204,12 @@ export async function addGapsToRestock(opts: {
   items: GearItem[];
   location: string;
   species: string[];
+  /** Re-add just these gap names (e.g. ones removed from the restock list earlier). */
+  only?: string[];
 }): Promise<{ inserted: GearItem[]; newlyAdded: string[]; error?: string }> {
-  const pending = opts.plan.missing_recommendations.filter(g => !opts.addedGaps.includes(g.item));
+  const pending = opts.only
+    ? opts.plan.missing_recommendations.filter(g => opts.only!.includes(g.item))
+    : opts.plan.missing_recommendations.filter(g => !opts.addedGaps.includes(g.item));
   if (pending.length === 0) return { inserted: [], newlyAdded: [] };
 
   const existingGhostNames = new Set(opts.items.filter(i => i.is_ghost).map(i => i.name.trim().toLowerCase()));

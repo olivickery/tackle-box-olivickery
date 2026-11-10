@@ -9,11 +9,11 @@ import {
 import AuthGate from '../../components/AuthGate';
 import Wordmark from '../../components/Wordmark';
 import LegalFooter from '../../components/LegalFooter';
-import PackChecklist from '../../components/PackChecklist';
+import PackChecklist, { type PackEntry } from '../../components/PackChecklist';
 import { supabase } from '../../lib/supabase';
 import {
   type GearItem, type PackList,
-  formatGearRow, formatPackRow, buildPackEntries, buildPackGaps, addGapsToRestock,
+  formatGearRow, formatPackRow, buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, newCustomItem,
 } from '../../lib/gear';
 
 type SortKey = 'trip-date' | 'newest' | 'name' | 'species' | 'location';
@@ -52,6 +52,7 @@ function SavedPacks({ session }: { session: Session }) {
   const [packToDelete, setPackToDelete] = useState<PackList | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAddingGaps, setIsAddingGaps] = useState(false);
+  const [reAddingGap, setReAddingGap] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,13 +136,56 @@ function SavedPacks({ session }: { session: Session }) {
   };
 
   const openPack = packs.find(p => p.id === openPackId) || null;
-  const openEntries = buildPackEntries(openPack?.plan ?? null, items);
+  const openEntries = buildPackEntries(openPack?.plan ?? null, items, {
+    hidden: openPack?.hidden_items, custom: openPack?.custom_items,
+  });
   const openGaps = buildPackGaps(openPack?.plan ?? null, openPack?.added_gaps ?? [], items, loading);
 
   const togglePacked = (id: string) => {
     if (!openPack) return;
     const checked = openPack.checked.includes(id) ? openPack.checked.filter(x => x !== id) : [...openPack.checked, id];
     updatePack(openPack.id, { checked });
+  };
+
+  const removeEntry = (entry: PackEntry) => {
+    if (!openPack) return;
+    const checked = openPack.checked.filter(id => id !== entry.id);
+    if (entry.custom) {
+      updatePack(openPack.id, { custom_items: openPack.custom_items.filter(c => c.id !== entry.id), checked });
+    } else if (!openPack.hidden_items.includes(entry.id)) {
+      updatePack(openPack.id, { hidden_items: [...openPack.hidden_items, entry.id], checked });
+    }
+  };
+
+  const restoreEntry = (entry: PackEntry) => {
+    if (!openPack) return;
+    if (entry.custom) {
+      if (!openPack.custom_items.some(c => c.id === entry.id)) {
+        updatePack(openPack.id, { custom_items: [...openPack.custom_items, { id: entry.id, name: entry.name }] });
+      }
+    } else {
+      updatePack(openPack.id, { hidden_items: openPack.hidden_items.filter(id => id !== entry.id) });
+    }
+  };
+
+  const reAddGap = async (gapName: string) => {
+    if (!openPack || reAddingGap) return;
+    setReAddingGap(gapName);
+    const result = await addGapsToRestock({
+      userId: session.user.id,
+      plan: openPack.plan,
+      addedGaps: openPack.added_gaps,
+      items,
+      location: openPack.location || '',
+      species: openPack.species,
+      only: [gapName],
+    });
+    setReAddingGap(null);
+    if (result.error) {
+      alert(`Couldn't add it back to your restock list: ${result.error}`);
+      return;
+    }
+    if (result.inserted.length) setItems(prev => [...result.inserted, ...prev]);
   };
 
   const addOpenGaps = async () => {
@@ -237,7 +281,7 @@ function SavedPacks({ session }: { session: Session }) {
             </div>
           ) : (
             sortedPacks.map(pack => {
-              const entries = buildPackEntries(pack.plan, items);
+              const entries = buildPackEntries(pack.plan, items, { hidden: pack.hidden_items, custom: pack.custom_items });
               const packed = pack.checked.filter(id => entries.some(e => e.id === id)).length;
               const pct = entries.length ? Math.round((packed / entries.length) * 100) : 0;
               const done = entries.length > 0 && packed === entries.length;
@@ -318,6 +362,13 @@ function SavedPacks({ session }: { session: Session }) {
           onReset={() => updatePack(openPack.id, { checked: [] })}
           onAddGaps={addOpenGaps}
           isAddingGaps={isAddingGaps}
+          onReAddGap={reAddGap}
+          reAddingGap={reAddingGap}
+          onRemoveEntry={removeEntry}
+          onRestoreEntry={restoreEntry}
+          hiddenCount={countHiddenGear(openPack.plan, items, openPack.hidden_items)}
+          onRestoreHidden={() => updatePack(openPack.id, { hidden_items: [] })}
+          onAddCustom={(name) => updatePack(openPack.id, { custom_items: [...openPack.custom_items, newCustomItem(name)] })}
           onClose={() => setOpenPackId(null)}
         />
       )}
