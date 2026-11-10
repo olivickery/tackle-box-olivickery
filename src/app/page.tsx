@@ -7,6 +7,7 @@ import AuthGate from '../components/AuthGate';
 import ZoomLightbox from '../components/ZoomLightbox';
 import Wordmark from '../components/Wordmark';
 import LegalFooter from '../components/LegalFooter';
+import PackChecklist, { GapStatusTag, type PackEntry, type PackGap } from '../components/PackChecklist';
 import { 
   Star, 
   Trash2, 
@@ -34,7 +35,8 @@ import {
   Compass,
   Search,
   Sparkles,
-  LogOut
+  LogOut,
+  ClipboardList
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
@@ -82,11 +84,87 @@ interface GearItem {
   created_at?: string;
 }
 
+interface GapItem {
+  item: string;
+  type: string;
+  reason: string;
+}
+
 interface TripPlan {
   trip_summary: string;
   recommended_gear_ids: string[];
   loadout_highlights: { item_id: string; reason: string }[];
-  missing_recommendations: string[];
+  missing_recommendations: GapItem[];
+}
+
+const SUGGESTED_NOTE_PREFIX = 'Suggested by Trip Planner';
+
+const GEAR_TYPES = [
+  'Hardbody', 'Soft Plastic', 'Topwater / Surface', 'Jerkbait', 'Metal Jig', 'Vibe / Blade',
+  'Reel', 'Rod', 'Terminal tackle', 'Tool', 'Accessory',
+];
+
+/** Accepts older plans (gaps as plain strings) and tidies whatever the AI returned. */
+function normalizePlan(raw: unknown): TripPlan {
+  const p = (raw ?? {}) as Record<string, unknown>;
+  const gapsRaw = Array.isArray(p.missing_recommendations) ? p.missing_recommendations : [];
+  return {
+    trip_summary: typeof p.trip_summary === 'string' ? p.trip_summary : '',
+    recommended_gear_ids: Array.isArray(p.recommended_gear_ids) ? p.recommended_gear_ids.map(String) : [],
+    loadout_highlights: Array.isArray(p.loadout_highlights)
+      ? (p.loadout_highlights as { item_id?: unknown; reason?: unknown }[])
+          .filter(h => h && h.item_id)
+          .map(h => ({ item_id: String(h.item_id), reason: typeof h.reason === 'string' ? h.reason : '' }))
+      : [],
+    missing_recommendations: gapsRaw
+      .map((g): GapItem | null => {
+        if (typeof g === 'string') return g.trim() ? { item: g.trim(), type: 'Accessory', reason: '' } : null;
+        if (g && typeof g === 'object') {
+          const o = g as Record<string, unknown>;
+          const item = typeof o.item === 'string' ? o.item.trim() : '';
+          if (!item) return null;
+          const type = typeof o.type === 'string' && GEAR_TYPES.includes(o.type) ? o.type : 'Accessory';
+          return { item, type, reason: typeof o.reason === 'string' ? o.reason : '' };
+        }
+        return null;
+      })
+      .filter((g): g is GapItem => g !== null),
+  };
+}
+
+interface SavedTrip {
+  plan: TripPlan;
+  location?: string;
+  species?: string;
+  conditions?: string;
+  checked: string[];
+  addedGaps: string[];
+}
+
+function loadSavedTrip(key: string): SavedTrip | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    if (!saved?.plan) return null;
+    return {
+      plan: normalizePlan(saved.plan),
+      location: typeof saved.location === 'string' ? saved.location : undefined,
+      species: typeof saved.species === 'string' ? saved.species : undefined,
+      conditions: typeof saved.conditions === 'string' ? saved.conditions : undefined,
+      checked: Array.isArray(saved.checked) ? saved.checked.map(String) : [],
+      addedGaps: Array.isArray(saved.addedGaps) ? saved.addedGaps.map(String) : [],
+    };
+  } catch {
+    return null; // Storage blocked or corrupt: start fresh.
+  }
+}
+
+function GearPlaceholder({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center justify-center bg-slate-900 text-slate-600 ${className}`}>
+      <Package className="w-1/3 h-1/3 max-w-10 max-h-10" />
+    </div>
+  );
 }
 
 const compressImageCrisp = (file: File): Promise<Blob> => {
@@ -160,9 +238,8 @@ function CardCarousel({
   onDeleteItem: (item: GearItem) => void;
   onZoomImage: (url: string) => void;
 }) {
-  const images = item.image_urls && item.image_urls.length > 0 
-    ? item.image_urls 
-    : [item.image_url];
+  const realImages = (item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]).filter(Boolean);
+  const images = realImages.length > 0 ? realImages : [''];
   
   const totalSlides = images.length + 3;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -309,7 +386,9 @@ function CardCarousel({
       {/* All photos stay mounted and decoded; only opacity changes on swipe. */}
       <div className={`absolute inset-0 ${isImageSlide ? '' : 'invisible'}`} aria-hidden={!isImageSlide}>
         {images.map((src, idx) =>
-          idx === 0 || shouldPreload ? (
+          !src ? (
+            <GearPlaceholder key="placeholder" className="absolute inset-0 w-full h-full" />
+          ) : idx === 0 || shouldPreload ? (
             <img
               key={`${idx}-${src}`}
               src={src}
@@ -436,7 +515,7 @@ function CardCarousel({
         </div>
       ) : (
         <div className="relative w-full h-full">
-          <button
+          {images[currentIndex] && <button
             onClick={(e) => {
               e.stopPropagation();
               onZoomImage(images[currentIndex]);
@@ -445,7 +524,7 @@ function CardCarousel({
             title="Zoom Image"
           >
             <ZoomIn className="w-3.5 h-3.5" />
-          </button>
+          </button>}
         </div>
       )}
 
@@ -521,11 +600,18 @@ function TackleboxIQ({ session }: { session: Session }) {
   // Trip Planner States
   const [isTripPlannerOpen, setIsTripPlannerOpen] = useState(false);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-  const [tripLocation, setTripLocation] = useState('Estuary & River');
-  const [tripSpeciesInput, setTripSpeciesInput] = useState('Flathead, Bream');
-  const [tripConditions, setTripConditions] = useState('Overcast / Low Light');
-  const [currentPlan, setCurrentPlan] = useState<TripPlan | null>(null);
+  // Last trip saved on this device (the app only renders client-side, behind AuthGate).
+  const tripStorageKey = `tbiq:lastTrip:${session.user.id}`;
+  const [savedTrip] = useState(() => loadSavedTrip(tripStorageKey));
+  const [tripLocation, setTripLocation] = useState(savedTrip?.location || 'Estuary & River');
+  const [tripSpeciesInput, setTripSpeciesInput] = useState(savedTrip?.species ?? 'Flathead, Bream');
+  const [tripConditions, setTripConditions] = useState(savedTrip?.conditions || 'Overcast / Low Light');
+  const [currentPlan, setCurrentPlan] = useState<TripPlan | null>(savedTrip?.plan ?? null);
   const [tripPlannerError, setTripPlannerError] = useState<string | null>(null);
+  const [packChecked, setPackChecked] = useState<string[]>(savedTrip?.checked ?? []);
+  const [addedGapItems, setAddedGapItems] = useState<string[]>(savedTrip?.addedGaps ?? []);
+  const [isPackChecklistOpen, setIsPackChecklistOpen] = useState(false);
+  const [isAddingGaps, setIsAddingGaps] = useState(false);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -598,17 +684,90 @@ function TackleboxIQ({ session }: { session: Session }) {
         ...item,
         type: item.type === 'Hardbody Suspending' ? 'Hardbody' : item.type,
         environment_tags: item.environment_tags || [],
-        image_urls: item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]
+        image_urls: (item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]).filter(Boolean)
       }));
       setItems(formattedItems as GearItem[]);
     }
     setLoading(false);
   };
 
+  // Keep the last trip (plan, inputs, packed ticks) on this device so the
+  // checklist is still there when it's time to pack.
+  useEffect(() => {
+    if (!currentPlan) return;
+    try {
+      localStorage.setItem(tripStorageKey, JSON.stringify({
+        plan: currentPlan,
+        location: tripLocation,
+        species: tripSpeciesInput,
+        conditions: tripConditions,
+        checked: packChecked,
+        addedGaps: addedGapItems,
+      }));
+    } catch {
+      // Non-essential; ignore quota/privacy-mode errors.
+    }
+  }, [tripStorageKey, currentPlan, tripLocation, tripSpeciesInput, tripConditions, packChecked, addedGapItems]);
+
+  const togglePacked = (id: string) => {
+    setPackChecked(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  };
+
+  const handleAddGapsToRestock = async () => {
+    if (!currentPlan || isAddingGaps) return;
+    const pending = currentPlan.missing_recommendations.filter(g => !addedGapItems.includes(g.item));
+    // (Gaps the user removed stay removed; only never-added ones are offered.)
+    if (pending.length === 0) return;
+
+    // Don't duplicate something already on the restock list.
+    const existingGhostNames = new Set(items.filter(i => i.is_ghost).map(i => i.name.trim().toLowerCase()));
+    const toInsert = pending.filter(g => !existingGhostNames.has(g.item.toLowerCase()));
+
+    const species = tripSpeciesInput.split(',').map(x => x.trim()).filter(Boolean);
+    setIsAddingGaps(true);
+
+    if (toInsert.length > 0) {
+      const rows = toInsert.map(g => ({
+        user_id: session.user.id,
+        name: g.item,
+        brand: '',
+        type: g.type,
+        depth: '',
+        color: '',
+        is_favorite: false,
+        is_ghost: true,
+        image_url: '',
+        image_urls: [] as string[],
+        notes: `${SUGGESTED_NOTE_PREFIX} (${tripLocation})${g.reason ? `: ${g.reason}` : ''}`,
+        species: species.length ? species : ['General'],
+        environment_tags: [tripLocation],
+      }));
+
+      const { data, error } = await supabase.from('gear_items').insert(rows).select();
+      if (error) {
+        console.error('Failed to add gaps to restock list:', error);
+        alert(`Couldn't add to your restock list: ${error.message}`);
+        setIsAddingGaps(false);
+        return;
+      }
+      const inserted = (data || []).map(row => ({
+        ...row,
+        environment_tags: row.environment_tags || [],
+        image_urls: (row.image_urls && row.image_urls.length > 0 ? row.image_urls : [row.image_url]).filter(Boolean),
+      })) as GearItem[];
+      setItems(prev => [...inserted, ...prev]);
+    }
+
+    setAddedGapItems(prev => [...prev, ...pending.map(g => g.item)]);
+    setIsAddingGaps(false);
+  };
+
   const handleGenerateTripPlan = async () => {
     setIsGeneratingPlan(true);
     setCurrentPlan(null);
     setTripPlannerError(null);
+    setPackChecked([]);
+    setAddedGapItems([]);
 
     const speciesArray = tripSpeciesInput
       .split(',')
@@ -629,7 +788,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
       const result = await res.json();
       if (res.ok && result.success && result.plan) {
-        setCurrentPlan(result.plan);
+        setCurrentPlan(normalizePlan(result.plan));
       } else {
         setTripPlannerError(result.error || 'Failed to generate trip loadout. Please try again in a moment.');
       }
@@ -703,6 +862,22 @@ function TackleboxIQ({ session }: { session: Session }) {
       setItemToDelete(null);
     }
     setIsDeleting(false);
+  };
+
+  // Restock "Remove": trip-plan suggestions have nothing worth keeping, so they
+  // go straight away; real gear goes through the usual delete confirmation.
+  const removeFromRestock = async (item: GearItem) => {
+    if (!item.notes?.startsWith(SUGGESTED_NOTE_PREFIX)) {
+      setItemToDelete(item);
+      return;
+    }
+    setItems(prev => prev.filter(i => i.id !== item.id));
+    const { error } = await supabase.from('gear_items').delete().eq('id', item.id);
+    if (error) {
+      console.error('Failed to remove restock item:', error);
+      alert(`Couldn't remove it from your restock list: ${error.message}`);
+      fetchGearItems();
+    }
   };
 
   const openNotesEditor = (item: GearItem) => {
@@ -805,7 +980,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
   const openPhotosEditor = (item: GearItem) => {
     setItemToEditPhotos(item);
-    setModalPhotos(item.image_urls && item.image_urls.length > 0 ? [...item.image_urls] : [item.image_url]);
+    setModalPhotos((item.image_urls && item.image_urls.length > 0 ? [...item.image_urls] : [item.image_url]).filter(Boolean));
   };
 
   const handleModalPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -886,7 +1061,10 @@ function TackleboxIQ({ session }: { session: Session }) {
     if (ghostItems.length === 0) return;
 
     const listText = ghostItems.map((item, index) => 
-      `${index + 1}. ${item.brand} - ${item.name} (${item.color}${item.depth && item.depth !== 'N/A' ? `, ${item.depth}` : ''})`
+      {
+        const details = [item.color, item.depth && item.depth !== 'N/A' ? item.depth : ''].filter(Boolean).join(', ');
+        return `${index + 1}. ${item.brand ? `${item.brand} - ` : ''}${item.name}${details ? ` (${details})` : ''}`;
+      }
     ).join('\n');
 
     const formattedExport = `Tacklebox IQ restock list:\n${listText}`;
@@ -1154,6 +1332,38 @@ function TackleboxIQ({ session }: { session: Session }) {
     if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
+
+  const packEntries: PackEntry[] = (() => {
+    if (!currentPlan) return [];
+    const reasons = new Map(currentPlan.loadout_highlights.map(h => [h.item_id, h.reason]));
+    const ids = [...currentPlan.loadout_highlights.map(h => h.item_id), ...currentPlan.recommended_gear_ids];
+    const seen = new Set<string>();
+    const entries: PackEntry[] = [];
+    for (const id of ids) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const gear = items.find(i => i.id === id && !i.is_ghost);
+      if (!gear) continue;
+      entries.push({
+        id: gear.id,
+        brand: gear.brand,
+        name: gear.name,
+        detail: [gear.type, gear.color, gear.depth && gear.depth !== 'N/A' ? gear.depth : ''].filter(Boolean).join(' · '),
+        image: gear.image_urls?.[0] || gear.image_url || undefined,
+        reason: reasons.get(id),
+      });
+    }
+    return entries;
+  })();
+  const packCheckedSet = new Set(packChecked.filter(id => packEntries.some(e => e.id === id)));
+  const planGaps: PackGap[] = (currentPlan?.missing_recommendations || []).map(g => {
+    if (!addedGapItems.includes(g.item)) return { ...g, status: 'pending' };
+    if (loading) return { ...g, status: 'on-list' };
+    const name = g.item.trim().toLowerCase();
+    const match = items.find(i => i.name.trim().toLowerCase() === name);
+    return { ...g, status: !match ? 'removed' : match.is_ghost ? 'on-list' : 'bought' };
+  });
+  const gapsLeftToAdd = planGaps.filter(g => g.status === 'pending').length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
@@ -1515,11 +1725,15 @@ function TackleboxIQ({ session }: { session: Session }) {
                           className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40"
                         >
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
-                            <img 
-                              src={item.image_urls?.[0] || item.image_url} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover opacity-70"
-                            />
+                            {item.image_urls?.[0] || item.image_url ? (
+                              <img 
+                                src={item.image_urls?.[0] || item.image_url} 
+                                alt={item.name} 
+                                className="w-full h-full object-cover opacity-70"
+                              />
+                            ) : (
+                              <GearPlaceholder className="w-full h-full" />
+                            )}
 
                             <button 
                               onClick={() => setItemToDelete(item)}
@@ -1531,7 +1745,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
                               <span className="bg-red-500/30 text-red-300 border border-red-500/50 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest backdrop-blur-sm">
-                                Needs Replacement
+                                {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'To buy' : 'Needs Replacement'}
                               </span>
                             </div>
                           </div>
@@ -1764,7 +1978,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                         if (!gear) return null;
                         return (
                           <div key={idx} className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-start gap-3">
-                            <img src={gear.image_urls?.[0] || gear.image_url} alt={gear.name} className="w-10 h-10 object-cover rounded-lg shrink-0 mt-0.5" />
+                            {gear.image_urls?.[0] || gear.image_url ? (
+                              <img src={gear.image_urls?.[0] || gear.image_url} alt={gear.name} className="w-10 h-10 object-cover rounded-lg shrink-0 mt-0.5" />
+                            ) : (
+                              <GearPlaceholder className="w-10 h-10 rounded-lg shrink-0 mt-0.5" />
+                            )}
                             <div>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-amber-400 font-bold">{gear.brand}</span>
@@ -1778,21 +1996,63 @@ function TackleboxIQ({ session }: { session: Session }) {
                     </div>
                   </div>
 
-                  {currentPlan.missing_recommendations.length > 0 && (
+                  {planGaps.length > 0 && (
                     <div className="bg-slate-950 p-3.5 rounded-xl border border-dashed border-red-500/40">
-                      <span className="text-[10px] uppercase font-bold text-red-400 block mb-1">Gap Analysis (Suggested Gaps)</span>
-                      <ul className="list-disc list-inside text-slate-300 space-y-1 text-[11px] font-sans">
-                        {currentPlan.missing_recommendations.map((gap, idx) => (
-                          <li key={idx}>{gap}</li>
+                      <span className="text-[10px] uppercase font-bold text-red-400 block mb-2">Gap analysis: not in your tackle box</span>
+                      <ul className="space-y-2 text-[11px] font-sans">
+                        {planGaps.map((gap, idx) => (
+                          <li key={idx}>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className={gap.status === 'removed' ? 'text-slate-500 line-through font-semibold' : 'text-slate-200 font-semibold'}>{gap.item}</span>
+                              <GapStatusTag status={gap.status} />
+                            </div>
+                            {gap.reason && <p className="text-slate-400 leading-snug">{gap.reason}</p>}
+                          </li>
                         ))}
                       </ul>
+                      {gapsLeftToAdd > 0 && (
+                        <button
+                          onClick={handleAddGapsToRestock}
+                          disabled={isAddingGaps}
+                          className="mt-3 w-full py-2.5 rounded-xl border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          {isAddingGaps ? 'Adding…' : `Add ${gapsLeftToAdd === 1 ? 'missing item' : `${gapsLeftToAdd} missing items`} to restock list`}
+                        </button>
+                      )}
                     </div>
+                  )}
+
+                  {packEntries.length > 0 && (
+                    <button
+                      onClick={() => setIsPackChecklistOpen(true)}
+                      className="w-full bg-slate-100 hover:bg-white text-slate-950 font-sans font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
+                    >
+                      <ClipboardList className="w-5 h-5" />
+                      {packCheckedSet.size > 0
+                        ? `Pack checklist (${packCheckedSet.size}/${packEntries.length} packed)`
+                        : 'Generate pack checklist'}
+                    </button>
                   )}
                 </div>
               )}
             </div>
           </div>
         </div>
+      )}
+
+      {isPackChecklistOpen && currentPlan && (
+        <PackChecklist
+          tripLabel={[tripLocation, tripSpeciesInput, tripConditions].filter(Boolean).join(' · ')}
+          entries={packEntries}
+          gaps={planGaps}
+          checked={packCheckedSet}
+          onToggle={togglePacked}
+          onReset={() => setPackChecked([])}
+          onAddGaps={handleAddGapsToRestock}
+          isAddingGaps={isAddingGaps}
+          onClose={() => setIsPackChecklistOpen(false)}
+        />
       )}
 
       {undoToast && (
@@ -2115,7 +2375,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       )}
 
       {itemToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-slate-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl relative text-center">
             
             <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -2124,7 +2384,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
             <h3 className="text-lg font-bold text-slate-100">Permanently delete item?</h3>
             <p className="text-xs text-slate-400 font-mono mt-1">
-              You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand} - {itemToDelete.name}</span> from your gear.
+              You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand ? `${itemToDelete.brand} - ` : ''}{itemToDelete.name}</span> from your gear.
             </p>
 
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 my-4 font-mono text-[11px] text-red-400">
@@ -2440,18 +2700,33 @@ function TackleboxIQ({ session }: { session: Session }) {
                 </div>
               ) : (
                 ghostItems.map((item) => (
-                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
+                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      {item.brand
+                        ? <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
+                        : <span className="text-[10px] font-mono text-red-400 uppercase">{item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'From trip plan' : item.type}</span>}
                       <h4 className="font-semibold text-sm text-slate-200">{item.name}</h4>
-                      <p className="text-xs text-slate-400 font-mono">Colour: {item.color} | {item.depth && item.depth !== 'N/A' ? item.depth : ''}</p>
+                      <p className="text-xs text-slate-400 font-mono">
+                        {[item.color && `Colour: ${item.color}`, item.depth && item.depth !== 'N/A' ? item.depth : '', !item.color && item.type].filter(Boolean).join(' | ')}
+                      </p>
                     </div>
-                    <button 
-                      onClick={() => toggleGhost(item.id, item.is_ghost)}
-                      className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition"
-                    >
-                      Replaced
-                    </button>
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      <button 
+                        onClick={() => toggleGhost(item.id, item.is_ghost)}
+                        className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'Bought' : 'Replaced'}
+                      </button>
+                      <button 
+                        onClick={() => removeFromRestock(item)}
+                        className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
+                        aria-label={`Remove ${item.name} from restock list`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
