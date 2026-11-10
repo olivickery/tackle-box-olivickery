@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import {
   type GearItem, type PackList,
   formatGearRow, formatPackRow, buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, newCustomItem,
+  inventoryPickerItems, applyInventoryAdds,
 } from '../../lib/gear';
 
 type SortKey = 'trip-date' | 'newest' | 'name' | 'species' | 'location';
@@ -161,7 +162,9 @@ function SavedPacks({ session }: { session: Session }) {
     if (!openPack) return;
     if (entry.custom) {
       if (!openPack.custom_items.some(c => c.id === entry.id)) {
-        updatePack(openPack.id, { custom_items: [...openPack.custom_items, { id: entry.id, name: entry.name }] });
+        updatePack(openPack.id, {
+          custom_items: [...openPack.custom_items, { id: entry.id, name: entry.name, ...(entry.gearId ? { gearId: entry.gearId } : {}) }],
+        });
       }
     } else {
       updatePack(openPack.id, { hidden_items: openPack.hidden_items.filter(id => id !== entry.id) });
@@ -369,6 +372,11 @@ function SavedPacks({ session }: { session: Session }) {
           hiddenCount={countHiddenGear(openPack.plan, items, openPack.hidden_items)}
           onRestoreHidden={() => updatePack(openPack.id, { hidden_items: [] })}
           onAddCustom={(name) => updatePack(openPack.id, { custom_items: [...openPack.custom_items, newCustomItem(name)] })}
+          inventory={inventoryPickerItems(items)}
+          onAddFromInventory={(ids) => {
+            const next = applyInventoryAdds(openPack.plan, items, openPack.hidden_items, openPack.custom_items, ids);
+            updatePack(openPack.id, { hidden_items: next.hidden, custom_items: next.custom });
+          }}
           onClose={() => setOpenPackId(null)}
         />
       )}

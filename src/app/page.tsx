@@ -13,6 +13,7 @@ import {
   type GearItem, type TripPlan, type CustomPackItem,
   SUGGESTED_NOTE_PREFIX, normalizePlan, formatGearRow, formatPackRow, splitSpecies, defaultPackTitle,
   buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, normalizeCustomItems, newCustomItem,
+  inventoryPickerItems, applyInventoryAdds,
 } from '../lib/gear';
 import { 
   Star, 
@@ -696,12 +697,22 @@ function TackleboxIQ({ session }: { session: Session }) {
   };
 
   const restorePackEntry = (entry: PackEntry) => {
-    if (entry.custom) setCustomPackItems(prev => (prev.some(c => c.id === entry.id) ? prev : [...prev, { id: entry.id, name: entry.name }]));
+    if (entry.custom) {
+      setCustomPackItems(prev => (prev.some(c => c.id === entry.id)
+        ? prev
+        : [...prev, { id: entry.id, name: entry.name, ...(entry.gearId ? { gearId: entry.gearId } : {}) }]));
+    }
     else setHiddenPackItems(prev => prev.filter(id => id !== entry.id));
   };
 
   const addCustomPackItem = (name: string) => {
     setCustomPackItems(prev => [...prev, newCustomItem(name)]);
+  };
+
+  const addPackItemsFromInventory = (gearIds: string[]) => {
+    const next = applyInventoryAdds(currentPlan, items, hiddenPackItems, customPackItems, gearIds);
+    setHiddenPackItems(next.hidden);
+    setCustomPackItems(next.custom);
   };
 
   const handleReAddGap = async (gapName: string) => {
@@ -2117,6 +2128,8 @@ function TackleboxIQ({ session }: { session: Session }) {
           hiddenCount={countHiddenGear(currentPlan, items, hiddenPackItems)}
           onRestoreHidden={() => setHiddenPackItems([])}
           onAddCustom={addCustomPackItem}
+          inventory={inventoryPickerItems(items)}
+          onAddFromInventory={addPackItemsFromInventory}
           onClose={() => setIsPackChecklistOpen(false)}
         />
       )}

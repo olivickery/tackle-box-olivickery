@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, ClipboardList, Package, Plus, RotateCcw, ShoppingBag, Trash2, Undo2, X } from 'lucide-react';
+import InventoryPicker, { type PickerItem } from './InventoryPicker';
 
 export interface PackEntry {
   id: string;
@@ -12,6 +13,8 @@ export interface PackEntry {
   reason?: string;
   /** Added by the user rather than picked by the trip planner. */
   custom?: boolean;
+  /** Set when a user-added item is gear from their tackle box. */
+  gearId?: string;
 }
 
 export type GapStatus = 'pending' | 'on-list' | 'bought' | 'removed';
@@ -174,15 +177,19 @@ interface Props {
   hiddenCount: number;
   onRestoreHidden: () => void;
   onAddCustom: (name: string) => void;
+  /** Everything in the tackle box, for the add-gear picker. */
+  inventory: PickerItem[];
+  onAddFromInventory: (gearIds: string[]) => void;
   onClose: () => void;
 }
 
 /** Full-screen, thumb-friendly packing checklist built from a trip plan. */
 export default function PackChecklist({
   title = 'Pack checklist', tripLabel, entries, gaps, checked, onToggle, onReset, onAddGaps, isAddingGaps,
-  onReAddGap, reAddingGap, onRemoveEntry, onRestoreEntry, hiddenCount, onRestoreHidden, onAddCustom, onClose,
+  onReAddGap, reAddingGap, onRemoveEntry, onRestoreEntry, hiddenCount, onRestoreHidden, onAddCustom, inventory, onAddFromInventory, onClose,
 }: Props) {
   const [customName, setCustomName] = useState('');
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [lastRemoved, setLastRemoved] = useState<PackEntry | null>(null);
 
   useEffect(() => {
@@ -229,7 +236,7 @@ export default function PackChecklist({
           }`}>
             {isChecked && <Check className="w-4 h-4 stroke-[3]" />}
           </span>
-          {!entry.custom && (entry.image ? (
+          {(!entry.custom || entry.gearId) && (entry.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={entry.image} alt="" draggable={false} className={`w-11 h-11 object-cover rounded-lg shrink-0 transition ${isChecked ? 'opacity-50' : ''}`} />
           ) : (
@@ -303,26 +310,33 @@ export default function PackChecklist({
             )}
           </div>
 
-          {/* User's own items */}
+          {/* Added by the user */}
           <div className="px-5 pt-5">
             <h3 className="text-[10px] uppercase font-bold text-slate-400 mb-2 flex items-center gap-1.5">
-              <Plus className="w-3.5 h-3.5" /> Your own items
+              <Plus className="w-3.5 h-3.5" /> Added by you
             </h3>
-            {customEntries.length > 0 && <ul className="space-y-2 mb-2">{customEntries.map(renderEntry)}</ul>}
-            <form onSubmit={submitCustom} className="flex gap-2">
+            {customEntries.length > 0 && <ul className="space-y-2 mb-3">{customEntries.map(renderEntry)}</ul>}
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen(true)}
+              className="w-full py-3 rounded-xl bg-slate-100 hover:bg-white text-slate-950 font-sans font-bold flex items-center justify-center gap-2 transition"
+            >
+              <Package className="w-4 h-4" /> Add from your tackle box
+            </button>
+            <form onSubmit={submitCustom} className="flex gap-2 mt-2">
               <input
                 type="text"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
-                placeholder="e.g. Sunscreen, bait, esky…"
+                placeholder="Other: sunscreen, bait…"
                 maxLength={60}
-                aria-label="Add your own item"
+                aria-label="Add something that isn't in your tackle box"
                 className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-base sm:text-xs text-slate-100 placeholder-slate-500 focus:border-amber-500 outline-none"
               />
               <button
                 type="submit"
                 disabled={!customName.trim()}
-                className="px-4 rounded-xl bg-slate-100 hover:bg-white text-slate-950 font-sans font-bold flex items-center gap-1 transition disabled:opacity-40"
+                className="px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center gap-1 transition disabled:opacity-40"
               >
                 <Plus className="w-4 h-4" /> Add
               </button>
@@ -380,6 +394,15 @@ export default function PackChecklist({
           </div>
         </div>
       </div>
+
+      {isPickerOpen && (
+        <InventoryPicker
+          items={inventory}
+          onListIds={new Set(entries.map(e => e.gearId ?? (e.custom ? '' : e.id)).filter(Boolean))}
+          onAdd={(ids) => { onAddFromInventory(ids); setIsPickerOpen(false); }}
+          onClose={() => setIsPickerOpen(false)}
+        />
+      )}
 
       {/* Undo after a removal */}
       {lastRemoved && (

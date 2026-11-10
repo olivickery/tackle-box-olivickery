@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { PackEntry, PackGap } from '../components/PackChecklist';
+import type { PickerItem } from '../components/InventoryPicker';
 
 export interface GearItem {
   id: string;
@@ -31,10 +32,14 @@ export interface TripPlan {
   missing_recommendations: GapItem[];
 }
 
-/** Something the user added to a pack list themselves (sunscreen, bait…). */
+/**
+ * Something the user added to a pack list themselves: either gear picked from
+ * their tackle box (gearId set, id = gear id) or a typed item (sunscreen, bait…).
+ */
 export interface CustomPackItem {
   id: string;
   name: string;
+  gearId?: string;
 }
 
 /** A saved pack list (row in public.pack_lists). */
@@ -118,8 +123,12 @@ export function formatPackRow(row: any): PackList {
 export function normalizeCustomItems(raw: unknown): CustomPackItem[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .filter((c): c is { id: unknown; name: unknown } => !!c && typeof c === 'object')
-    .map(c => ({ id: String(c.id), name: String(c.name ?? '').trim() }))
+    .filter((c): c is { id: unknown; name: unknown; gearId?: unknown } => !!c && typeof c === 'object')
+    .map(c => ({
+      id: String(c.id),
+      name: String(c.name ?? '').trim(),
+      ...(typeof c.gearId === 'string' && c.gearId ? { gearId: c.gearId } : {}),
+    }))
     .filter(c => c.id && c.name);
 }
 
@@ -137,6 +146,42 @@ export function splitSpecies(input: string): string[] {
 /** Default name for a new pack list, e.g. "Flathead, Bream · Estuary & River". */
 export function defaultPackTitle(species: string[], location: string): string {
   return [species.join(', '), location].filter(Boolean).join(' · ') || 'Trip pack list';
+}
+
+function gearDetail(gear: GearItem): string {
+  return [gear.type, gear.color, gear.depth && gear.depth !== 'N/A' ? gear.depth : ''].filter(Boolean).join(' · ');
+}
+
+/** Everything in the user's tackle box (not restock items), for the add-gear picker. */
+export function inventoryPickerItems(items: GearItem[]): PickerItem[] {
+  return items
+    .filter(i => !i.is_ghost)
+    .map(i => ({
+      id: i.id, brand: i.brand, name: i.name, detail: gearDetail(i), type: i.type,
+      image: i.image_urls?.[0] || i.image_url || undefined,
+    }))
+    .sort((a, b) => `${a.brand} ${a.name}`.localeCompare(`${b.brand} ${b.name}`));
+}
+
+/**
+ * Adds picked gear to a pack list: plan picks the user had removed are simply
+ * restored; anything else becomes a user-added gear item.
+ */
+export function applyInventoryAdds(
+  plan: TripPlan | null,
+  items: GearItem[],
+  hidden: string[],
+  custom: CustomPackItem[],
+  gearIds: string[],
+): { hidden: string[]; custom: CustomPackItem[] } {
+  const recommended = new Set(plan ? [...plan.loadout_highlights.map(h => h.item_id), ...plan.recommended_gear_ids] : []);
+  const nextCustom = [...custom];
+  for (const id of gearIds) {
+    if (recommended.has(id) || nextCustom.some(c => c.id === id)) continue;
+    const gear = items.find(i => i.id === id);
+    if (gear) nextCustom.push({ id, name: gear.name, gearId: id });
+  }
+  return { hidden: hidden.filter(id => !gearIds.includes(id)), custom: nextCustom };
 }
 
 /**
@@ -163,13 +208,23 @@ export function buildPackEntries(
       id: gear.id,
       brand: gear.brand,
       name: gear.name,
-      detail: [gear.type, gear.color, gear.depth && gear.depth !== 'N/A' ? gear.depth : ''].filter(Boolean).join(' · '),
+      detail: gearDetail(gear),
       image: gear.image_urls?.[0] || gear.image_url || undefined,
       reason: reasons.get(id),
     });
   }
   for (const c of edits.custom || []) {
-    entries.push({ id: c.id, brand: '', name: c.name, detail: '', custom: true });
+    if (c.gearId) {
+      const gear = items.find(i => i.id === c.gearId && !i.is_ghost);
+      if (!gear || seen.has(gear.id)) continue; // deleted / moved to restock / already listed
+      seen.add(gear.id);
+      entries.push({
+        id: c.id, gearId: gear.id, brand: gear.brand, name: gear.name, detail: gearDetail(gear),
+        image: gear.image_urls?.[0] || gear.image_url || undefined, custom: true,
+      });
+    } else {
+      entries.push({ id: c.id, brand: '', name: c.name, detail: '', custom: true });
+    }
   }
   return entries;
 }
