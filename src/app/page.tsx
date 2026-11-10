@@ -7,7 +7,13 @@ import AuthGate from '../components/AuthGate';
 import ZoomLightbox from '../components/ZoomLightbox';
 import Wordmark from '../components/Wordmark';
 import LegalFooter from '../components/LegalFooter';
-import PackChecklist, { GapStatusTag, type PackEntry, type PackGap } from '../components/PackChecklist';
+import PackChecklist, { GapStatusTag } from '../components/PackChecklist';
+import Link from 'next/link';
+import {
+  type GearItem, type TripPlan,
+  SUGGESTED_NOTE_PREFIX, normalizePlan, formatGearRow, formatPackRow, splitSpecies, defaultPackTitle,
+  buildPackEntries, buildPackGaps, addGapsToRestock,
+} from '../lib/gear';
 import { 
   Star, 
   Trash2, 
@@ -36,7 +42,8 @@ import {
   Search,
   Sparkles,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  Bookmark
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
@@ -67,71 +74,6 @@ function VaultIcon({ className }: { className?: string }) {
   );
 }
 
-interface GearItem {
-  id: string;
-  name: string;
-  brand: string;
-  type: string;
-  depth: string;
-  color: string;
-  is_favorite: boolean;
-  is_ghost: boolean;
-  image_url: string;
-  image_urls: string[];
-  notes?: string;
-  species: string[];
-  environment_tags?: string[];
-  created_at?: string;
-}
-
-interface GapItem {
-  item: string;
-  type: string;
-  reason: string;
-}
-
-interface TripPlan {
-  trip_summary: string;
-  recommended_gear_ids: string[];
-  loadout_highlights: { item_id: string; reason: string }[];
-  missing_recommendations: GapItem[];
-}
-
-const SUGGESTED_NOTE_PREFIX = 'Suggested by Trip Planner';
-
-const GEAR_TYPES = [
-  'Hardbody', 'Soft Plastic', 'Topwater / Surface', 'Jerkbait', 'Metal Jig', 'Vibe / Blade',
-  'Reel', 'Rod', 'Terminal tackle', 'Tool', 'Accessory',
-];
-
-/** Accepts older plans (gaps as plain strings) and tidies whatever the AI returned. */
-function normalizePlan(raw: unknown): TripPlan {
-  const p = (raw ?? {}) as Record<string, unknown>;
-  const gapsRaw = Array.isArray(p.missing_recommendations) ? p.missing_recommendations : [];
-  return {
-    trip_summary: typeof p.trip_summary === 'string' ? p.trip_summary : '',
-    recommended_gear_ids: Array.isArray(p.recommended_gear_ids) ? p.recommended_gear_ids.map(String) : [],
-    loadout_highlights: Array.isArray(p.loadout_highlights)
-      ? (p.loadout_highlights as { item_id?: unknown; reason?: unknown }[])
-          .filter(h => h && h.item_id)
-          .map(h => ({ item_id: String(h.item_id), reason: typeof h.reason === 'string' ? h.reason : '' }))
-      : [],
-    missing_recommendations: gapsRaw
-      .map((g): GapItem | null => {
-        if (typeof g === 'string') return g.trim() ? { item: g.trim(), type: 'Accessory', reason: '' } : null;
-        if (g && typeof g === 'object') {
-          const o = g as Record<string, unknown>;
-          const item = typeof o.item === 'string' ? o.item.trim() : '';
-          if (!item) return null;
-          const type = typeof o.type === 'string' && GEAR_TYPES.includes(o.type) ? o.type : 'Accessory';
-          return { item, type, reason: typeof o.reason === 'string' ? o.reason : '' };
-        }
-        return null;
-      })
-      .filter((g): g is GapItem => g !== null),
-  };
-}
-
 interface SavedTrip {
   plan: TripPlan;
   location?: string;
@@ -139,6 +81,7 @@ interface SavedTrip {
   conditions?: string;
   checked: string[];
   addedGaps: string[];
+  packId?: string;
 }
 
 function loadSavedTrip(key: string): SavedTrip | null {
@@ -153,6 +96,7 @@ function loadSavedTrip(key: string): SavedTrip | null {
       conditions: typeof saved.conditions === 'string' ? saved.conditions : undefined,
       checked: Array.isArray(saved.checked) ? saved.checked.map(String) : [],
       addedGaps: Array.isArray(saved.addedGaps) ? saved.addedGaps.map(String) : [],
+      packId: typeof saved.packId === 'string' ? saved.packId : undefined,
     };
   } catch {
     return null; // Storage blocked or corrupt: start fresh.
@@ -598,7 +542,15 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
 
   // Trip Planner States
-  const [isTripPlannerOpen, setIsTripPlannerOpen] = useState(false);
+  // /?planner=1 (from the pack lists page) opens the planner straight away.
+  const [isTripPlannerOpen, setIsTripPlannerOpen] = useState(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('planner')
+  );
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('planner')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   // Last trip saved on this device (the app only renders client-side, behind AuthGate).
   const tripStorageKey = `tbiq:lastTrip:${session.user.id}`;
@@ -612,6 +564,11 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [addedGapItems, setAddedGapItems] = useState<string[]>(savedTrip?.addedGaps ?? []);
   const [isPackChecklistOpen, setIsPackChecklistOpen] = useState(false);
   const [isAddingGaps, setIsAddingGaps] = useState(false);
+  const [savedPackId, setSavedPackId] = useState<string | null>(savedTrip?.packId ?? null);
+  const [isSaveFormOpen, setIsSaveFormOpen] = useState(false);
+  const [packTitleInput, setPackTitleInput] = useState('');
+  const [packDateInput, setPackDateInput] = useState('');
+  const [isSavingPack, setIsSavingPack] = useState(false);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -680,13 +637,7 @@ function TackleboxIQ({ session }: { session: Session }) {
     if (error) {
       console.error('Error fetching gear from Supabase:', error);
     } else if (data) {
-      const formattedItems = data.map((item: any) => ({
-        ...item,
-        type: item.type === 'Hardbody Suspending' ? 'Hardbody' : item.type,
-        environment_tags: item.environment_tags || [],
-        image_urls: (item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]).filter(Boolean)
-      }));
-      setItems(formattedItems as GearItem[]);
+      setItems(data.map(formatGearRow));
     }
     setLoading(false);
   };
@@ -703,11 +654,62 @@ function TackleboxIQ({ session }: { session: Session }) {
         conditions: tripConditions,
         checked: packChecked,
         addedGaps: addedGapItems,
+        packId: savedPackId ?? undefined,
       }));
     } catch {
       // Non-essential; ignore quota/privacy-mode errors.
     }
-  }, [tripStorageKey, currentPlan, tripLocation, tripSpeciesInput, tripConditions, packChecked, addedGapItems]);
+  }, [tripStorageKey, currentPlan, tripLocation, tripSpeciesInput, tripConditions, packChecked, addedGapItems, savedPackId]);
+
+  // If the saved list was deleted on the pack lists page, forget the link.
+  useEffect(() => {
+    if (!savedPackId) return;
+    supabase.from('pack_lists').select('id').eq('id', savedPackId).maybeSingle()
+      .then(({ data, error }) => { if (!error && !data) setSavedPackId(null); });
+  }, [savedPackId]);
+
+  // Once saved, ticks and added gaps also sync to the saved pack list (debounced).
+  useEffect(() => {
+    if (!savedPackId) return;
+    const t = setTimeout(() => {
+      supabase.from('pack_lists')
+        .update({ checked: packChecked, added_gaps: addedGapItems })
+        .eq('id', savedPackId)
+        .then(({ error }) => { if (error) console.error('Failed to sync pack list:', error); });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [savedPackId, packChecked, addedGapItems]);
+
+  const openSavePackForm = () => {
+    setPackTitleInput(defaultPackTitle(splitSpecies(tripSpeciesInput), tripLocation));
+    setPackDateInput('');
+    setIsSaveFormOpen(true);
+  };
+
+  const handleSavePackList = async () => {
+    if (!currentPlan || isSavingPack) return;
+    setIsSavingPack(true);
+    const species = splitSpecies(tripSpeciesInput);
+    const { data, error } = await supabase.from('pack_lists').insert({
+      user_id: session.user.id,
+      title: packTitleInput.trim() || defaultPackTitle(species, tripLocation),
+      location: tripLocation,
+      species,
+      conditions: tripConditions,
+      trip_date: packDateInput || null,
+      plan: currentPlan,
+      checked: packChecked,
+      added_gaps: addedGapItems,
+    }).select().single();
+    setIsSavingPack(false);
+    if (error || !data) {
+      console.error('Failed to save pack list:', error);
+      alert(`Couldn't save the pack list: ${error?.message ?? 'unknown error'}`);
+      return;
+    }
+    setSavedPackId(formatPackRow(data).id);
+    setIsSaveFormOpen(false);
+  };
 
   const togglePacked = (id: string) => {
     setPackChecked(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
@@ -715,51 +717,23 @@ function TackleboxIQ({ session }: { session: Session }) {
 
   const handleAddGapsToRestock = async () => {
     if (!currentPlan || isAddingGaps) return;
-    const pending = currentPlan.missing_recommendations.filter(g => !addedGapItems.includes(g.item));
-    // (Gaps the user removed stay removed; only never-added ones are offered.)
-    if (pending.length === 0) return;
-
-    // Don't duplicate something already on the restock list.
-    const existingGhostNames = new Set(items.filter(i => i.is_ghost).map(i => i.name.trim().toLowerCase()));
-    const toInsert = pending.filter(g => !existingGhostNames.has(g.item.toLowerCase()));
-
-    const species = tripSpeciesInput.split(',').map(x => x.trim()).filter(Boolean);
     setIsAddingGaps(true);
-
-    if (toInsert.length > 0) {
-      const rows = toInsert.map(g => ({
-        user_id: session.user.id,
-        name: g.item,
-        brand: '',
-        type: g.type,
-        depth: '',
-        color: '',
-        is_favorite: false,
-        is_ghost: true,
-        image_url: '',
-        image_urls: [] as string[],
-        notes: `${SUGGESTED_NOTE_PREFIX} (${tripLocation})${g.reason ? `: ${g.reason}` : ''}`,
-        species: species.length ? species : ['General'],
-        environment_tags: [tripLocation],
-      }));
-
-      const { data, error } = await supabase.from('gear_items').insert(rows).select();
-      if (error) {
-        console.error('Failed to add gaps to restock list:', error);
-        alert(`Couldn't add to your restock list: ${error.message}`);
-        setIsAddingGaps(false);
-        return;
-      }
-      const inserted = (data || []).map(row => ({
-        ...row,
-        environment_tags: row.environment_tags || [],
-        image_urls: (row.image_urls && row.image_urls.length > 0 ? row.image_urls : [row.image_url]).filter(Boolean),
-      })) as GearItem[];
-      setItems(prev => [...inserted, ...prev]);
-    }
-
-    setAddedGapItems(prev => [...prev, ...pending.map(g => g.item)]);
+    const result = await addGapsToRestock({
+      userId: session.user.id,
+      plan: currentPlan,
+      addedGaps: addedGapItems,
+      items,
+      location: tripLocation,
+      species: splitSpecies(tripSpeciesInput),
+    });
     setIsAddingGaps(false);
+    if (result.error) {
+      console.error('Failed to add gaps to restock list:', result.error);
+      alert(`Couldn't add to your restock list: ${result.error}`);
+      return;
+    }
+    if (result.inserted.length) setItems(prev => [...result.inserted, ...prev]);
+    if (result.newlyAdded.length) setAddedGapItems(prev => [...prev, ...result.newlyAdded]);
   };
 
   const handleGenerateTripPlan = async () => {
@@ -768,6 +742,8 @@ function TackleboxIQ({ session }: { session: Session }) {
     setTripPlannerError(null);
     setPackChecked([]);
     setAddedGapItems([]);
+    setSavedPackId(null);
+    setIsSaveFormOpen(false);
 
     const speciesArray = tripSpeciesInput
       .split(',')
@@ -1333,36 +1309,9 @@ function TackleboxIQ({ session }: { session: Session }) {
     return 0;
   });
 
-  const packEntries: PackEntry[] = (() => {
-    if (!currentPlan) return [];
-    const reasons = new Map(currentPlan.loadout_highlights.map(h => [h.item_id, h.reason]));
-    const ids = [...currentPlan.loadout_highlights.map(h => h.item_id), ...currentPlan.recommended_gear_ids];
-    const seen = new Set<string>();
-    const entries: PackEntry[] = [];
-    for (const id of ids) {
-      if (seen.has(id)) continue;
-      seen.add(id);
-      const gear = items.find(i => i.id === id && !i.is_ghost);
-      if (!gear) continue;
-      entries.push({
-        id: gear.id,
-        brand: gear.brand,
-        name: gear.name,
-        detail: [gear.type, gear.color, gear.depth && gear.depth !== 'N/A' ? gear.depth : ''].filter(Boolean).join(' · '),
-        image: gear.image_urls?.[0] || gear.image_url || undefined,
-        reason: reasons.get(id),
-      });
-    }
-    return entries;
-  })();
+  const packEntries = buildPackEntries(currentPlan, items);
   const packCheckedSet = new Set(packChecked.filter(id => packEntries.some(e => e.id === id)));
-  const planGaps: PackGap[] = (currentPlan?.missing_recommendations || []).map(g => {
-    if (!addedGapItems.includes(g.item)) return { ...g, status: 'pending' };
-    if (loading) return { ...g, status: 'on-list' };
-    const name = g.item.trim().toLowerCase();
-    const match = items.find(i => i.name.trim().toLowerCase() === name);
-    return { ...g, status: !match ? 'removed' : match.is_ghost ? 'on-list' : 'bought' };
-  });
+  const planGaps = buildPackGaps(currentPlan, addedGapItems, items, loading);
   const gapsLeftToAdd = planGaps.filter(g => g.status === 'pending').length;
 
   return (
@@ -1385,7 +1334,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             <div className="w-8 h-8 shrink-0 rounded-lg overflow-hidden flex items-center justify-center bg-slate-800 border border-slate-700 p-1.5 group-hover:border-slate-600 transition">
               <VaultIcon className="w-full h-full text-slate-300" />
             </div>
-            <div className="translate-y-[2px] min-w-0">
+            <div className="translate-y-[2px] min-w-0 max-[379px]:hidden">
               <h1 className="text-base sm:text-lg leading-none group-hover:opacity-80 transition"><Wordmark /></h1>
               <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[389px]:hidden">Smart gear management</p>
             </div>
@@ -1404,6 +1353,15 @@ function TackleboxIQ({ session }: { session: Session }) {
               <Sparkles className="w-4 h-4" />
               <span>PLAN TRIP</span>
             </button>
+
+            <Link
+              href="/packs"
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-slate-100 transition"
+              title="My pack lists"
+              aria-label="My pack lists"
+            >
+              <ClipboardList className="w-4 h-4" />
+            </Link>
 
             <button
               onClick={() => supabase.auth.signOut()}
@@ -2032,6 +1990,56 @@ function TackleboxIQ({ session }: { session: Session }) {
                       {packCheckedSet.size > 0
                         ? `Pack checklist (${packCheckedSet.size}/${packEntries.length} packed)`
                         : 'Generate pack checklist'}
+                    </button>
+                  )}
+
+                  {/* Save as a named pack list */}
+                  {savedPackId ? (
+                    <div className="flex items-center justify-between gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3.5 py-2.5">
+                      <span className="text-emerald-400 flex items-center gap-1.5"><Check className="w-4 h-4" /> Saved to your pack lists</span>
+                      <Link href="/packs" className="text-emerald-300 hover:text-emerald-200 underline underline-offset-2 shrink-0">View</Link>
+                    </div>
+                  ) : isSaveFormOpen ? (
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-3">
+                      <div>
+                        <label htmlFor="pack-title" className="block text-slate-400 mb-1.5 uppercase font-bold text-[10px]">Pack list name</label>
+                        <input
+                          id="pack-title"
+                          type="text"
+                          value={packTitleInput}
+                          onChange={(e) => setPackTitleInput(e.target.value)}
+                          maxLength={80}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none text-base sm:text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="pack-date" className="block text-slate-400 mb-1.5 uppercase font-bold text-[10px]">Trip date (optional)</label>
+                        <input
+                          id="pack-date"
+                          type="date"
+                          value={packDateInput}
+                          onChange={(e) => setPackDateInput(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none text-base sm:text-xs [color-scheme:dark]"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setIsSaveFormOpen(false)} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
+                        <button
+                          onClick={handleSavePackList}
+                          disabled={isSavingPack}
+                          className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold transition disabled:opacity-60 flex items-center justify-center gap-2"
+                        >
+                          {isSavingPack && <Loader2 className="w-4 h-4 animate-spin" />}
+                          Save pack list
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={openSavePackForm}
+                      className="w-full py-2.5 rounded-xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-200 font-sans font-bold transition flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Bookmark className="w-4 h-4" /> Save pack list
                     </button>
                   )}
                 </div>

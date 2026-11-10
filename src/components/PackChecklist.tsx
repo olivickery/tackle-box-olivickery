@@ -38,6 +38,8 @@ export function GapStatusTag({ status }: { status: GapStatus }) {
 }
 
 interface Props {
+  /** Heading; defaults to "Pack checklist". */
+  title?: string;
   tripLabel: string;
   entries: PackEntry[];
   gaps: PackGap[];
@@ -51,7 +53,7 @@ interface Props {
 
 /** Full-screen, thumb-friendly packing checklist built from a trip plan. */
 export default function PackChecklist({
-  tripLabel, entries, gaps, checked, onToggle, onReset, onAddGaps, isAddingGaps, onClose,
+  title = 'Pack checklist', tripLabel, entries, gaps, checked, onToggle, onReset, onAddGaps, isAddingGaps, onClose,
 }: Props) {
   const packed = entries.filter(e => checked.has(e.id)).length;
   const total = entries.length;
@@ -68,7 +70,7 @@ export default function PackChecklist({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="font-sans font-bold text-lg text-slate-100 flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-amber-400 shrink-0" /> Pack checklist
+                  <ClipboardList className="w-5 h-5 text-amber-400 shrink-0" /> <span className="truncate">{title}</span>
                 </h2>
                 <p className="text-[11px] text-slate-400 mt-0.5 truncate">{tripLabel}</p>
               </div>
