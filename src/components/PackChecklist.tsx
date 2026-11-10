@@ -12,11 +12,29 @@ export interface PackEntry {
   reason?: string;
 }
 
+export type GapStatus = 'pending' | 'on-list' | 'bought' | 'removed';
+
 export interface PackGap {
   item: string;
   type: string;
   reason: string;
-  added: boolean;
+  status: GapStatus;
+}
+
+/** Small status label for a gap item; renders nothing until it's been added. */
+export function GapStatusTag({ status }: { status: GapStatus }) {
+  if (status === 'pending') return null;
+  const styles: Record<Exclude<GapStatus, 'pending'>, { cls: string; label: string; Icon: typeof Check }> = {
+    'on-list': { cls: 'text-emerald-400', label: 'On restock list', Icon: Check },
+    bought: { cls: 'text-emerald-400', label: 'Bought', Icon: Check },
+    removed: { cls: 'text-red-400', label: 'Removed from restock list', Icon: X },
+  };
+  const { cls, label, Icon } = styles[status];
+  return (
+    <span className={`text-[10px] font-mono flex items-center gap-1 shrink-0 ${cls}`}>
+      <Icon className="w-3 h-3" /> {label}
+    </span>
+  );
 }
 
 interface Props {
@@ -39,7 +57,7 @@ export default function PackChecklist({
   const total = entries.length;
   const pct = total ? Math.round((packed / total) * 100) : 0;
   const allPacked = total > 0 && packed === total;
-  const gapsToAdd = gaps.filter(g => !g.added).length;
+  const gapsToAdd = gaps.filter(g => g.status === 'pending').length;
 
   return (
     <div className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-sm overflow-y-auto" role="dialog" aria-modal="true" aria-label="Pack checklist">
@@ -136,10 +154,8 @@ export default function PackChecklist({
                 {gaps.map((gap, idx) => (
                   <li key={idx} className="p-2.5 rounded-xl border border-dashed border-red-500/30 bg-slate-950">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-200">{gap.item}</span>
-                      {gap.added && (
-                        <span className="text-[10px] text-emerald-400 flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> On restock list</span>
-                      )}
+                      <span className={gap.status === 'removed' ? 'text-slate-500 line-through' : 'text-slate-200'}>{gap.item}</span>
+                      <GapStatusTag status={gap.status} />
                     </div>
                     {gap.reason && <p className="text-[10px] text-slate-400 font-sans mt-0.5 leading-snug">{gap.reason}</p>}
                   </li>
@@ -152,7 +168,7 @@ export default function PackChecklist({
                   className="mt-3 w-full py-2.5 rounded-xl border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  {isAddingGaps ? 'Adding…' : `Add ${gapsToAdd === 1 ? 'it' : `all ${gapsToAdd}`} to restock list`}
+                  {isAddingGaps ? 'Adding…' : `Add ${gapsToAdd === 1 ? '1 item' : `${gapsToAdd} items`} to restock list`}
                 </button>
               )}
             </div>

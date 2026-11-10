@@ -7,7 +7,7 @@ import AuthGate from '../components/AuthGate';
 import ZoomLightbox from '../components/ZoomLightbox';
 import Wordmark from '../components/Wordmark';
 import LegalFooter from '../components/LegalFooter';
-import PackChecklist, { type PackEntry } from '../components/PackChecklist';
+import PackChecklist, { GapStatusTag, type PackEntry, type PackGap } from '../components/PackChecklist';
 import { 
   Star, 
   Trash2, 
@@ -716,6 +716,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   const handleAddGapsToRestock = async () => {
     if (!currentPlan || isAddingGaps) return;
     const pending = currentPlan.missing_recommendations.filter(g => !addedGapItems.includes(g.item));
+    // (Gaps the user removed stay removed; only never-added ones are offered.)
     if (pending.length === 0) return;
 
     // Don't duplicate something already on the restock list.
@@ -861,6 +862,22 @@ function TackleboxIQ({ session }: { session: Session }) {
       setItemToDelete(null);
     }
     setIsDeleting(false);
+  };
+
+  // Restock "Remove": trip-plan suggestions have nothing worth keeping, so they
+  // go straight away; real gear goes through the usual delete confirmation.
+  const removeFromRestock = async (item: GearItem) => {
+    if (!item.notes?.startsWith(SUGGESTED_NOTE_PREFIX)) {
+      setItemToDelete(item);
+      return;
+    }
+    setItems(prev => prev.filter(i => i.id !== item.id));
+    const { error } = await supabase.from('gear_items').delete().eq('id', item.id);
+    if (error) {
+      console.error('Failed to remove restock item:', error);
+      alert(`Couldn't remove it from your restock list: ${error.message}`);
+      fetchGearItems();
+    }
   };
 
   const openNotesEditor = (item: GearItem) => {
@@ -1339,8 +1356,14 @@ function TackleboxIQ({ session }: { session: Session }) {
     return entries;
   })();
   const packCheckedSet = new Set(packChecked.filter(id => packEntries.some(e => e.id === id)));
-  const planGaps = (currentPlan?.missing_recommendations || []).map(g => ({ ...g, added: addedGapItems.includes(g.item) }));
-  const gapsLeftToAdd = planGaps.filter(g => !g.added).length;
+  const planGaps: PackGap[] = (currentPlan?.missing_recommendations || []).map(g => {
+    if (!addedGapItems.includes(g.item)) return { ...g, status: 'pending' };
+    if (loading) return { ...g, status: 'on-list' };
+    const name = g.item.trim().toLowerCase();
+    const match = items.find(i => i.name.trim().toLowerCase() === name);
+    return { ...g, status: !match ? 'removed' : match.is_ghost ? 'on-list' : 'bought' };
+  });
+  const gapsLeftToAdd = planGaps.filter(g => g.status === 'pending').length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
@@ -1980,10 +2003,8 @@ function TackleboxIQ({ session }: { session: Session }) {
                         {planGaps.map((gap, idx) => (
                           <li key={idx}>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-slate-200 font-semibold">{gap.item}</span>
-                              {gap.added && (
-                                <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> On restock list</span>
-                              )}
+                              <span className={gap.status === 'removed' ? 'text-slate-500 line-through font-semibold' : 'text-slate-200 font-semibold'}>{gap.item}</span>
+                              <GapStatusTag status={gap.status} />
                             </div>
                             {gap.reason && <p className="text-slate-400 leading-snug">{gap.reason}</p>}
                           </li>
@@ -2354,7 +2375,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       )}
 
       {itemToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-slate-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl relative text-center">
             
             <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -2363,7 +2384,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
             <h3 className="text-lg font-bold text-slate-100">Permanently delete item?</h3>
             <p className="text-xs text-slate-400 font-mono mt-1">
-              You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand} - {itemToDelete.name}</span> from your gear.
+              You are about to remove <span className="text-slate-200 font-bold">{itemToDelete.brand ? `${itemToDelete.brand} - ` : ''}{itemToDelete.name}</span> from your gear.
             </p>
 
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 my-4 font-mono text-[11px] text-red-400">
@@ -2679,7 +2700,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 </div>
               ) : (
                 ghostItems.map((item) => (
-                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       {item.brand
                         ? <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
@@ -2689,12 +2710,23 @@ function TackleboxIQ({ session }: { session: Session }) {
                         {[item.color && `Colour: ${item.color}`, item.depth && item.depth !== 'N/A' ? item.depth : '', !item.color && item.type].filter(Boolean).join(' | ')}
                       </p>
                     </div>
-                    <button 
-                      onClick={() => toggleGhost(item.id, item.is_ghost)}
-                      className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition"
-                    >
-                      Replaced
-                    </button>
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      <button 
+                        onClick={() => toggleGhost(item.id, item.is_ghost)}
+                        className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'Bought' : 'Replaced'}
+                      </button>
+                      <button 
+                        onClick={() => removeFromRestock(item)}
+                        className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
+                        aria-label={`Remove ${item.name} from restock list`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
