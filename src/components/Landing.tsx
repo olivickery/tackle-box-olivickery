@@ -17,6 +17,7 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import Wordmark from './Wordmark';
+import LegalFooter from './LegalFooter';
 
 /* ------------------------------------------------------------------ */
 /* Small building blocks                                               */
@@ -385,6 +386,7 @@ export default function Landing({ onGetStarted, onSignIn }: { onGetStarted: () =
           </p>
         </section>
       </main>
+      <LegalFooter />
     </div>
   );
 }

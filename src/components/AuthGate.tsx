@@ -6,6 +6,7 @@ import { Loader2, AlertTriangle, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Wordmark from './Wordmark';
 import Landing from './Landing';
+import Link from 'next/link';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'recovery';
 
@@ -224,6 +225,14 @@ export default function AuthGate({
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {SUBMIT_LABELS[mode]}
           </button>
+
+          {mode === 'signup' && (
+            <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+              By creating an account you agree to the{' '}
+              <Link href="/terms" className="text-slate-300 hover:text-white underline underline-offset-2">Terms</Link> and{' '}
+              <Link href="/privacy" className="text-slate-300 hover:text-white underline underline-offset-2">Privacy Policy</Link>.
+            </p>
+          )}
         </form>
 
         {mode !== 'recovery' && (
