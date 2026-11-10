@@ -15,7 +15,6 @@ import {
   Plus, 
   Loader2,
   X,
-  ArrowDown,
   ArrowUp,
   Package,
   Tag,
@@ -36,7 +35,6 @@ import {
   Sparkles,
   LogOut
 } from 'lucide-react';
-
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
   'Surf & Rock',
@@ -157,7 +155,7 @@ function CardCarousel({
   onEditSpecs: (item: GearItem) => void;
   onEditPhotos: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
-  onToggleGhost: (id: string, currentStatus: boolean) => void;
+  onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
   onDeleteItem: (item: GearItem) => void;
   onZoomImage: (url: string) => void;
 }) {
@@ -290,6 +288,20 @@ function CardCarousel({
           title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
         >
           <Star className="w-3.5 h-3.5 fill-current" />
+        </button>
+      )}
+
+      {isFirstSlide && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleGhost(item.id, item.is_ghost, { withUndo: true });
+          }}
+          className="absolute bottom-2 left-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
+          title="Lost it? Add to restock list"
+          aria-label="Mark as needing replacement"
+        >
+          <Repeat className="w-3.5 h-3.5" />
         </button>
       )}
 
@@ -489,6 +501,14 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [items, setItems] = useState<GearItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace'>('all');
+  const [undoToast, setUndoToast] = useState<{ id: string; name: string; nowGhost: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!undoToast) return;
+    const t = setTimeout(() => setUndoToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [undoToast]);
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -644,10 +664,15 @@ function TackleboxIQ({ session }: { session: Session }) {
     }
   };
 
-  const toggleGhost = async (id: string, currentStatus: boolean) => {
-    setItems(items.map(item => 
+  const toggleGhost = async (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => {
+    setItems(prev => prev.map(item => 
       item.id === id ? { ...item, is_ghost: !currentStatus } : item
     ));
+
+    if (opts?.withUndo) {
+      const target = items.find(item => item.id === id);
+      setUndoToast({ id, name: target ? `${target.brand} ${target.name}`.trim() : 'Item', nowGhost: !currentStatus });
+    }
 
     const { error } = await supabase
       .from('gear_items')
@@ -1085,6 +1110,12 @@ function TackleboxIQ({ session }: { session: Session }) {
     return nameMatch || brandMatch || colorMatch || typeMatch || depthMatch || speciesMatch || envMatch;
   };
 
+  const allGhostCount = items.filter(item => item.is_ghost).length;
+  const allFavCount = items.filter(item => item.is_favorite && !item.is_ghost).length;
+  const showFavSection = pillFilter === 'all' || pillFilter === 'favs';
+  const showMyGearSection = pillFilter === 'all';
+  const showGhostSection = pillFilter === 'all' || pillFilter === 'replace';
+
   const ghostItems = items.filter(item => item.is_ghost && matchesSearch(item));
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost && matchesSearch(item));
   const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
@@ -1098,7 +1129,12 @@ function TackleboxIQ({ session }: { session: Session }) {
     return matchesCategory && matchesBrand && matchesEnv && matchesSearch(item);
   });
 
-  const sortedListItems = items.filter(matchesSearch).sort((a, b) => {
+  const matchesPill = (item: GearItem) =>
+    pillFilter === 'favs' ? item.is_favorite && !item.is_ghost
+    : pillFilter === 'replace' ? item.is_ghost
+    : true;
+
+  const sortedListItems = items.filter(item => matchesPill(item) && matchesSearch(item)).sort((a, b) => {
     let valA = '';
     let valB = '';
 
@@ -1127,19 +1163,20 @@ function TackleboxIQ({ session }: { session: Session }) {
             onClick={() => {
               setViewMode('grid');
               setSearchQuery('');
+              setPillFilter('all');
               setActiveCategoryFilter(null);
               setActiveBrandFilter(null);
               setActiveEnvFilter(null);
               scrollToTop();
             }}
-            className="flex items-center gap-2 text-left group cursor-pointer"
+            className="flex items-center gap-2 text-left group cursor-pointer min-w-0"
           >
-            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-slate-800 border border-slate-700 p-1.5 group-hover:border-slate-600 transition">
+            <div className="w-8 h-8 shrink-0 rounded-lg overflow-hidden flex items-center justify-center bg-slate-800 border border-slate-700 p-1.5 group-hover:border-slate-600 transition">
               <VaultIcon className="w-full h-full text-slate-300" />
             </div>
-            <div className="max-[359px]:hidden translate-y-[2px]">
+            <div className="translate-y-[2px] min-w-0">
               <h1 className="text-base sm:text-lg leading-none group-hover:opacity-80 transition"><Wordmark /></h1>
-              <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[369px]:hidden">Smart gear management</p>
+              <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[389px]:hidden">Smart gear management</p>
             </div>
           </button>
 
@@ -1150,48 +1187,18 @@ function TackleboxIQ({ session }: { session: Session }) {
                 setTripPlannerError(null);
                 setIsTripPlannerOpen(true);
               }}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-mono text-xs font-bold flex items-center gap-1.5 transition"
+              className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap"
               title="AI Trip Planner"
             >
-              <Sparkles className="w-4 h-4 text-slate-300" />
-              <span className="hidden sm:inline">PLAN TRIP</span>
+              <Sparkles className="w-4 h-4" />
+              <span>PLAN TRIP</span>
             </button>
-
-            {/* Combined View & Restock Toggle Block */}
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
-              <button 
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}`}
-                title="Tray Grid View"
-              >
-                <Grid className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-lg transition ${viewMode === 'list' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}`}
-                title="List Specs View"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              
-              <button 
-                onClick={() => setIsRestockOpen(true)}
-                className="relative p-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition"
-                title="Restock List"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                {ghostItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center animate-pulse">
-                    {ghostItems.length}
-                  </span>
-                )}
-              </button>
-            </div>
 
             <button
               onClick={() => supabase.auth.signOut()}
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 transition"
               title={`Sign out (${session.user.email ?? ''})`}
+              aria-label="Sign out"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -1199,73 +1206,96 @@ function TackleboxIQ({ session }: { session: Session }) {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 pt-6">
-        
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 font-mono text-[10px] sm:text-xs">
-          <button 
-            onClick={() => {
-              setViewMode('grid');
-              setActiveCategoryFilter(null);
-              setActiveBrandFilter(null);
-              setActiveEnvFilter(null);
-              if (myGearItems.length > 0) scrollToSection('my-gear-section');
-            }}
-            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl p-2.5 sm:p-3 text-left transition group cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 group-hover:text-slate-300 block uppercase transition text-[9px] sm:text-[10px] truncate">All my gear</span>
-              {myGearItems.length > 0 && <ArrowDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition shrink-0 ml-1" />}
-            </div>
-            <span className="text-sm sm:text-base font-bold text-slate-200 whitespace-nowrap block mt-1">{items.length} Items</span>
-          </button>
+      <main className="max-w-5xl mx-auto px-4 pt-4">
+
+        {/* Command bar: search, view toggle, restock */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input 
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search gear..."
+              aria-label="Search gear by name, brand, species, specs, colour or location"
+              className="w-full bg-slate-900/90 border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-9 py-2.5 text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 p-0.5 rounded-md"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex shrink-0 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+            <button 
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+              title="Grid view"
+              aria-label="Grid view"
+            >
+              <Grid className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-lg transition ${viewMode === 'list' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+              title="List view"
+              aria-label="List view"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
 
           <button 
-            onClick={() => {
-              setViewMode('grid');
-              if (favoriteItems.length > 0) scrollToSection('favourites-section');
-            }}
-            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/40 rounded-xl p-2.5 sm:p-3 text-left transition group cursor-pointer"
+            onClick={() => setIsRestockOpen(true)}
+            className="relative shrink-0 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition"
+            title="Restock list"
+            aria-label={`Restock list (${allGhostCount})`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 group-hover:text-amber-400 block uppercase transition text-[9px] sm:text-[10px] truncate">Favourites</span>
-              {favoriteItems.length > 0 && <ArrowDown className="w-3 h-3 text-slate-500 group-hover:text-amber-400 transition shrink-0 ml-1" />}
-            </div>
-            <span className="text-sm sm:text-base font-bold text-amber-400 whitespace-nowrap block mt-1">{favoriteItems.length} Items</span>
-          </button>
-
-          <button 
-            onClick={() => {
-              setViewMode('grid');
-              if (ghostItems.length > 0) scrollToSection('to-replace-section');
-            }}
-            className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-red-500/40 rounded-xl p-2.5 sm:p-3 text-left transition group cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 group-hover:text-red-400 block uppercase transition text-[9px] sm:text-[10px] truncate">To replace</span>
-              {ghostItems.length > 0 && <ArrowDown className="w-3 h-3 text-slate-500 group-hover:text-red-400 transition shrink-0 ml-1" />}
-            </div>
-            <span className="text-sm sm:text-base font-bold text-red-400 whitespace-nowrap block mt-1">{ghostItems.length} Items</span>
+            <ShoppingBag className="w-4 h-4" />
+            {allGhostCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+                {allGhostCount}
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Global Search Bar */}
-        <div className="mb-6 relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input 
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search gear by name, brand, species, specs, colour, or location..."
-            className="w-full bg-slate-900/90 border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-9 py-2.5 text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition"
-          />
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 p-0.5 rounded-md"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+        {/* Filter pills */}
+        <div className="-mx-4 px-4 mb-5 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden font-mono text-xs">
+          {([
+            { key: 'all', label: 'All', icon: null, count: items.length,
+              active: 'bg-slate-100 text-slate-950 border-slate-100', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-slate-800 text-slate-300' },
+            { key: 'favs', label: 'Favourites', icon: <Star className="w-3.5 h-3.5 fill-current" />, count: allFavCount,
+              active: 'bg-amber-500 text-slate-950 border-amber-400', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-amber-500/15 text-amber-400' },
+            { key: 'replace', label: 'To replace', icon: <Repeat className="w-3.5 h-3.5" />, count: allGhostCount,
+              active: 'bg-red-500 text-white border-red-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-red-500/15 text-red-400' },
+          ] as const).map((pill) => {
+            const isActive = pillFilter === pill.key;
+            return (
+              <button
+                key={pill.key}
+                onClick={() => {
+                  setPillFilter(pill.key);
+                  scrollToTop();
+                }}
+                aria-pressed={isActive}
+                className={`shrink-0 flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full border transition whitespace-nowrap ${
+                  isActive ? `${pill.active} font-bold` : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-slate-600'
+                }`}
+              >
+                {pill.icon}
+                <span>{pill.label}</span>
+                <span className={`min-w-5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-center ${isActive ? pill.badge : pill.idleBadge}`}>
+                  {pill.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (
@@ -1278,7 +1308,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             {viewMode === 'grid' && (
               <div className="space-y-8">
                 
-                {favoriteItems.length > 0 && (
+                {showFavSection && favoriteItems.length > 0 && (
                   <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
@@ -1350,7 +1380,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                   </div>
                 )}
 
-                {baseMyGearItems.length > 0 && (
+                {showMyGearSection && baseMyGearItems.length > 0 && (
                   <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1468,7 +1498,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                   </div>
                 )}
 
-                {ghostItems.length > 0 && (
+                {showGhostSection && ghostItems.length > 0 && (
                   <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-red-400 font-mono flex items-center gap-1.5">
@@ -1531,6 +1561,16 @@ function TackleboxIQ({ session }: { session: Session }) {
                   </div>
                 )}
 
+              </div>
+            )}
+
+            {viewMode === 'grid' && pillFilter !== 'all' && (pillFilter === 'favs' ? favoriteItems.length === 0 : ghostItems.length === 0) && (
+              <div className="py-16 text-center font-mono text-xs text-slate-500">
+                {searchQuery.trim()
+                  ? 'Nothing here matches your search.'
+                  : pillFilter === 'favs'
+                    ? 'No favourites yet. Tap the star on any card to add one.'
+                    : 'Nothing to replace. Tap the replace icon on a card when you lose a lure.'}
               </div>
             )}
 
@@ -1748,6 +1788,27 @@ function TackleboxIQ({ session }: { session: Session }) {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {undoToast && (
+        <div className="fixed bottom-24 inset-x-4 z-50 flex justify-center pointer-events-none" role="status" aria-live="polite">
+          <div className="pointer-events-auto max-w-sm w-full flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-xl pl-4 pr-2 py-2 shadow-2xl font-mono text-xs">
+            <Repeat className={`w-4 h-4 shrink-0 ${undoToast.nowGhost ? 'text-red-400' : 'text-emerald-400'}`} />
+            <span className="flex-1 min-w-0 text-slate-200">
+              <span className="block truncate">{undoToast.name}</span>
+              <span className="text-slate-500">{undoToast.nowGhost ? 'Moved to restock list' : 'Back in your gear'}</span>
+            </span>
+            <button
+              onClick={() => {
+                toggleGhost(undoToast.id, undoToast.nowGhost);
+                setUndoToast(null);
+              }}
+              className="shrink-0 px-3 py-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 font-bold uppercase"
+            >
+              Undo
+            </button>
           </div>
         </div>
       )}
@@ -2099,7 +2160,8 @@ function TackleboxIQ({ session }: { session: Session }) {
           setExtractionError(null);
           setIsAddModalOpen(true);
         }}
-        className="fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95"
+        className="fixed bottom-6 left-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer"
+        aria-label="Add gear"
       >
         <Plus className="w-6 h-6 stroke-[3]" />
         <span className="hidden sm:inline font-sans uppercase text-xs tracking-wider">Add gear</span>
