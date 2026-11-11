@@ -11,6 +11,7 @@ import PackChecklist, { GapStatusTag, ReAddGapButton, type PackEntry } from '../
 import Link from 'next/link';
 import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
 import NamePrompt from '../components/NamePrompt';
+import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from '../components/OnboardingCards';
 import { firstNameOf } from '../lib/profile';
 import {
   type GearItem, type TripPlan, type CustomPackItem,
@@ -109,6 +110,28 @@ function loadSavedTrip(key: string): SavedTrip | null {
   } catch {
     return null; // Storage blocked or corrupt: start fresh.
   }
+}
+
+interface OnboardingState {
+  dismissed: OnboardingStepId[];
+  completed: OnboardingStepId[];
+  hidden: boolean;
+  force: boolean;
+  swiped: boolean;
+  shared: boolean;
+}
+
+function readOnboarding(meta: Record<string, unknown> | undefined): OnboardingState {
+  const o = (meta?.onboarding ?? {}) as Partial<Record<keyof OnboardingState, unknown>>;
+  const ids = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is OnboardingStepId => ONBOARDING_STEP_IDS.includes(x as OnboardingStepId)) : []);
+  return {
+    dismissed: ids(o.dismissed),
+    completed: ids(o.completed),
+    hidden: o.hidden === true,
+    force: o.force === true,
+    swiped: o.swiped === true,
+    shared: o.shared === true,
+  };
 }
 
 function GearPlaceholder({ className = '' }: { className?: string }) {
@@ -552,6 +575,27 @@ function TackleboxIQ({ session }: { session: Session }) {
   // First name from the account profile; shown on shared lists ("Oli's restock list").
   const firstName = firstNameOf(session.user);
   const namePromptSkipKey = `tbiq:namePromptSkipped:${session.user.id}`;
+  // Getting-started tip cards. Snapshot of saved progress at load; changes are
+  // kept in state and written back to the account's metadata.
+  const [onboardingAtLoad] = useState(() => readOnboarding(session.user.user_metadata));
+  const [accountAgeDays] = useState(() => (Date.now() - new Date(session.user.created_at).getTime()) / 86_400_000);
+  const [tipsDismissed, setTipsDismissed] = useState<OnboardingStepId[]>(onboardingAtLoad.dismissed);
+  const [tipsHidden, setTipsHidden] = useState(onboardingAtLoad.hidden);
+  const [tipsForced, setTipsForced] = useState(onboardingAtLoad.force);
+  const [tipsShowAllNow, setTipsShowAllNow] = useState(false);
+  const [tipSwiped, setTipSwiped] = useState(onboardingAtLoad.swiped);
+  const [listShared, setListShared] = useState(onboardingAtLoad.shared);
+  const savedCompletedRef = useRef<OnboardingStepId[]>(onboardingAtLoad.completed);
+
+  const saveOnboarding = (patch: Partial<OnboardingState>) => {
+    const next: OnboardingState = {
+      dismissed: tipsDismissed, completed: savedCompletedRef.current, hidden: tipsHidden,
+      force: tipsForced, swiped: tipSwiped, shared: listShared, ...patch,
+    };
+    supabase.auth.updateUser({ data: { onboarding: next } })
+      .then(({ error }) => { if (error) console.error('Failed to save tips progress:', error); });
+  };
+
   const [namePrompt, setNamePrompt] = useState<null | 'welcome' | 'share'>(() => {
     if (firstNameOf(session.user)) return null;
     try { return localStorage.getItem(`tbiq:namePromptSkipped:${session.user.id}`) ? null : 'welcome'; } catch { return null; }
@@ -678,6 +722,24 @@ function TackleboxIQ({ session }: { session: Session }) {
       // Non-essential; ignore quota/privacy-mode errors.
     }
   }, [tripStorageKey, currentPlan, tripLocation, tripSpeciesInput, tripConditions, packChecked, addedGapItems, hiddenPackItems, customPackItems, savedPackId]);
+
+  // Record completed tip steps on the account, so done tips stay away next visit.
+  const tipsDoneKey = [
+    !loading && items.some(i => !i.is_ghost) ? 'add' : '',
+    tipSwiped ? 'swipe' : '',
+    !loading && items.some(i => i.is_favorite || i.is_ghost) ? 'star' : '',
+    currentPlan ? 'plan' : '',
+    listShared ? 'restock' : '',
+  ].filter(Boolean).join(',');
+  useEffect(() => {
+    if (!tipsDoneKey) return;
+    const done = tipsDoneKey.split(',') as OnboardingStepId[];
+    const fresh = done.filter(id => !savedCompletedRef.current.includes(id));
+    if (fresh.length === 0) return;
+    savedCompletedRef.current = [...savedCompletedRef.current, ...fresh];
+    supabase.auth.updateUser({ data: { onboarding: { ...readOnboarding(session.user.user_metadata), completed: savedCompletedRef.current } } })
+      .then(({ error }) => { if (error) console.error('Failed to save tips progress:', error); });
+  }, [tipsDoneKey, session.user.user_metadata]);
 
   // If the saved list was deleted on the pack lists page, forget the link.
   useEffect(() => {
@@ -1150,6 +1212,7 @@ function TackleboxIQ({ session }: { session: Session }) {
     const url = `${window.location.origin}/list/${data.id}`;
     const message = `${title} on Tacklebox IQ`;
     try {
+      if (!listShared) { setListShared(true); saveOnboarding({ shared: true }); }
       if (typeof navigator.share === 'function') {
         await navigator.share({ title, text: message, url });
       } else {
@@ -1417,6 +1480,20 @@ function TackleboxIQ({ session }: { session: Session }) {
     return 0;
   });
 
+  const ownedGearCount = items.filter(i => !i.is_ghost).length;
+  const tipsDone = new Set<OnboardingStepId>([
+    ...(ownedGearCount > 0 ? ['add' as const] : []),
+    ...(tipSwiped ? ['swipe' as const] : []),
+    ...(items.some(i => i.is_favorite || i.is_ghost) ? ['star' as const] : []),
+    ...(currentPlan ? ['plan' as const] : []),
+    ...(listShared ? ['restock' as const] : []),
+  ]);
+  const tipsEligible = tipsForced || tipsShowAllNow || ownedGearCount === 0 || accountAgeDays < 14;
+  const visibleTipIds: OnboardingStepId[] = loading || tipsHidden || !tipsEligible
+    ? []
+    : ONBOARDING_STEP_IDS.filter(id =>
+        !tipsDismissed.includes(id) && (tipsShowAllNow || !onboardingAtLoad.completed.includes(id)));
+
   const packEntries = buildPackEntries(currentPlan, items, { hidden: hiddenPackItems, custom: customPackItems });
   const packCheckedSet = new Set(packChecked.filter(id => packEntries.some(e => e.id === id)));
   const planGaps = buildPackGaps(currentPlan, addedGapItems, items, loading);
@@ -1593,6 +1670,22 @@ function TackleboxIQ({ session }: { session: Session }) {
           <>
             {viewMode === 'grid' && (
               <div className="space-y-8">
+                <OnboardingCards
+                  visibleIds={visibleTipIds}
+                  doneIds={tipsDone}
+                  onAction={(id) => {
+                    if (id === 'add') { setExtractionError(null); setIsAddModalOpen(true); }
+                    if (id === 'plan') { setTripPlannerError(null); setIsTripPlannerOpen(true); }
+                    if (id === 'restock') setIsRestockOpen(true);
+                  }}
+                  onDismiss={(id) => {
+                    const next = [...tipsDismissed, id];
+                    setTipsDismissed(next);
+                    saveOnboarding({ dismissed: next });
+                  }}
+                  onHideAll={() => { setTipsHidden(true); setTipsForced(false); setTipsShowAllNow(false); saveOnboarding({ hidden: true, force: false }); }}
+                  onSwiped={() => { if (!tipSwiped) { setTipSwiped(true); saveOnboarding({ swiped: true }); } }}
+                />
                 
                 {showFavSection && favoriteItems.length > 0 && (
                   <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-36">
@@ -1935,6 +2028,21 @@ function TackleboxIQ({ session }: { session: Session }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {viewMode === 'grid' && visibleTipIds.length === 0 && !loading && (
+              <div className="mt-10 flex justify-center">
+                <button
+                  onClick={() => {
+                    setTipsHidden(false); setTipsForced(true); setTipsShowAllNow(true); setTipsDismissed([]);
+                    saveOnboarding({ hidden: false, force: true, dismissed: [] });
+                    scrollToTop();
+                  }}
+                  className="text-[11px] font-mono text-slate-500 hover:text-slate-300 underline underline-offset-2 transition"
+                >
+                  Show getting-started tips
+                </button>
               </div>
             )}
 
