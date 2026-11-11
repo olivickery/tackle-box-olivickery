@@ -9,6 +9,7 @@ import Wordmark from '../components/Wordmark';
 import LegalFooter from '../components/LegalFooter';
 import PackChecklist, { GapStatusTag, ReAddGapButton, type PackEntry } from '../components/PackChecklist';
 import Link from 'next/link';
+import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
 import {
   type GearItem, type TripPlan, type CustomPackItem,
   SUGGESTED_NOTE_PREFIX, normalizePlan, formatGearRow, formatPackRow, splitSpecies, defaultPackTitle,
@@ -1472,7 +1473,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 title="My pack lists"
               >
                 <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span><span className="sm:hidden">S</span></span>
+                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span></span>
               </Link>
 
               <button 
@@ -2030,9 +2031,12 @@ function TackleboxIQ({ session }: { session: Session }) {
                           <li key={idx}>
                             <div className="flex items-center justify-between gap-2">
                               <span className={gap.status === 'removed' ? 'text-slate-500 line-through font-semibold' : 'text-slate-200 font-semibold'}>{gap.item}</span>
-                              {gap.status === 'removed'
-                                ? <ReAddGapButton onClick={() => handleReAddGap(gap.item)} busy={reAddingGap === gap.item} />
-                                : <GapStatusTag status={gap.status} />}
+                              <span className="flex items-center gap-1.5 shrink-0">
+                                {gap.status === 'removed'
+                                  ? <ReAddGapButton onClick={() => handleReAddGap(gap.item)} busy={reAddingGap === gap.item} />
+                                  : <GapStatusTag status={gap.status} />}
+                                <AmazonLink name={gap.item} compact />
+                              </span>
                             </div>
                             {gap.status === 'removed' && <p className="text-[10px] font-mono text-red-400/80">Removed from restock list</p>}
                             {gap.reason && <p className="text-slate-400 leading-snug">{gap.reason}</p>}
@@ -2049,6 +2053,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                           {isAddingGaps ? 'Adding…' : `Add ${gapsLeftToAdd === 1 ? 'missing item' : `${gapsLeftToAdd} missing items`} to restock list`}
                         </button>
                       )}
+                      <AmazonDisclosure className="mt-3" />
                     </div>
                   )}
 
@@ -2765,7 +2770,8 @@ function TackleboxIQ({ session }: { session: Session }) {
                 </div>
               ) : (
                 ghostItems.map((item) => (
-                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       {item.brand
                         ? <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
@@ -2793,11 +2799,14 @@ function TackleboxIQ({ session }: { session: Session }) {
                       </button>
                     </div>
                   </div>
+                  <AmazonLink brand={item.brand} name={item.name} className="mt-2.5 w-full" />
+                  </div>
                 ))
               )}
             </div>
 
             <div className="pt-4 border-t border-slate-800 font-mono text-xs text-slate-400">
+              {ghostItems.length > 0 && <AmazonDisclosure className="mb-3 text-center" />}
               <div className="flex justify-between mb-2">
                 <span>Items to Buy:</span>
                 <span className="text-slate-200 font-bold">{ghostItems.length} Items</span>

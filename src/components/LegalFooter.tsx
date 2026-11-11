@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { SUPPORT_EMAIL } from '../lib/site';
+import { AMAZON_DISCLOSURE } from '../lib/affiliate';
 
 /** Site footer with legal links. Server-safe; used on the overview, in the app and on legal pages. */
 export default function LegalFooter({ className = '' }: { className?: string }) {
@@ -15,6 +16,8 @@ export default function LegalFooter({ className = '' }: { className?: string }) 
         </nav>
         <p className="text-[11px] text-slate-500 max-w-xl mx-auto leading-relaxed">
           AI suggestions are a guide only. Always check conditions and local fishing rules.
+          <br />
+          {AMAZON_DISCLOSURE}
         </p>
         <p className="text-[10px] text-slate-500">© {new Date().getFullYear()} Tacklebox IQ</p>
       </div>

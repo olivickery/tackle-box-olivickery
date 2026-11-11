@@ -73,6 +73,11 @@ export default function PrivacyPage() {
           We store your sign-in session in your browser&apos;s local storage so you stay signed in. We don&apos;t use
           advertising or tracking cookies.
         </p>
+        <p>
+          If you tap a &ldquo;Find on Amazon&rdquo; link, you leave Tacklebox IQ for Amazon.com.au. The link contains only the
+          item&apos;s name and our affiliate tag, not your account details. Amazon may then set its own cookies under its
+          privacy notice.
+        </p>
       </Section>
 
       <Section n={7} title="Keeping and deleting your data">
