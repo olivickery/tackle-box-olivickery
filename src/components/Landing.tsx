@@ -52,7 +52,7 @@ function Phone({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto w-[220px] sm:w-[240px] aspect-[9/19] rounded-[2rem] border-[6px] border-slate-800 bg-slate-950 shadow-2xl overflow-hidden relative">
       <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-4 rounded-full bg-slate-800 z-10" />
-      <div className="h-full pt-7 px-2.5 pb-3 flex flex-col gap-2 text-[9px] text-slate-300">{children}</div>
+      <div className="h-full pt-7 px-2.5 pb-7 flex flex-col gap-2 text-[9px] text-slate-300">{children}</div>
     </div>
   );
 }
