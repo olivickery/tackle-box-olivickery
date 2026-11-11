@@ -1393,34 +1393,33 @@ function TackleboxIQ({ session }: { session: Session }) {
             <div className="w-8 h-8 shrink-0 rounded-lg overflow-hidden flex items-center justify-center bg-slate-800 border border-slate-700 p-1.5 group-hover:border-slate-600 transition">
               <VaultIcon className="w-full h-full text-slate-300" />
             </div>
-            <div className="translate-y-[2px] min-w-0 max-[379px]:hidden">
+            <div className="translate-y-[2px] min-w-0">
               <h1 className="text-base sm:text-lg leading-none group-hover:opacity-80 transition"><Wordmark /></h1>
               <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[389px]:hidden">Smart gear management</p>
             </div>
           </button>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* AI Trip Planner Button */}
-            <button
-              onClick={() => {
-                setTripPlannerError(null);
-                setIsTripPlannerOpen(true);
-              }}
-              className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap"
-              title="AI Trip Planner"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>PLAN TRIP</span>
-            </button>
-
-            <Link
-              href="/packs"
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-slate-100 transition"
-              title="My pack lists"
-              aria-label="My pack lists"
-            >
-              <ClipboardList className="w-4 h-4" />
-            </Link>
+            <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-800" role="group" aria-label="View">
+              <button 
+                onClick={() => setViewMode('grid')}
+                aria-pressed={viewMode === 'grid'}
+                className={`p-1.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Grid view"
+                aria-label="Grid view"
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setViewMode('list')}
+                aria-pressed={viewMode === 'list'}
+                className={`p-1.5 rounded-lg transition ${viewMode === 'list' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                title="List view"
+                aria-label="List view"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
 
             <button
               onClick={() => supabase.auth.signOut()}
@@ -1436,22 +1435,22 @@ function TackleboxIQ({ session }: { session: Session }) {
 
       <main className="max-w-5xl mx-auto px-4 pt-4">
 
-        {/* Command bar: search, view toggle, restock */}
-        <div className="flex items-center gap-2 mb-3">
-          <div className="relative flex-1 min-w-0">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        {/* Command row: search + the three main actions */}
+        <div className="flex items-stretch gap-2 mb-3">
+          <div className="relative flex-1 min-w-0 sm:max-w-sm">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input 
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search gear..."
+              placeholder="Search…"
               aria-label="Search gear by name, brand, species, specs, colour or location"
-              className="w-full bg-slate-900/90 border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-9 py-2.5 text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden"
+              className={`w-full h-full min-h-11 bg-slate-900/90 border border-slate-800 focus:border-amber-500 rounded-xl pl-9 ${searchQuery ? 'pr-8' : 'pr-2'} text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 p-0.5 rounded-md"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 p-0.5 rounded-md"
                 aria-label="Clear search"
               >
                 <X className="w-4 h-4" />
@@ -1459,48 +1458,53 @@ function TackleboxIQ({ session }: { session: Session }) {
             )}
           </div>
 
-          <div className="flex shrink-0 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-            <button 
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-              title="Grid view"
-              aria-label="Grid view"
+          <div className="flex gap-2 shrink-0 sm:flex-1 sm:justify-end">
+            <button
+              onClick={() => {
+                setTripPlannerError(null);
+                setIsTripPlannerOpen(true);
+              }}
+              className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition shadow-lg shadow-amber-500/10"
+              title="AI Trip Planner"
             >
-              <Grid className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PLAN<span className="hidden sm:inline"> TRIP</span></span>
             </button>
-            <button 
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition ${viewMode === 'list' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-              title="List view"
-              aria-label="List view"
+
+            <Link
+              href="/packs"
+              className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
+              title="My pack lists"
             >
-              <List className="w-4 h-4" />
+              <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
+              <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span><span className="sm:hidden">S</span></span>
+            </Link>
+
+            <button 
+              onClick={() => setIsRestockOpen(true)}
+              className="relative w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
+              title="Gear to replace"
+              aria-label={`Gear to replace (${allGhostCount})`}
+            >
+              <ShoppingBag className="w-4 h-4 shrink-0" />
+              <span className="text-[9px] max-[359px]:text-[8px] sm:text-xs leading-none whitespace-nowrap"><span className="sm:hidden">RESTOCK</span><span className="hidden sm:inline">GEAR TO REPLACE</span></span>
+              {allGhostCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+                  {allGhostCount}
+                </span>
+              )}
             </button>
           </div>
-
-          <button 
-            onClick={() => setIsRestockOpen(true)}
-            className="relative shrink-0 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition"
-            title="Restock list"
-            aria-label={`Restock list (${allGhostCount})`}
-          >
-            <ShoppingBag className="w-4 h-4" />
-            {allGhostCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
-                {allGhostCount}
-              </span>
-            )}
-          </button>
         </div>
 
-        {/* Filter pills */}
-        <div className="-mx-4 px-4 mb-5 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden font-mono text-xs">
+        {/* Filter pills: full width, three equal columns */}
+        <div className="mb-5 grid grid-cols-3 gap-2 font-mono text-[11px] sm:text-xs">
           {([
-            { key: 'all', label: 'All', icon: null, count: items.length,
+            { key: 'all', label: 'All', short: 'All', icon: null, count: items.length,
               active: 'bg-slate-100 text-slate-950 border-slate-100', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-slate-800 text-slate-300' },
-            { key: 'favs', label: 'Favourites', icon: <Star className="w-3.5 h-3.5 fill-current" />, count: allFavCount,
+            { key: 'favs', label: 'Favourites', short: 'Favs', icon: <Star className="w-3.5 h-3.5 fill-current shrink-0" />, count: allFavCount,
               active: 'bg-amber-500 text-slate-950 border-amber-400', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-amber-500/15 text-amber-400' },
-            { key: 'replace', label: 'To replace', icon: <Repeat className="w-3.5 h-3.5" />, count: allGhostCount,
+            { key: 'replace', label: 'To replace', short: 'Replace', icon: <Repeat className="w-3.5 h-3.5 shrink-0" />, count: allGhostCount,
               active: 'bg-red-500 text-white border-red-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-red-500/15 text-red-400' },
           ] as const).map((pill) => {
             const isActive = pillFilter === pill.key;
@@ -1512,12 +1516,14 @@ function TackleboxIQ({ session }: { session: Session }) {
                   scrollToTop();
                 }}
                 aria-pressed={isActive}
-                className={`shrink-0 flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full border transition whitespace-nowrap ${
+                aria-label={`${pill.label} (${pill.count})`}
+                className={`min-w-0 flex items-center justify-center gap-1.5 px-2 py-2 rounded-full border transition whitespace-nowrap ${
                   isActive ? `${pill.active} font-bold` : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-slate-600'
                 }`}
               >
                 {pill.icon}
-                <span>{pill.label}</span>
+                <span className="sm:hidden">{pill.short}</span>
+                <span className="hidden sm:inline">{pill.label}</span>
                 <span className={`min-w-5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-center ${isActive ? pill.badge : pill.idleBadge}`}>
                   {pill.count}
                 </span>
