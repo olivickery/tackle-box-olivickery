@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Camera, Check, ChevronLeft, ChevronRight, ClipboardList, ExternalLink, Fish, Plus, Repeat, Share2,
+  Camera, Check, ChevronLeft, ChevronRight, ExternalLink, Fish, Plus, Repeat, Share2,
   ShoppingBag, Sparkles, Star, X,
 } from 'lucide-react';
 
@@ -21,38 +21,38 @@ interface Step {
 /* Illustrations, drawn in the overview-page style (no photos)         */
 /* ------------------------------------------------------------------ */
 
-function Lure({ from, to, className = '' }: { from: string; to: string; className?: string }) {
+/** Full-bleed colour for a tip's front face; graphics sit straight on top. */
+function Stage({ from, to, children }: { from: string; to: string; children: React.ReactNode }) {
   return (
-    <div className={`${className.includes('absolute') ? '' : 'relative'} overflow-hidden rounded-md ${className}`} style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}>
-      <Fish className="absolute inset-0 m-auto w-1/2 h-1/2 text-white/70 -rotate-12" strokeWidth={1.5} />
-    </div>
-  );
-}
-
-function Stage({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950 flex items-center justify-center overflow-hidden">
-      <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-amber-500/10 blur-2xl" />
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden" style={{ background: `linear-gradient(140deg, ${from}, ${to})` }}>
+      <div className="absolute -bottom-16 -left-12 w-48 h-48 rounded-full bg-black/15 blur-2xl" />
+      <div className="absolute -top-16 -right-12 w-48 h-48 rounded-full bg-white/15 blur-2xl" />
       {children}
     </div>
   );
 }
 
+const glass = 'bg-white/15 border border-white/30 backdrop-blur-sm';
+
 function IllAdd() {
   return (
-    <Stage>
-      <div className="relative w-[58%] aspect-[3/4] rounded-xl border-2 border-slate-700 bg-slate-950 p-2 flex flex-col">
-        <div className="relative flex-1 rounded-md overflow-hidden">
-          <Lure from="#1e3a8a" to="#0ea5e9" className="absolute inset-0 rounded-none" />
-          <div className="absolute inset-2 border-2 border-amber-400/80 rounded" />
-          <div className="absolute left-2 right-2 top-1/2 h-px bg-amber-400 shadow-[0_0_8px_2px_rgba(251,191,36,0.6)]" />
-        </div>
-        <div className="mt-1.5 flex items-center justify-center gap-1 text-[8px] font-mono font-bold text-amber-400">
-          <Camera className="w-2.5 h-2.5" /> Reading the packet…
-        </div>
+    <Stage from="#1e3a8a" to="#0ea5e9">
+      <div className="relative w-[56%] aspect-square -translate-y-[6%]">
+        {/* viewfinder corners */}
+        {['top-0 left-0 border-t-4 border-l-4 rounded-tl-xl', 'top-0 right-0 border-t-4 border-r-4 rounded-tr-xl',
+          'bottom-0 left-0 border-b-4 border-l-4 rounded-bl-xl', 'bottom-0 right-0 border-b-4 border-r-4 rounded-br-xl'].map(c => (
+          <span key={c} className={`absolute w-8 h-8 border-white ${c}`} />
+        ))}
+        <Fish className="absolute inset-0 m-auto w-[62%] h-[62%] text-white -rotate-12" strokeWidth={1.4} />
+        <span className="absolute left-1 right-1 top-1/2 h-0.5 bg-amber-300 shadow-[0_0_12px_3px_rgba(252,211,77,0.7)]" />
       </div>
-      <div className="absolute bottom-3 right-3 w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/30">
-        <Plus className="w-5 h-5 stroke-[3]" />
+      <div className="absolute bottom-[11%] left-1/2 -translate-x-1/2 flex items-center gap-2">
+        <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-mono font-bold text-white whitespace-nowrap ${glass}`}>
+          <Camera className="w-3.5 h-3.5" /> Snap the packet
+        </span>
+        <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${glass}`}>
+          <Plus className="w-5 h-5 stroke-[3]" />
+        </span>
       </div>
     </Stage>
   );
@@ -60,58 +60,51 @@ function IllAdd() {
 
 function IllSwipe() {
   return (
-    <Stage>
-      <div className="relative w-[62%] aspect-square">
-        <div className="absolute inset-0 translate-x-5 rotate-6 rounded-lg bg-slate-800 border border-slate-700 p-2 font-mono text-[7px] text-slate-400 space-y-1">
-          <span className="block text-[8px] font-bold text-slate-200">SPECS</span>
-          <span className="block">Brand · Daiwa</span><span className="block">Depth · 1.5m</span><span className="block">Species · Bass</span>
-        </div>
-        <div className="absolute inset-0 rounded-lg overflow-hidden border border-slate-700 shadow-xl">
-          <Lure from="#065f46" to="#a3e635" className="absolute inset-0 rounded-none" />
-          <div className="absolute bottom-1.5 inset-x-0 flex justify-center gap-1">
-            <span className="w-3 h-1.5 rounded-full bg-white" /><span className="w-1.5 h-1.5 rounded-full bg-white/50" /><span className="w-1.5 h-1.5 rounded-full bg-white/50" />
+    <Stage from="#065f46" to="#84cc16">
+      <div className="relative w-[58%] aspect-[4/5]">
+        <div className={`absolute inset-0 translate-x-7 rotate-[8deg] rounded-2xl ${glass}`} />
+        <div className="absolute inset-0 rounded-2xl bg-white/25 border-2 border-white/70 shadow-2xl flex items-center justify-center">
+          <Fish className="w-[60%] h-[60%] text-white -rotate-12" strokeWidth={1.4} />
+          <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
+            <span className="w-4 h-2 rounded-full bg-white" /><span className="w-2 h-2 rounded-full bg-white/50" /><span className="w-2 h-2 rounded-full bg-white/50" />
           </div>
         </div>
       </div>
-      <div className="absolute bottom-7 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-slate-950/90 border border-slate-700 px-2.5 py-1 text-[9px] font-mono font-bold text-amber-400">
-        <ChevronLeft className="w-3 h-3" /> SWIPE <ChevronRight className="w-3 h-3" />
-      </div>
+      <span className={`absolute bottom-[12%] left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-3 py-1 text-xs font-mono font-bold text-white ${glass}`}>
+        <ChevronLeft className="w-4 h-4" /> SWIPE <ChevronRight className="w-4 h-4" />
+      </span>
     </Stage>
   );
 }
 
 function IllStar() {
   return (
-    <Stage>
-      <div className="relative w-[64%] aspect-square rounded-lg overflow-hidden border border-slate-700 shadow-xl">
-        <Lure from="#78350f" to="#fbbf24" className="absolute inset-0 rounded-none" />
-        <span className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center ring-4 ring-amber-500/30">
-          <Star className="w-3.5 h-3.5 fill-current" />
-        </span>
-        <span className="absolute bottom-1.5 left-1.5 w-7 h-7 rounded-full bg-slate-900/90 border border-slate-600 text-red-300 flex items-center justify-center ring-4 ring-red-500/25">
-          <Repeat className="w-3.5 h-3.5" />
-        </span>
-      </div>
+    <Stage from="#9a3412" to="#fbbf24">
+      <Fish className="w-[58%] h-[58%] text-white -rotate-12" strokeWidth={1.4} />
+      <span className="absolute top-[14%] right-[14%] w-14 h-14 rounded-full bg-white text-amber-500 flex items-center justify-center shadow-xl ring-8 ring-white/25">
+        <Star className="w-7 h-7 fill-current" />
+      </span>
+      <span className="absolute bottom-[16%] left-[14%] w-14 h-14 rounded-full bg-slate-950/70 text-white flex items-center justify-center shadow-xl ring-8 ring-black/20">
+        <Repeat className="w-7 h-7" />
+      </span>
     </Stage>
   );
 }
 
 function IllPlan() {
   return (
-    <Stage>
-      <div className="w-[70%] space-y-1 text-[8px] font-mono">
-        <div className="rounded-md bg-slate-950 border border-slate-700 px-2 py-1 text-slate-300 truncate">Fishing: <span className="text-amber-400">Estuary</span></div>
-        <div className="rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-1">
-          <span className="flex items-center gap-1 font-bold text-amber-400"><Sparkles className="w-2.5 h-2.5" /> TACTICS</span>
-          <span className="block text-slate-300 mt-0.5 font-sans leading-snug truncate">Slow-roll vibes on the run-out tide…</span>
+    <Stage from="#5b21b6" to="#ec4899">
+      <div className="w-[76%] space-y-2 font-mono">
+        <div className="flex items-center gap-2 text-white">
+          <Sparkles className="w-7 h-7" />
+          <span className="text-base font-bold leading-tight">Tactics<br /><span className="text-xs font-normal text-white/85">for this trip</span></span>
         </div>
-        {['Shad 3"', 'Vibe 65'].map((n, i) => (
-          <div key={n} className="flex items-center gap-1.5 rounded-md bg-slate-950 border border-slate-800 px-1.5 py-1">
-            <span className={`w-3 h-3 rounded border flex items-center justify-center ${i === 0 ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600'}`}>
-              {i === 0 && <Check className="w-2 h-2 text-slate-950" strokeWidth={4} />}
+        {[['Shad 3"', true], ['Vibe 65', false], ['Leader', false]].map(([n, done]) => (
+          <div key={n as string} className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-white ${glass}`}>
+            <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${done ? 'bg-white border-white' : 'border-white/80'}`}>
+              {done && <Check className="w-3 h-3 text-violet-700" strokeWidth={4} />}
             </span>
-            <span className={i === 0 ? 'text-slate-500 line-through' : 'text-slate-200'}>{n}</span>
-            <ClipboardList className="w-2.5 h-2.5 ml-auto text-slate-600" />
+            <span className={done ? 'line-through text-white/70' : ''}>{n as string}</span>
           </div>
         ))}
       </div>
@@ -121,17 +114,21 @@ function IllPlan() {
 
 function IllRestock() {
   return (
-    <Stage>
-      <div className="w-[72%] space-y-1.5 text-[8px] font-mono">
-        <span className="flex items-center gap-1 text-[9px] font-bold text-slate-200"><ShoppingBag className="w-3 h-3 text-red-400" /> RESTOCK</span>
-        {[['#1e3a8a', '#dc2626', 'Popper 120'], ['#0f172a', '#64748b', '10lb braid']].map(([f, t, n]) => (
-          <div key={n} className="flex items-center gap-1.5 rounded-md border border-dashed border-red-500/40 bg-slate-950 p-1">
-            <Lure from={f} to={t} className="w-5 h-5 shrink-0 opacity-80" />
-            <span className="text-slate-200 font-bold">{n}</span>
-            <span className="ml-auto flex items-center gap-0.5 rounded bg-slate-800 border border-slate-700 px-1 py-px text-amber-400">Amazon <ExternalLink className="w-2 h-2" /></span>
+    <Stage from="#0f766e" to="#22d3ee">
+      <div className="w-[78%] space-y-2 font-mono">
+        <div className="flex items-center gap-2 text-white">
+          <ShoppingBag className="w-7 h-7" />
+          <span className="text-base font-bold">Restock</span>
+        </div>
+        {['Popper 120', '10lb braid'].map(n => (
+          <div key={n} className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-white ${glass}`}>
+            <span className="font-bold truncate">{n}</span>
+            <span className="ml-auto flex items-center gap-0.5 shrink-0 text-[10px] font-bold">Amazon <ExternalLink className="w-3 h-3" /></span>
           </div>
         ))}
-        <div className="flex items-center justify-center gap-1 rounded-md bg-amber-500 text-slate-950 font-bold py-1"><Share2 className="w-2.5 h-2.5" /> Share list</div>
+        <div className="flex items-center justify-center gap-1.5 rounded-lg bg-white text-teal-800 text-xs font-bold py-1.5">
+          <Share2 className="w-3.5 h-3.5" /> Share list
+        </div>
       </div>
     </Stage>
   );
@@ -193,12 +190,12 @@ function TipCard({
         {side === 0 ? (
           <step.Illustration />
         ) : (
-          <div className="absolute inset-0 bg-slate-900/95 p-4 font-mono text-xs flex flex-col">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400">How to</span>
-            <ol className="mt-2 space-y-2 text-[11px] text-slate-200 leading-snug font-sans">
+          <div className="absolute inset-0 bg-slate-900 px-5 pt-5 pb-8 font-mono flex flex-col justify-center">
+            <span className="text-xs uppercase font-bold tracking-wider text-amber-400">How to</span>
+            <ol className="mt-3 space-y-3 text-sm text-slate-100 leading-snug font-sans">
               {step.how.map((line, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="w-4 h-4 shrink-0 rounded-full bg-amber-500 text-slate-950 text-[9px] font-bold flex items-center justify-center mt-px">{i + 1}</span>
+                <li key={i} className="flex gap-2.5">
+                  <span className="w-6 h-6 shrink-0 rounded-full bg-amber-500 text-slate-950 text-xs font-bold flex items-center justify-center">{i + 1}</span>
                   <span>{line}</span>
                 </li>
               ))}
@@ -206,21 +203,18 @@ function TipCard({
           </div>
         )}
 
-        <span className="absolute top-2 left-2 z-10 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-950/80 border border-slate-700 text-slate-300">
-          TIP {index + 1}
-        </span>
+        {side === 0 && (
+          <span className="absolute top-2.5 left-2.5 z-10 text-xs font-mono font-bold px-3 py-1 rounded-full bg-slate-950/70 text-white backdrop-blur-sm">
+            TIP {index + 1}
+          </span>
+        )}
         <button
           onClick={onDismiss}
-          className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-slate-950/80 border border-slate-700 text-slate-400 hover:text-slate-100 transition"
+          className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-full bg-slate-950/70 text-white/90 hover:text-white backdrop-blur-sm transition"
           aria-label={`Dismiss tip: ${step.title}`}
         >
           <X className="w-3.5 h-3.5" />
         </button>
-        {done && (
-          <span className="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 flex items-center gap-1">
-            <Check className="w-3 h-3" strokeWidth={3} /> DONE
-          </span>
-        )}
 
         {/* Desktop arrows + dots, like gear cards */}
         <button onClick={() => flip(side === 0 ? 1 : 0)} className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 opacity-0 group-hover:opacity-100 transition z-10" aria-label={side === 0 ? 'How to' : 'Back to picture'}>
@@ -237,22 +231,27 @@ function TipCard({
       <h3 className="font-semibold text-sm text-slate-100">{step.title}</h3>
       <p className="text-xs text-slate-400 mt-0.5">{step.blurb}</p>
 
-      <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2">
+      <div className="mt-3 pt-2 border-t border-slate-800/60 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <button
           onClick={() => flip(side === 0 ? 1 : 0)}
-          className="text-[10px] font-mono uppercase text-slate-400 hover:text-slate-200 transition"
+          className="justify-self-start text-[10px] font-mono uppercase text-slate-400 hover:text-slate-200 transition"
         >
           {side === 0 ? 'How to →' : '← Picture'}
         </button>
+        {done ? (
+          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 flex items-center gap-1">
+            <Check className="w-3 h-3" strokeWidth={3} /> DONE
+          </span>
+        ) : <span />}
         {step.action ? (
           <button
             onClick={step.id === 'swipe' ? () => flip(1) : onAction}
-            className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition"
+            className="justify-self-end text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition"
           >
             {step.action}
           </button>
         ) : (
-          <button onClick={onDismiss} className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+          <button onClick={onDismiss} className="justify-self-end text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
             Got it
           </button>
         )}
