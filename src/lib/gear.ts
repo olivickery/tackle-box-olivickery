@@ -96,14 +96,23 @@ export function normalizePlan(raw: unknown): TripPlan {
   };
 }
 
+/**
+ * Stock photo that older versions saved for gear added without a photo (it
+ * shows a sleeping cat). Treated as "no photo" so the placeholder shows instead.
+ */
+const LEGACY_STOCK_PHOTO = 'images.unsplash.com/photo-1541781774459-bb2af2f05b55';
+const isRealPhoto = (url: unknown): url is string => typeof url === 'string' && !!url && !url.includes(LEGACY_STOCK_PHOTO);
+
 /** Tidies a gear_items row from Supabase for display. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatGearRow(row: any): GearItem {
+  const photos = (row.image_urls && row.image_urls.length > 0 ? row.image_urls : [row.image_url]).filter(isRealPhoto);
   return {
     ...row,
     type: row.type === 'Hardbody Suspending' ? 'Hardbody' : row.type,
     environment_tags: row.environment_tags || [],
-    image_urls: (row.image_urls && row.image_urls.length > 0 ? row.image_urls : [row.image_url]).filter(Boolean),
+    image_url: isRealPhoto(row.image_url) ? row.image_url : (photos[0] || ''),
+    image_urls: photos,
   } as GearItem;
 }
 

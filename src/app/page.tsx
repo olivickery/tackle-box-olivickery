@@ -1404,8 +1404,9 @@ function TackleboxIQ({ session }: { session: Session }) {
       ? formData.species.split(',').map(s => s.trim())
       : ['General'];
 
-    const fallbackImage = formData.image_urls[0] || 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=400&q=80';
-    const finalImageUrls = formData.image_urls.length > 0 ? formData.image_urls : [fallbackImage];
+    // No photo? Save none: cards show the tackle-box placeholder instead of a stock image.
+    const fallbackImage = formData.image_urls[0] || '';
+    const finalImageUrls = formData.image_urls;
 
     const newItem = {
       user_id: session.user.id,
@@ -1432,12 +1433,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       console.error('Error inserting new lure:', error);
       alert(`Failed to add lure: ${error.message}`);
     } else if (data && data[0]) {
-      const insertedItem = {
-        ...data[0],
-        type: data[0].type === 'Hardbody Suspending' ? 'Hardbody' : data[0].type,
-        environment_tags: data[0].environment_tags || [],
-        image_urls: data[0].image_urls && data[0].image_urls.length > 0 ? data[0].image_urls : [data[0].image_url]
-      } as GearItem;
+      const insertedItem = formatGearRow(data[0]);
 
       setItems([insertedItem, ...items]);
       setFormData({
