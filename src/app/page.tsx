@@ -1933,7 +1933,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
             <div className="mt-4 space-y-4">
               <div>
-                <label htmlFor="trip-location" className="block text-slate-200 mb-1.5 font-sans font-semibold text-sm">Where are you fishing?</label>
+                <label htmlFor="trip-location" className="block text-slate-300 mb-1.5 font-sans font-semibold text-xs">Where are you fishing?</label>
                 <select 
                   id="trip-location"
                   value={tripLocation}
@@ -1947,7 +1947,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               </div>
 
               <div>
-                <label htmlFor="trip-species" className="block text-slate-200 mb-1.5 font-sans font-semibold text-sm">What are you targeting?</label>
+                <label htmlFor="trip-species" className="block text-slate-300 mb-1.5 font-sans font-semibold text-xs">What are you targeting?</label>
                 <input 
                   id="trip-species"
                   type="text" 
@@ -1959,7 +1959,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               </div>
 
               <div>
-                <label htmlFor="trip-conditions" className="block text-slate-200 mb-1.5 font-sans font-semibold text-sm">Expected conditions?</label>
+                <label htmlFor="trip-conditions" className="block text-slate-300 mb-1.5 font-sans font-semibold text-xs">Expected conditions?</label>
                 <select 
                   id="trip-conditions"
                   value={tripConditions}

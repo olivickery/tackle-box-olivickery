@@ -3,12 +3,16 @@
 import React, { useRef } from 'react';
 import {
   Camera,
+  Check,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Fish,
+  Grid,
   ListChecks,
   Lock,
   MapPin,
+  Plus,
   Search,
   ShoppingBag,
   Sparkles,
@@ -60,7 +64,7 @@ function MiniHeader() {
         <Wordmark />
       </span>
       <div className="flex gap-1">
-        <span className="w-4 h-4 rounded bg-slate-800" />
+        <span className="w-7 h-4 rounded bg-slate-800 flex items-center justify-center"><Grid className="w-2 h-2 text-slate-300" /></span>
         <span className="w-4 h-4 rounded bg-slate-800" />
       </div>
     </div>
@@ -87,15 +91,24 @@ function ScreenTray() {
   return (
     <Phone>
       <MiniHeader />
-      <div className="grid grid-cols-3 gap-1">
-        {['36 Items', '6 Favs', '1 Restock'].map((t, i) => (
-          <div key={t} className="rounded bg-slate-900 border border-slate-800 px-1 py-1">
-            <span className={`block text-[8px] font-bold ${i === 1 ? 'text-amber-400' : i === 2 ? 'text-red-400' : 'text-slate-100'}`}>{t}</span>
-          </div>
-        ))}
+      <div className="flex gap-1">
+        <div className="flex-1 min-w-0 rounded bg-slate-900 border border-slate-800 px-1.5 flex items-center gap-1 text-slate-500">
+          <Search className="w-2.5 h-2.5 shrink-0" /> Search…
+        </div>
+        {[[Sparkles, 'PLAN'], [ClipboardList, 'PACKS'], [ShoppingBag, 'RESTOCK']].map(([Icon, label]) => {
+          const I = Icon as typeof Sparkles;
+          return (
+            <span key={label as string} className="w-8 py-0.5 rounded bg-slate-800 border border-slate-700 flex flex-col items-center gap-px">
+              <I className="w-2.5 h-2.5 text-amber-400" />
+              <span className="text-[5px] font-bold text-slate-100">{label as string}</span>
+            </span>
+          );
+        })}
       </div>
-      <div className="rounded bg-slate-900 border border-slate-800 px-1.5 py-1 flex items-center gap-1 text-slate-500">
-        <Search className="w-2.5 h-2.5" /> Search brand, species…
+      <div className="flex gap-1 text-[7px] font-mono">
+        <span className="px-2 py-0.5 rounded-full bg-slate-700 border border-slate-500 text-white font-bold">All 36</span>
+        <span className="flex-1 text-center py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">★ Favourites <span className="text-amber-400">6</span></span>
+        <span className="flex-1 text-center py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">Replace <span className="text-red-400">1</span></span>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         {lures.map((l) => (
@@ -160,7 +173,7 @@ function ScreenPlanner() {
       </div>
       <div className="rounded-lg bg-slate-900 border border-amber-500/30 p-2 space-y-1">
         <span className="text-[7px] uppercase font-bold text-amber-400 flex items-center gap-1">
-          <Sparkles className="w-2 h-2" /> Your loadout
+          <Sparkles className="w-2 h-2" /> Tactics
         </span>
         <p className="text-slate-300 leading-snug">Work soft plastics slow along the drop-offs on the run-out tide…</p>
       </div>
@@ -176,7 +189,53 @@ function ScreenPlanner() {
           </div>
         ))}
       </div>
-      <div className="mt-auto rounded-lg border border-dashed border-red-500/50 p-1.5 text-red-300">Gap: no heavy jig head for deeper water</div>
+      <div className="rounded-lg border border-dashed border-red-500/50 p-1.5 space-y-0.5">
+        <span className="block text-[7px] uppercase font-bold text-red-400">4 gaps in your tackle box</span>
+        <span className="block text-slate-300">1/4oz jig heads · 8lb leader…</span>
+      </div>
+      <div className="mt-auto grid grid-cols-2 gap-1">
+        <span className="rounded-md bg-slate-100 text-slate-950 font-bold text-center py-1.5">Pack checklist</span>
+        <span className="rounded-md bg-slate-800 border border-slate-700 text-slate-100 font-bold text-center py-1.5">Save list</span>
+      </div>
+    </Phone>
+  );
+}
+
+function ScreenPacks() {
+  const rows: [string, string, string, boolean][] = [
+    ['#065f46', '#a3e635', 'Shad 3"', true],
+    ['#4c1d95', '#f472b6', 'Vibe 65', true],
+    ['#78350f', '#fbbf24', 'Crank 50', false],
+  ];
+  return (
+    <Phone>
+      <MiniHeader />
+      <div className="px-1">
+        <span className="flex items-center gap-1 text-[10px] font-bold text-slate-100">
+          <ClipboardList className="w-3 h-3 text-amber-400" /> Flathead · Sat
+        </span>
+        <div className="mt-1 flex items-center gap-1.5">
+          <div className="flex-1 h-1 rounded-full bg-slate-800 overflow-hidden"><div className="h-full w-3/4 bg-amber-500 rounded-full" /></div>
+          <span className="text-slate-400">3 of 4</span>
+        </div>
+      </div>
+      {rows.map(([f, t, n, done]) => (
+        <div key={n} className={`flex items-center gap-1.5 rounded-lg border p-1 ${done ? 'bg-slate-900 border-emerald-500/30' : 'bg-slate-950 border-slate-800'}`}>
+          <span className={`w-3 h-3 rounded border flex items-center justify-center shrink-0 ${done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600'}`}>
+            {done && <Check className="w-2 h-2 text-slate-950" strokeWidth={4} />}
+          </span>
+          <LureSwatch from={f} to={t} className={`w-6 h-6 shrink-0 ${done ? 'opacity-50' : ''}`} />
+          <span className={`font-bold ${done ? 'text-slate-500 line-through' : 'text-slate-100'}`}>{n}</span>
+        </div>
+      ))}
+      <span className="px-1 text-[7px] uppercase font-bold text-slate-500">Added by you</span>
+      <div className="flex items-center gap-1.5 rounded-lg border bg-slate-900 border-emerald-500/30 p-1">
+        <span className="w-3 h-3 rounded bg-emerald-500 flex items-center justify-center shrink-0"><Check className="w-2 h-2 text-slate-950" strokeWidth={4} /></span>
+        <span className="text-slate-500 line-through font-bold">Sunscreen</span>
+      </div>
+      <div className="mt-auto rounded-md bg-slate-100 text-slate-950 font-bold text-center py-1.5 flex items-center justify-center gap-1">
+        <Plus className="w-3 h-3" /> Add from your tackle box
+      </div>
     </Phone>
   );
 }
@@ -186,12 +245,12 @@ function ScreenRestock() {
     <Phone>
       <MiniHeader />
       <div className="flex items-center gap-1 px-1 text-[10px] font-bold text-slate-100">
-        <ShoppingBag className="w-3 h-3 text-red-400" /> Items to replace
+        <ShoppingBag className="w-3 h-3 text-red-400" /> Restock list
       </div>
       {[
         ['#1e3a8a', '#dc2626', 'Popper 120', 'Lost to a GT'],
         ['#0f172a', '#64748b', '10lb braid', 'Running low'],
-        ['#78350f', '#fbbf24', 'Jig heads 1/8', 'Box empty'],
+        ['#78350f', '#fbbf24', '1/4oz jig heads', 'From trip plan'],
       ].map(([f, t, n, why]) => (
         <div key={n} className="flex items-center gap-1.5 rounded-lg border border-dashed border-red-500/50 bg-slate-900/60 p-1.5">
           <LureSwatch from={f} to={t} className="w-8 h-8 shrink-0 opacity-70" />
@@ -211,17 +270,20 @@ function ScreenRestock() {
 const PREVIEWS = [
   { caption: 'Your whole tackle box,', accent: 'in your pocket', Screen: ScreenTray },
   { caption: 'Snap the packet.', accent: 'AI fills in the rest', Screen: ScreenScan },
-  { caption: 'Plan the trip,', accent: 'pack the right gear', Screen: ScreenPlanner },
+  { caption: 'Plan the trip,', accent: 'get the tactics', Screen: ScreenPlanner },
+  { caption: 'Tick it off,', accent: 'save it for next time', Screen: ScreenPacks },
   { caption: 'Never forget', accent: 'what to restock', Screen: ScreenRestock },
 ];
 
 const FEATURES = [
   { Icon: Camera, title: 'Photo inventory', body: 'Up to four photos per item, swipe through them instantly and pinch to zoom in on the fine print.' },
   { Icon: Wand2, title: 'Packet scanning', body: 'Photograph the packaging and brand, model, colour, specs and target species are filled in for you.' },
-  { Icon: Sparkles, title: 'AI trip planner', body: 'Tell it where you are fishing and what you are after. It builds a loadout from your own gear and flags what is missing.' },
+  { Icon: Sparkles, title: 'AI trip planner', body: 'Tell it where you are fishing, what you are targeting and the conditions. You get tactics, a loadout from your own gear and the gaps worth filling.' },
+  { Icon: ClipboardList, title: 'Pack lists', body: 'Turn a plan into a checklist and tick gear off as you pack. Add anything from your tackle box, swipe away what you don’t need, and save lists by trip, species or date.' },
+  { Icon: ShoppingBag, title: 'Restock list', body: 'Lost a lure? One tap adds it. Trip-plan gaps go on too, and you can copy the whole list for your next tackle shop run.' },
+  { Icon: Star, title: 'Favourites at a glance', body: 'Star your go-to gear and filter to favourites or items to replace in one tap.' },
   { Icon: Search, title: 'Find anything fast', body: 'Live search across brand, colour, specs, species and location, with filters you can stack.' },
-  { Icon: ShoppingBag, title: 'Restock list', body: 'Mark lost or used-up gear and copy a ready-made shopping list for your next tackle shop run.' },
-  { Icon: ZoomIn, title: 'Built for your phone', body: 'Designed mobile-first for the boat, the bank and the car park, and just as good on desktop.' },
+  { Icon: ZoomIn, title: 'Built for your phone', body: 'Designed mobile-first for the boat, the bank and the car park. Your gear and pack lists sync to desktop too.' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -330,7 +392,8 @@ export default function Landing({ onGetStarted, onSignIn }: { onGetStarted: () =
         <section className="pb-8 border-b border-slate-800">
           <p className="text-sm text-slate-300 leading-relaxed">
             Tacklebox IQ keeps every lure, rod, reel and bit of terminal tackle you own in one place, with photos, specs and
-            notes. No feeds, no catch maps, no clutter: just your gear, what it&apos;s good for, and what to bring next time.
+            notes. Plan a trip, pack from a checklist, and keep a running restock list. No feeds, no catch maps, no clutter:
+            just your gear, what it&apos;s good for, and what to bring next time.
           </p>
         </section>
 
@@ -358,7 +421,7 @@ export default function Landing({ onGetStarted, onSignIn }: { onGetStarted: () =
           <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 flex gap-3">
             <Lock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-xs text-slate-400 leading-relaxed">
-              Every account is private: your gear list and notes are only visible to you when you&apos;re signed in. There&apos;s
+              Every account is private: your gear, notes and pack lists are only visible to you when you&apos;re signed in. There&apos;s
               no feed and nothing is posted publicly. When you use the AI features, only the details needed for that request
               are sent to the AI service.
             </p>
