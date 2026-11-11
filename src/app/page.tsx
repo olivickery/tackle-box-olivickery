@@ -1136,6 +1136,15 @@ function TackleboxIQ({ session }: { session: Session }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Show the phone "back to top" button once the user has scrolled a screen or so.
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 500);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const handleCategoryClick = (categoryType: string) => {
     setViewMode('grid');
     if (activeCategoryFilter === categoryType) {
@@ -2506,12 +2515,25 @@ function TackleboxIQ({ session }: { session: Session }) {
         </div>
       )}
 
+      {/* Phones only: thumb-reach shortcut back to the top, stacked above Add gear */}
+      <button
+        onClick={scrollToTop}
+        aria-label="Back to top"
+        tabIndex={showBackToTop ? 0 : -1}
+        aria-hidden={!showBackToTop}
+        className={`sm:hidden fixed right-[28px] bottom-[96px] z-40 w-12 h-12 rounded-full bg-slate-800/95 backdrop-blur border border-slate-700 text-slate-200 shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 ${
+          showBackToTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
+        }`}
+      >
+        <ArrowUp className="w-5 h-5 text-amber-400" />
+      </button>
+
       <button 
         onClick={() => {
           setExtractionError(null);
           setIsAddModalOpen(true);
         }}
-        className="fixed bottom-6 left-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer"
+        className="fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold flex items-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer"
         aria-label="Add gear"
       >
         <Plus className="w-6 h-6 stroke-[3]" />
