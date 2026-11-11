@@ -1528,7 +1528,10 @@ function TackleboxIQ({ session }: { session: Session }) {
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-800" role="group" aria-label="View">
               <button 
-                onClick={() => setViewMode('grid')}
+                onClick={() => {
+                  setViewMode('grid');
+                  if (window.matchMedia('(max-width: 639px)').matches) setPillFilter('all');
+                }}
                 aria-pressed={viewMode === 'grid'}
                 className={`p-1.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
                 title="Grid view"
@@ -1626,7 +1629,8 @@ function TackleboxIQ({ session }: { session: Session }) {
       <main className="max-w-5xl mx-auto px-4 pt-4">
 
         {/* Filter pills: full width, three equal columns */}
-        <div className="mb-5 flex gap-2 sm:grid sm:grid-cols-3 font-mono text-[11px] sm:text-xs">
+        {/* Phones: pills only in list view (grid already shows favourites / restock sections). */}
+        <div className={`mb-5 gap-2 sm:grid sm:grid-cols-3 font-mono text-[11px] sm:text-xs ${viewMode === 'grid' ? 'hidden' : 'flex'}`}>
           {([
             { key: 'all', label: 'All', short: 'All', icon: null, count: items.length,
               active: 'bg-slate-700 text-white border-slate-500', badge: 'bg-slate-950/30 text-white', idleBadge: 'bg-slate-800 text-slate-300' },
