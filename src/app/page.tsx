@@ -2521,11 +2521,11 @@ function TackleboxIQ({ session }: { session: Session }) {
         aria-label="Back to top"
         tabIndex={showBackToTop ? 0 : -1}
         aria-hidden={!showBackToTop}
-        className={`sm:hidden fixed right-[28px] bottom-[96px] z-40 w-12 h-12 rounded-full bg-slate-800/95 backdrop-blur border border-slate-700 text-slate-200 shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 ${
+        className={`sm:hidden fixed right-6 bottom-[92px] z-40 w-14 h-14 rounded-2xl bg-slate-800/95 backdrop-blur border border-slate-700 text-slate-200 shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 ${
           showBackToTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
         }`}
       >
-        <ArrowUp className="w-5 h-5 text-amber-400" />
+        <ArrowUp className="w-6 h-6 stroke-[3] text-amber-400" />
       </button>
 
       <button 
