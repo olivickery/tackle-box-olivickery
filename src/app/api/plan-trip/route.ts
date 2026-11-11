@@ -49,7 +49,7 @@ Respond ONLY with a clean JSON object containing:
 1. "trip_summary": A brief 1-2 sentence tactical advice summary for these specific conditions and location.
 2. "recommended_gear_ids": Array of item IDs (from ID[...] above) that are top picks.
 3. "loadout_highlights": Array of objects: [{"item_id": "...", "reason": "1-sentence tip on retrieve/technique"}]
-4. "missing_recommendations": Array of 1-3 objects for essential gear gaps NOT present in their inventory:
+4. "missing_recommendations": Array of exactly 4 objects, ordered most important first, for useful gear gaps NOT present in their inventory (vary the gear types where it makes sense):
    [{"item": "short shopping-list name, e.g. 6lb fluorocarbon leader or 90mm suspending minnow", "type": one of ${GEAR_TYPES.map(t => `"${t}"`).join(', ')}, "reason": "1-sentence why it matters for this trip"}]`;
 
     const modelsToTry = ['gemini-3.6-flash', 'gemini-2.5-flash'];
