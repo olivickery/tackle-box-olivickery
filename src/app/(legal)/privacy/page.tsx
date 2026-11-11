@@ -52,6 +52,10 @@ export default function PrivacyPage() {
           exact address could open it, so avoid photographing anything you wouldn&apos;t want seen (such as documents or
           your face).
         </p>
+        <p>
+          If you share your restock list, anyone with that link can see the name you chose to show and the items on the list
+          for 30 days. Nothing else from your account is included.
+        </p>
       </Section>
 
       <Section n={5} title="Service providers">

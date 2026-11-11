@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import { ShoppingBag, Package } from 'lucide-react';
@@ -7,18 +8,14 @@ import LegalFooter from '../../../components/LegalFooter';
 import { AmazonLink, AmazonDisclosure } from '../../../components/AmazonLink';
 import { normalizeSupabaseUrl } from '../../../lib/supabase';
 
-export const metadata: Metadata = {
-  title: 'Shared restock list | Tacklebox IQ',
-  description: 'A fishing gear restock list shared from Tacklebox IQ.',
-  robots: { index: false, follow: false },
-};
 
 interface SharedItem { brand?: string; name: string; detail?: string }
 interface SharedList { title: string; items: SharedItem[]; created_at: string; expires_at: string }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function loadList(id: string): Promise<SharedList | null> {
+// cache(): generateMetadata and the page share one lookup per request.
+const loadList = cache(async (id: string): Promise<SharedList | null> => {
   if (!UUID.test(id)) return null;
   const supabase = createClient(
     normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
@@ -31,6 +28,21 @@ async function loadList(id: string): Promise<SharedList | null> {
   const items = (Array.isArray(row.items) ? row.items : [])
     .filter((i: unknown): i is SharedItem => !!i && typeof (i as SharedItem).name === 'string' && !!(i as SharedItem).name.trim());
   return { title: row.title, items, created_at: row.created_at, expires_at: row.expires_at };
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const list = await loadList(id);
+  const title = list ? list.title : 'Shared restock list';
+  const description = list
+    ? `${list.items.length} ${list.items.length === 1 ? 'item' : 'items'} of fishing gear to restock, shared from Tacklebox IQ.`
+    : 'A fishing gear restock list shared from Tacklebox IQ.';
+  return {
+    title: `${title} | Tacklebox IQ`,
+    description,
+    robots: { index: false, follow: false },
+    openGraph: { title, description, siteName: 'Tacklebox IQ', type: 'website' },
+  };
 }
 
 function formatDate(iso: string) {

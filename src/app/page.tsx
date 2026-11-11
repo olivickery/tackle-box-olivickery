@@ -547,6 +547,12 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const [isSharingList, setIsSharingList] = useState(false);
+  // Name shown on shared lists ("Oli's restock list"); chosen once, kept in the user's profile.
+  const [shareName, setShareName] = useState<string>(
+    typeof session.user.user_metadata?.display_name === 'string' ? session.user.user_metadata.display_name : ''
+  );
+  const [isEditingShareName, setIsEditingShareName] = useState(!shareName);
+  const [shareNameInput, setShareNameInput] = useState(shareName);
 
   // Trip Planner States
   // /?planner=1 (from the pack lists page) opens the planner straight away.
@@ -1106,7 +1112,17 @@ function TackleboxIQ({ session }: { session: Session }) {
    */
   const handleShareRestockList = async () => {
     if (ghostItems.length === 0 || isSharingList) return;
+    const name = (isEditingShareName ? shareNameInput : shareName).trim().slice(0, 40);
+    if (!name) return;
     setIsSharingList(true);
+
+    if (name !== shareName) {
+      setShareName(name);
+      const { error: nameError } = await supabase.auth.updateUser({ data: { display_name: name } });
+      if (nameError) console.error('Failed to save display name:', nameError);
+    }
+    setIsEditingShareName(false);
+    const title = `${name}'s restock list`;
 
     const snapshot = ghostItems.map(item => ({
       brand: item.brand || '',
@@ -1119,19 +1135,26 @@ function TackleboxIQ({ session }: { session: Session }) {
 
     const { data, error } = await supabase
       .from('shared_lists')
-      .insert({ user_id: session.user.id, kind: 'restock', title: 'Restock list', items: snapshot })
+      .insert({ user_id: session.user.id, kind: 'restock', title, items: snapshot })
       .select('id')
       .single();
 
-    const url = !error && data ? `${window.location.origin}/list/${data.id}` : null;
-    const text = `Tacklebox IQ restock list:\n${listText}`;
-    if (error) console.error('Failed to create share link:', error);
+    if (error || !data) {
+      console.error('Failed to create share link:', error);
+      // Fall back to the plain list so the user isn't left empty-handed.
+      try { await copyText(`${title}:\n${listText}`); } catch { /* ignore */ }
+      alert("Couldn't create a share link just now, so the plain list was copied instead.");
+      setIsSharingList(false);
+      return;
+    }
 
+    const url = `${window.location.origin}/list/${data.id}`;
+    const message = `${title} on Tacklebox IQ`;
     try {
-      if (url && typeof navigator.share === 'function') {
-        await navigator.share({ title: 'Restock list', text: `${text}\n\nView and buy:`, url });
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title, text: message, url });
       } else {
-        await copyText(url ? `${text}\n\nView and buy: ${url}` : text);
+        await copyText(`${message}: ${url}`);
         setCopiedToClipboard(true);
         setTimeout(() => setCopiedToClipboard(false), 3000);
       }
@@ -2840,9 +2863,31 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <span>Items to Buy:</span>
                 <span className="text-slate-200 font-bold">{ghostItems.length} Items</span>
               </div>
+              {ghostItems.length > 0 && (isEditingShareName ? (
+                <div className="mb-2.5">
+                  <label htmlFor="share-name" className="block text-slate-300 mb-1.5 font-sans font-semibold text-xs">Your name on the shared list</label>
+                  <input
+                    id="share-name"
+                    type="text"
+                    value={shareNameInput}
+                    onChange={(e) => setShareNameInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleShareRestockList(); }}
+                    placeholder="e.g. Oli"
+                    maxLength={40}
+                    autoComplete="given-name"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-base sm:text-xs text-slate-100 placeholder-slate-500 focus:border-amber-500 outline-none"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">Shown as &ldquo;{(shareNameInput.trim() || 'Your name')}&rsquo;s restock list&rdquo; to anyone with the link.</p>
+                </div>
+              ) : (
+                <p className="mb-2.5 text-[11px] text-slate-500">
+                  Shared as <span className="text-slate-300">{shareName}</span>{' '}
+                  <button onClick={() => { setShareNameInput(shareName); setIsEditingShareName(true); }} className="text-amber-400 hover:text-amber-300 underline underline-offset-2">Change</button>
+                </p>
+              ))}
               <button 
                 onClick={handleShareRestockList}
-                disabled={ghostItems.length === 0 || isSharingList}
+                disabled={ghostItems.length === 0 || isSharingList || (isEditingShareName && !shareNameInput.trim())}
                 className={`w-full font-sans font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 ${
                   copiedToClipboard 
                     ? 'bg-emerald-500 text-slate-950' 
@@ -2852,7 +2897,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 {copiedToClipboard ? (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>List and link copied!</span>
+                    <span>Link copied!</span>
                   </>
                 ) : isSharingList ? (
                   <>
