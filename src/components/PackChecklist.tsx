@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ClipboardList, Package, Plus, RotateCcw, ShoppingBag, Trash2, Undo2, X } from 'lucide-react';
+import Link from 'next/link';
+import { Bookmark, Check, ClipboardList, Loader2, Package, Plus, RotateCcw, ShoppingBag, Trash2, Undo2, X } from 'lucide-react';
 import InventoryPicker, { type PickerItem } from './InventoryPicker';
 
 export interface PackEntry {
@@ -162,6 +163,8 @@ interface Props {
   /** Heading; defaults to "Pack checklist". */
   title?: string;
   tripLabel: string;
+  /** The trip plan's tactics (AI summary), shown above the list. */
+  tactics?: string;
   entries: PackEntry[];
   gaps: PackGap[];
   checked: Set<string>;
@@ -180,14 +183,24 @@ interface Props {
   /** Everything in the tackle box, for the add-gear picker. */
   inventory: PickerItem[];
   onAddFromInventory: (gearIds: string[]) => void;
+  /** Offer "Save pack list" (planner only; saved lists don't need it). */
+  save?: {
+    saved: boolean;
+    saving: boolean;
+    defaultTitle: string;
+    onSave: (title: string, tripDate: string) => void;
+  };
   onClose: () => void;
 }
 
 /** Full-screen, thumb-friendly packing checklist built from a trip plan. */
 export default function PackChecklist({
-  title = 'Pack checklist', tripLabel, entries, gaps, checked, onToggle, onReset, onAddGaps, isAddingGaps,
-  onReAddGap, reAddingGap, onRemoveEntry, onRestoreEntry, hiddenCount, onRestoreHidden, onAddCustom, inventory, onAddFromInventory, onClose,
+  title = 'Pack checklist', tripLabel, tactics, entries, gaps, checked, onToggle, onReset, onAddGaps, isAddingGaps,
+  onReAddGap, reAddingGap, onRemoveEntry, onRestoreEntry, hiddenCount, onRestoreHidden, onAddCustom, inventory, onAddFromInventory, save, onClose,
 }: Props) {
+  const [isSaveFormOpen, setIsSaveFormOpen] = useState(false);
+  const [saveTitle, setSaveTitle] = useState('');
+  const [saveDate, setSaveDate] = useState('');
   const [customName, setCustomName] = useState('');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [lastRemoved, setLastRemoved] = useState<PackEntry | null>(null);
@@ -290,6 +303,16 @@ export default function PackChecklist({
             </div>
           </div>
 
+          {/* Tactics from the trip plan */}
+          {tactics && (
+            <div className="px-5 pt-4">
+              <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-xl">
+                <span className="text-[10px] uppercase font-bold text-amber-400 block mb-1">Tactics</span>
+                <p className="text-slate-200 leading-relaxed text-[11px] font-sans">{tactics}</p>
+              </div>
+            </div>
+          )}
+
           {/* Gear to pack */}
           <div className="px-5 pt-4">
             <div className="flex items-center justify-between mb-2">
@@ -371,6 +394,59 @@ export default function PackChecklist({
                 >
                   <ShoppingBag className="w-4 h-4" />
                   {isAddingGaps ? 'Adding…' : `Add ${gapsToAdd === 1 ? '1 item' : `${gapsToAdd} items`} to restock list`}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Save as a named pack list (planner only) */}
+          {save && (
+            <div className="px-5 pt-6">
+              {save.saved ? (
+                <div className="flex items-center justify-between gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3.5 py-2.5">
+                  <span className="text-emerald-400 flex items-center gap-1.5"><Check className="w-4 h-4" /> Saved to your pack lists</span>
+                  <Link href="/packs" className="text-emerald-300 hover:text-emerald-200 underline underline-offset-2 shrink-0">View</Link>
+                </div>
+              ) : isSaveFormOpen ? (
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-3">
+                  <div>
+                    <label htmlFor="pack-title" className="block text-slate-300 mb-1.5 font-sans font-semibold text-xs">Name this pack list</label>
+                    <input
+                      id="pack-title"
+                      type="text"
+                      value={saveTitle}
+                      onChange={(e) => setSaveTitle(e.target.value)}
+                      maxLength={80}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none text-base sm:text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="pack-date" className="block text-slate-300 mb-1.5 font-sans font-semibold text-xs">Trip date (optional)</label>
+                    <input
+                      id="pack-date"
+                      type="date"
+                      value={saveDate}
+                      onChange={(e) => setSaveDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none text-base sm:text-xs [color-scheme:dark]"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setIsSaveFormOpen(false)} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
+                    <button
+                      onClick={() => save.onSave(saveTitle.trim() || save.defaultTitle, saveDate)}
+                      disabled={save.saving}
+                      className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold transition disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {save.saving && <Loader2 className="w-4 h-4 animate-spin" />} Save pack list
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setSaveTitle(save.defaultTitle); setSaveDate(''); setIsSaveFormOpen(true); }}
+                  className="w-full py-2.5 rounded-xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-200 font-sans font-bold transition flex items-center justify-center gap-2 text-sm"
+                >
+                  <Bookmark className="w-4 h-4" /> Save pack list
                 </button>
               )}
             </div>
