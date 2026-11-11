@@ -138,7 +138,7 @@ const STEPS: Step[] = [
   },
   {
     id: 'star', title: 'Star favourites, flag losses', blurb: '★ your go-to lures. ↻ when one’s lost.', Illustration: IllStar,
-    how: ['Tap ★ on a card to make it a favourite.', 'Lost one to a snag? Tap ↻ to add it to your restock list.', 'Use the pills under the search bar to filter.'],
+    how: ['Tap ★ on a card to make it a favourite.', 'Lost one to a snag? Tap ↻ to add it to your restock list.', 'Filter to favourites or items to replace with the pills (in list view on phones).'],
   },
   {
     id: 'plan', title: 'Plan a trip', blurb: 'Tactics, a loadout and a pack list.', action: 'Plan a trip', Illustration: IllPlan,
