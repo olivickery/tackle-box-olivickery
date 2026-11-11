@@ -1,3 +1,5 @@
+'use client';
+
 import { ExternalLink } from 'lucide-react';
 import { amazonSearchUrl, AMAZON_DISCLOSURE } from '../lib/affiliate';
 

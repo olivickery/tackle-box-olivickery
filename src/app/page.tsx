@@ -44,7 +44,8 @@ import {
   Search,
   Sparkles,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  Share2
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
@@ -545,6 +546,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [isSharingList, setIsSharingList] = useState(false);
 
   // Trip Planner States
   // /?planner=1 (from the pack lists page) opens the planner straight away.
@@ -1081,39 +1083,66 @@ function TackleboxIQ({ session }: { session: Session }) {
     setIsSavingPhotos(false);
   };
 
-  const handleExportRestockList = async () => {
-    if (ghostItems.length === 0) return;
+  const copyText = async (text: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+  };
 
-    const listText = ghostItems.map((item, index) => 
-      {
-        const details = [item.color, item.depth && item.depth !== 'N/A' ? item.depth : ''].filter(Boolean).join(', ');
-        return `${index + 1}. ${item.brand ? `${item.brand} - ` : ''}${item.name}${details ? ` (${details})` : ''}`;
-      }
-    ).join('\n');
+  /**
+   * Share the restock list: saves a snapshot and shares a tackleboxiq.com/list/<id>
+   * link (plus the plain list). Amazon links live on that page, never in the
+   * shared text, because Associates links aren't allowed in emails or texts.
+   */
+  const handleShareRestockList = async () => {
+    if (ghostItems.length === 0 || isSharingList) return;
+    setIsSharingList(true);
 
-    const formattedExport = `Tacklebox IQ restock list:\n${listText}`;
+    const snapshot = ghostItems.map(item => ({
+      brand: item.brand || '',
+      name: item.name,
+      detail: [item.color, item.depth && item.depth !== 'N/A' ? item.depth : ''].filter(Boolean).join(' · ') || (item.brand ? '' : item.type),
+    }));
+    const listText = snapshot
+      .map((item, index) => `${index + 1}. ${item.brand ? `${item.brand} ` : ''}${item.name}`)
+      .join('\n');
+
+    const { data, error } = await supabase
+      .from('shared_lists')
+      .insert({ user_id: session.user.id, kind: 'restock', title: 'Restock list', items: snapshot })
+      .select('id')
+      .single();
+
+    const url = !error && data ? `${window.location.origin}/list/${data.id}` : null;
+    const text = `Tacklebox IQ restock list:\n${listText}`;
+    if (error) console.error('Failed to create share link:', error);
 
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(formattedExport);
+      if (url && typeof navigator.share === 'function') {
+        await navigator.share({ title: 'Restock list', text: `${text}\n\nView and buy:`, url });
       } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = formattedExport;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
+        await copyText(url ? `${text}\n\nView and buy: ${url}` : text);
+        setCopiedToClipboard(true);
+        setTimeout(() => setCopiedToClipboard(false), 3000);
       }
-
-      setCopiedToClipboard(true);
-      setTimeout(() => setCopiedToClipboard(false), 3000);
     } catch (err) {
-      console.error('Failed to write to clipboard:', err);
-      alert('Could not copy automatically. Check browser clipboard permissions.');
+      // Closing the share sheet isn't an error.
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        console.error('Failed to share restock list:', err);
+        alert('Could not share automatically. Check your browser permissions.');
+      }
     }
+    setIsSharingList(false);
   };
 
   const scrollToSection = (id: string) => {
@@ -2812,8 +2841,8 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <span className="text-slate-200 font-bold">{ghostItems.length} Items</span>
               </div>
               <button 
-                onClick={handleExportRestockList}
-                disabled={ghostItems.length === 0}
+                onClick={handleShareRestockList}
+                disabled={ghostItems.length === 0 || isSharingList}
                 className={`w-full font-sans font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 ${
                   copiedToClipboard 
                     ? 'bg-emerald-500 text-slate-950' 
@@ -2823,10 +2852,18 @@ function TackleboxIQ({ session }: { session: Session }) {
                 {copiedToClipboard ? (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>Copied to Clipboard!</span>
+                    <span>List and link copied!</span>
+                  </>
+                ) : isSharingList ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Creating link…</span>
                   </>
                 ) : (
-                  <span>Export list of gear to replace</span>
+                  <>
+                    <Share2 className="w-4 h-4" />
+                    <span>Share list</span>
+                  </>
                 )}
               </button>
             </div>
