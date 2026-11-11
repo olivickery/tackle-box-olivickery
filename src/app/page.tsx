@@ -43,8 +43,7 @@ import {
   Search,
   Sparkles,
   LogOut,
-  ClipboardList,
-  Bookmark
+  ClipboardList
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
@@ -573,9 +572,6 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [hiddenPackItems, setHiddenPackItems] = useState<string[]>(savedTrip?.hidden ?? []);
   const [customPackItems, setCustomPackItems] = useState<CustomPackItem[]>(savedTrip?.custom ?? []);
   const [reAddingGap, setReAddingGap] = useState<string | null>(null);
-  const [isSaveFormOpen, setIsSaveFormOpen] = useState(false);
-  const [packTitleInput, setPackTitleInput] = useState('');
-  const [packDateInput, setPackDateInput] = useState('');
   const [isSavingPack, setIsSavingPack] = useState(false);
 
   // Filter States
@@ -735,23 +731,17 @@ function TackleboxIQ({ session }: { session: Session }) {
     if (result.inserted.length) setItems(prev => [...result.inserted, ...prev]);
   };
 
-  const openSavePackForm = () => {
-    setPackTitleInput(defaultPackTitle(splitSpecies(tripSpeciesInput), tripLocation));
-    setPackDateInput('');
-    setIsSaveFormOpen(true);
-  };
-
-  const handleSavePackList = async () => {
+  const handleSavePackList = async (title: string, tripDate: string) => {
     if (!currentPlan || isSavingPack) return;
     setIsSavingPack(true);
     const species = splitSpecies(tripSpeciesInput);
     const { data, error } = await supabase.from('pack_lists').insert({
       user_id: session.user.id,
-      title: packTitleInput.trim() || defaultPackTitle(species, tripLocation),
+      title: title.trim() || defaultPackTitle(species, tripLocation),
       location: tripLocation,
       species,
       conditions: tripConditions,
-      trip_date: packDateInput || null,
+      trip_date: tripDate || null,
       plan: currentPlan,
       checked: packChecked,
       added_gaps: addedGapItems,
@@ -765,7 +755,6 @@ function TackleboxIQ({ session }: { session: Session }) {
       return;
     }
     setSavedPackId(formatPackRow(data).id);
-    setIsSaveFormOpen(false);
   };
 
   const togglePacked = (id: string) => {
@@ -800,7 +789,6 @@ function TackleboxIQ({ session }: { session: Session }) {
     setPackChecked([]);
     setAddedGapItems([]);
     setSavedPackId(null);
-    setIsSaveFormOpen(false);
     setHiddenPackItems([]);
     setCustomPackItems([]);
 
@@ -2076,54 +2064,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                     </button>
                   )}
 
-                  {/* Save as a named pack list */}
-                  {savedPackId ? (
+                  {savedPackId && (
                     <div className="flex items-center justify-between gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3.5 py-2.5">
                       <span className="text-emerald-400 flex items-center gap-1.5"><Check className="w-4 h-4" /> Saved to your pack lists</span>
                       <Link href="/packs" className="text-emerald-300 hover:text-emerald-200 underline underline-offset-2 shrink-0">View</Link>
                     </div>
-                  ) : isSaveFormOpen ? (
-                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-3">
-                      <div>
-                        <label htmlFor="pack-title" className="block text-slate-400 mb-1.5 uppercase font-bold text-[10px]">Pack list name</label>
-                        <input
-                          id="pack-title"
-                          type="text"
-                          value={packTitleInput}
-                          onChange={(e) => setPackTitleInput(e.target.value)}
-                          maxLength={80}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none text-base sm:text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="pack-date" className="block text-slate-400 mb-1.5 uppercase font-bold text-[10px]">Trip date (optional)</label>
-                        <input
-                          id="pack-date"
-                          type="date"
-                          value={packDateInput}
-                          onChange={(e) => setPackDateInput(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none text-base sm:text-xs [color-scheme:dark]"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => setIsSaveFormOpen(false)} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
-                        <button
-                          onClick={handleSavePackList}
-                          disabled={isSavingPack}
-                          className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold transition disabled:opacity-60 flex items-center justify-center gap-2"
-                        >
-                          {isSavingPack && <Loader2 className="w-4 h-4 animate-spin" />}
-                          Save pack list
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={openSavePackForm}
-                      className="w-full py-2.5 rounded-xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-200 font-sans font-bold transition flex items-center justify-center gap-2 text-sm"
-                    >
-                      <Bookmark className="w-4 h-4" /> Save pack list
-                    </button>
                   )}
                 </div>
               )}
@@ -2152,6 +2097,12 @@ function TackleboxIQ({ session }: { session: Session }) {
           onAddCustom={addCustomPackItem}
           inventory={inventoryPickerItems(items)}
           onAddFromInventory={addPackItemsFromInventory}
+          save={{
+            saved: !!savedPackId,
+            saving: isSavingPack,
+            defaultTitle: defaultPackTitle(splitSpecies(tripSpeciesInput), tripLocation),
+            onSave: handleSavePackList,
+          }}
           onClose={() => setIsPackChecklistOpen(false)}
         />
       )}
