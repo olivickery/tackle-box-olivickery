@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<!--
+  Tacklebox IQ: "Confirm signup" email.
+  Paste into Supabase Dashboard > Authentication > Emails > Confirm signup.
+  Subject: Confirm your Tacklebox IQ account
+  Supabase fills in the confirmation link and the first name given at sign-up.
+  Built with tables and inline styles so it renders in Gmail, Outlook and Apple Mail.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>Confirm your Tacklebox IQ account</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 20px !important; padding-right: 20px !important; }
+      .h1 { font-size: 24px !important; }
+    }
+    a { color: #f59e0b; }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#020617; -webkit-text-size-adjust:100%;">
+  <!-- Inbox preview text -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+    One tap to confirm your email, then start sorting your tackle box.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#020617" style="background-color:#020617;">
+    <tr>
+      <td align="center" style="padding:32px 12px;">
+
+        <table role="presentation" class="container" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px; max-width:560px;">
+
+          <!-- Brand -->
+          <tr>
+            <td class="px" style="padding:0 32px 20px 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="40" height="40" align="center" valign="middle" bgcolor="#0f172a" style="width:40px; height:40px; background-color:#0f172a; border:1px solid #1e293b; border-radius:10px; font-family:Arial, Helvetica, sans-serif; font-size:17px; font-weight:800; color:#f59e0b; letter-spacing:-1px;">IQ</td>
+                  <td style="padding-left:10px; font-family:Arial, Helvetica, sans-serif; font-size:18px; font-weight:700; color:#f1f5f9;">
+                    Tacklebox <span style="color:#f59e0b;">IQ</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td bgcolor="#0f172a" style="background-color:#0f172a; border:1px solid #1e293b; border-radius:20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                <!-- Hero -->
+                <tr>
+                  <td class="px" style="padding:36px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
+                    <p style="margin:0 0 10px 0; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#f59e0b;">Welcome aboard</p>
+                    <h1 class="h1" style="margin:0 0 14px 0; font-size:28px; line-height:1.25; font-weight:800; color:#f8fafc;">
+                      G&rsquo;day {{ if .Data.first_name }}{{ .Data.first_name }}{{ else }}there{{ end }}, let&rsquo;s get your tackle box sorted.
+                    </h1>
+                    <p style="margin:0; font-size:15px; line-height:1.6; color:#cbd5e1;">
+                      Thanks for joining Tacklebox IQ. Confirm your email and you&rsquo;re in: every lure, rod and reel you own in one place, with photos, specs, trip plans and a running restock list.
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- CTA -->
+                <tr>
+                  <td class="px" align="left" style="padding:26px 32px 8px 32px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center" bgcolor="#f59e0b" style="background-color:#f59e0b; border-radius:999px;">
+                          <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block; padding:14px 30px; font-family:Arial, Helvetica, sans-serif; font-size:14px; font-weight:800; letter-spacing:0.5px; color:#020617; text-decoration:none; border-radius:999px;">CONFIRM MY EMAIL</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px" style="padding:10px 32px 30px 32px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.6; color:#64748b;">
+                    Button not working? Copy this link into your browser:<br>
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="color:#f59e0b; word-break:break-all;">{{ .ConfirmationURL }}</a>
+                  </td>
+                </tr>
+
+                <!-- Divider -->
+                <tr><td class="px" style="padding:0 32px;"><div style="height:1px; line-height:1px; background-color:#1e293b;">&nbsp;</div></td></tr>
+
+                <!-- Getting started -->
+                <tr>
+                  <td class="px" style="padding:30px 32px 6px 32px; font-family:Arial, Helvetica, sans-serif;">
+                    <h2 style="margin:0 0 4px 0; font-size:18px; font-weight:800; color:#f8fafc;">Getting started</h2>
+                    <p style="margin:0 0 18px 0; font-size:13px; line-height:1.6; color:#94a3b8;">Five quick steps to get the most out of it.</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px" style="padding:0 32px 10px 32px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial, Helvetica, sans-serif;">
+                      <tr>
+                        <td width="34" valign="top" style="padding:0 0 16px 0;"><div style="width:26px; height:26px; line-height:26px; border-radius:13px; background-color:#f59e0b; color:#020617; font-size:13px; font-weight:800; text-align:center;">1</div></td>
+                        <td valign="top" style="padding:2px 0 16px 0; font-size:14px; line-height:1.55; color:#cbd5e1;"><strong style="color:#f8fafc;">Add your first piece of gear.</strong> Tap the yellow <strong style="color:#f8fafc;">+</strong>, snap the packet, and the brand, model, colour and specs fill in for you.</td>
+                      </tr>
+                      <tr>
+                        <td width="34" valign="top" style="padding:0 0 16px 0;"><div style="width:26px; height:26px; line-height:26px; border-radius:13px; background-color:#f59e0b; color:#020617; font-size:13px; font-weight:800; text-align:center;">2</div></td>
+                        <td valign="top" style="padding:2px 0 16px 0; font-size:14px; line-height:1.55; color:#cbd5e1;"><strong style="color:#f8fafc;">Star your go-to lures.</strong> Favourites sit at the top, and the filter pills get you to them in one tap.</td>
+                      </tr>
+                      <tr>
+                        <td width="34" valign="top" style="padding:0 0 16px 0;"><div style="width:26px; height:26px; line-height:26px; border-radius:13px; background-color:#f59e0b; color:#020617; font-size:13px; font-weight:800; text-align:center;">3</div></td>
+                        <td valign="top" style="padding:2px 0 16px 0; font-size:14px; line-height:1.55; color:#cbd5e1;"><strong style="color:#f8fafc;">Plan your next trip.</strong> Tap <strong style="color:#f8fafc;">Plan</strong>, say where you&rsquo;re fishing and what you&rsquo;re after, and get tactics, a loadout from your own gear and the gaps worth filling.</td>
+                      </tr>
+                      <tr>
+                        <td width="34" valign="top" style="padding:0 0 16px 0;"><div style="width:26px; height:26px; line-height:26px; border-radius:13px; background-color:#f59e0b; color:#020617; font-size:13px; font-weight:800; text-align:center;">4</div></td>
+                        <td valign="top" style="padding:2px 0 16px 0; font-size:14px; line-height:1.55; color:#cbd5e1;"><strong style="color:#f8fafc;">Pack from a checklist.</strong> Turn the plan into a pack list, tick gear off as it goes in the bag, and save it for next time.</td>
+                      </tr>
+                      <tr>
+                        <td width="34" valign="top" style="padding:0 0 16px 0;"><div style="width:26px; height:26px; line-height:26px; border-radius:13px; background-color:#f59e0b; color:#020617; font-size:13px; font-weight:800; text-align:center;">5</div></td>
+                        <td valign="top" style="padding:2px 0 16px 0; font-size:14px; line-height:1.55; color:#cbd5e1;"><strong style="color:#f8fafc;">Put it on your home screen.</strong> On iPhone, open tackleboxiq.com in Safari, tap <strong style="color:#f8fafc;">Share</strong> then <strong style="color:#f8fafc;">Add to Home Screen</strong>. On Android, use the Chrome menu.</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Divider -->
+                <tr><td class="px" style="padding:0 32px;"><div style="height:1px; line-height:1px; background-color:#1e293b;">&nbsp;</div></td></tr>
+
+                <!-- Features -->
+                <tr>
+                  <td class="px" style="padding:30px 32px 14px 32px; font-family:Arial, Helvetica, sans-serif;">
+                    <h2 style="margin:0; font-size:18px; font-weight:800; color:#f8fafc;">What it does</h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px" style="padding:0 32px 18px 32px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial, Helvetica, sans-serif;">
+                      <tr>
+                        <td width="44" valign="top" style="padding:0 0 16px 0;"><div style="width:34px; height:34px; line-height:34px; border-radius:10px; background-color:#020617; border:1px solid #1e293b; text-align:center; font-size:16px;">&#128247;</div></td>
+                        <td valign="top" style="padding:1px 0 16px 0;"><p style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Photo inventory</p><p style="margin:3px 0 0 0; font-size:13px; line-height:1.55; color:#94a3b8;">Up to four photos per item. Swipe through them and pinch to zoom in on the fine print.</p></td>
+                      </tr>
+                      <tr>
+                        <td width="44" valign="top" style="padding:0 0 16px 0;"><div style="width:34px; height:34px; line-height:34px; border-radius:10px; background-color:#020617; border:1px solid #1e293b; text-align:center; font-size:16px;">&#129668;</div></td>
+                        <td valign="top" style="padding:1px 0 16px 0;"><p style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Packet scanning</p><p style="margin:3px 0 0 0; font-size:13px; line-height:1.55; color:#94a3b8;">Photograph the packaging and the brand, model, colour, specs and target species are filled in for you.</p></td>
+                      </tr>
+                      <tr>
+                        <td width="44" valign="top" style="padding:0 0 16px 0;"><div style="width:34px; height:34px; line-height:34px; border-radius:10px; background-color:#020617; border:1px solid #1e293b; text-align:center; font-size:16px;">&#10024;</div></td>
+                        <td valign="top" style="padding:1px 0 16px 0;"><p style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">AI trip planner</p><p style="margin:3px 0 0 0; font-size:13px; line-height:1.55; color:#94a3b8;">Tell it where you&rsquo;re fishing, what you&rsquo;re targeting and the conditions. You get tactics, a loadout from your own gear and the gaps worth filling.</p></td>
+                      </tr>
+                      <tr>
+                        <td width="44" valign="top" style="padding:0 0 16px 0;"><div style="width:34px; height:34px; line-height:34px; border-radius:10px; background-color:#020617; border:1px solid #1e293b; text-align:center; font-size:16px;">&#128203;</div></td>
+                        <td valign="top" style="padding:1px 0 16px 0;"><p style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Pack lists</p><p style="margin:3px 0 0 0; font-size:13px; line-height:1.55; color:#94a3b8;">Tick gear off as you pack, add anything from your tackle box, and save lists by trip, species or date.</p></td>
+                      </tr>
+                      <tr>
+                        <td width="44" valign="top" style="padding:0 0 16px 0;"><div style="width:34px; height:34px; line-height:34px; border-radius:10px; background-color:#020617; border:1px solid #1e293b; text-align:center; font-size:16px;">&#128717;</div></td>
+                        <td valign="top" style="padding:1px 0 16px 0;"><p style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Restock list</p><p style="margin:3px 0 0 0; font-size:13px; line-height:1.55; color:#94a3b8;">Lost a lure? One tap adds it. Find it on Amazon, or share the list with a link.</p></td>
+                      </tr>
+                      <tr>
+                        <td width="44" valign="top" style="padding:0 0 16px 0;"><div style="width:34px; height:34px; line-height:34px; border-radius:10px; background-color:#020617; border:1px solid #1e293b; text-align:center; font-size:16px;">&#11088;</div></td>
+                        <td valign="top" style="padding:1px 0 16px 0;"><p style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Favourites at a glance</p><p style="margin:3px 0 0 0; font-size:13px; line-height:1.55; color:#94a3b8;">Star your go-to gear and filter to favourites or items to replace in one tap.</p></td>
+                      </tr>
+                      <tr>
+                        <td width="44" valign="top" style="padding:0 0 16px 0;"><div style="width:34px; height:34px; line-height:34px; border-radius:10px; background-color:#020617; border:1px solid #1e293b; text-align:center; font-size:16px;">&#128269;</div></td>
+                        <td valign="top" style="padding:1px 0 16px 0;"><p style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Find anything fast</p><p style="margin:3px 0 0 0; font-size:13px; line-height:1.55; color:#94a3b8;">Live search across brand, colour, specs, species and location.</p></td>
+                      </tr>
+                      <tr>
+                        <td width="44" valign="top" style="padding:0 0 0 0;"><div style="width:34px; height:34px; line-height:34px; border-radius:10px; background-color:#020617; border:1px solid #1e293b; text-align:center; font-size:16px;">&#128241;</div></td>
+                        <td valign="top" style="padding:1px 0 0 0;"><p style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Built for your phone</p><p style="margin:3px 0 0 0; font-size:13px; line-height:1.55; color:#94a3b8;">Made for the boat, the bank and the car park, and it syncs to desktop too.</p></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Closing CTA -->
+                <tr>
+                  <td class="px" align="center" style="padding:14px 32px 36px 32px; font-family:Arial, Helvetica, sans-serif;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#020617" style="background-color:#020617; border:1px solid #1e293b; border-radius:16px;">
+                      <tr>
+                        <td align="center" style="padding:24px 20px;">
+                          <p style="margin:0 0 14px 0; font-size:15px; font-weight:700; color:#f8fafc;">Ready to sort your tackle box?</p>
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" bgcolor="#f59e0b" style="background-color:#f59e0b; border-radius:999px;">
+                                <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block; padding:12px 26px; font-family:Arial, Helvetica, sans-serif; font-size:13px; font-weight:800; letter-spacing:0.5px; color:#020617; text-decoration:none; border-radius:999px;">CONFIRM AND GET STARTED</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="px" align="center" style="padding:24px 32px 0 32px; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:1.7; color:#64748b;">
+              You&rsquo;re getting this because someone signed up to Tacklebox IQ with this email address. If that wasn&rsquo;t you, just ignore this email and no account will be activated.<br><br>
+              Questions? Email <a href="mailto:support@tackleboxiq.com" style="color:#94a3b8;">support@tackleboxiq.com</a><br>
+              <a href="https://www.tackleboxiq.com/privacy" style="color:#94a3b8;">Privacy Policy</a> &nbsp;&middot;&nbsp; <a href="https://www.tackleboxiq.com/terms" style="color:#94a3b8;">Terms</a><br>
+              &copy; Tacklebox IQ &middot; tackleboxiq.com
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
