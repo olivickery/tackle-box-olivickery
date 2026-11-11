@@ -24,7 +24,8 @@ export default function PrivacyPage() {
 
       <Section n={2} title="What we collect">
         <Bullets items={[
-          ['Account details', 'your email address and password. Passwords are stored hashed by our authentication provider; we never see them.'],
+          ['Account details', 'your name, email address and password. Passwords are stored hashed by our authentication provider; we never see them.'],
+          ['Email preferences', 'whether you’ve asked to receive fishing tips and Tacklebox IQ news, and when you chose that.'],
           ['Your gear', 'photos you upload, and the item details, notes, locations, favourites and restock flags you save.'],
           ['Trip planner requests', 'the location, target species and conditions you enter, along with a summary of your gear list.'],
           ['Technical data', 'standard server logs (such as IP address, browser type and request times) kept by our hosting providers for security and troubleshooting.'],
@@ -40,6 +41,11 @@ export default function PrivacyPage() {
           photos, generate trip plans, send account emails (such as confirmation and password reset), and keep the service
           secure. We don&apos;t sell your information or share it for marketing.
         </p>
+        <p>
+          We only send fishing tips and Tacklebox IQ news if you tick the box to receive them. Every one of those emails has
+          an unsubscribe link, and you can also ask us to stop at any time. Account emails, like password resets, are sent
+          regardless because they&apos;re needed to run your account.
+        </p>
       </Section>
 
       <Section n={4} title="Who can see your gear">
@@ -53,8 +59,8 @@ export default function PrivacyPage() {
           your face).
         </p>
         <p>
-          If you share your restock list, anyone with that link can see the name you chose to show and the items on the list
-          for 30 days. Nothing else from your account is included.
+          If you share your restock list, anyone with that link can see your first name and the items on the list for 30
+          days. Nothing else from your account is included.
         </p>
       </Section>
 
