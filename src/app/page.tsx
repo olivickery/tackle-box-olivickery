@@ -1472,7 +1472,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                   setIsTripPlannerOpen(true);
                 }}
                 className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
-                title="AI Trip Planner"
+                title="AI trip planner"
               >
                 <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
                 <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PLAN<span className="hidden sm:inline"> TRIP</span></span>
@@ -1914,14 +1914,14 @@ function TackleboxIQ({ session }: { session: Session }) {
 
       <LegalFooter className="mt-8" />
 
-      {/* AI Trip Planner Modal */}
+      {/* AI trip planner modal */}
       {isTripPlannerOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto font-mono text-xs">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100 font-sans">AI Trip Planner</h2>
+                <h2 className="font-bold text-lg text-slate-100 font-sans">AI trip planner</h2>
               </div>
               <button 
                 onClick={() => setIsTripPlannerOpen(false)}
@@ -1933,8 +1933,9 @@ function TackleboxIQ({ session }: { session: Session }) {
 
             <div className="mt-4 space-y-4">
               <div>
-                <label className="block text-slate-400 mb-1.5 uppercase font-bold text-[10px]">1. Destination / Environment</label>
+                <label htmlFor="trip-location" className="block text-slate-200 mb-1.5 font-sans font-semibold text-sm">Where are you fishing?</label>
                 <select 
+                  id="trip-location"
                   value={tripLocation}
                   onChange={(e) => setTripLocation(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none text-base sm:text-xs"
@@ -1946,8 +1947,9 @@ function TackleboxIQ({ session }: { session: Session }) {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1.5 uppercase font-bold text-[10px]">2. Target Species (Comma Separated)</label>
+                <label htmlFor="trip-species" className="block text-slate-200 mb-1.5 font-sans font-semibold text-sm">What are you targeting?</label>
                 <input 
+                  id="trip-species"
                   type="text" 
                   value={tripSpeciesInput}
                   onChange={(e) => setTripSpeciesInput(e.target.value)}
@@ -1957,8 +1959,9 @@ function TackleboxIQ({ session }: { session: Session }) {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1.5 uppercase font-bold text-[10px]">3. Expected Water & Weather Conditions</label>
+                <label htmlFor="trip-conditions" className="block text-slate-200 mb-1.5 font-sans font-semibold text-sm">Expected conditions?</label>
                 <select 
+                  id="trip-conditions"
                   value={tripConditions}
                   onChange={(e) => setTripConditions(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:border-amber-500 outline-none text-base sm:text-xs"
@@ -1999,7 +2002,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               {currentPlan && (
                 <div className="mt-6 pt-6 border-t border-slate-800 space-y-4">
                   <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-xl">
-                    <span className="text-[10px] uppercase font-bold text-amber-400 block mb-1">Guide Tactical Summary</span>
+                    <span className="text-[10px] uppercase font-bold text-amber-400 block mb-1">Tactics</span>
                     <p className="text-slate-200 leading-relaxed text-[11px] font-sans">{currentPlan.trip_summary}</p>
                   </div>
 
@@ -2132,6 +2135,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       {isPackChecklistOpen && currentPlan && (
         <PackChecklist
           tripLabel={[tripLocation, tripSpeciesInput, tripConditions].filter(Boolean).join(' · ')}
+          tactics={currentPlan.trip_summary}
           entries={packEntries}
           gaps={planGaps}
           checked={packCheckedSet}

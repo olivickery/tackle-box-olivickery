@@ -162,6 +162,8 @@ interface Props {
   /** Heading; defaults to "Pack checklist". */
   title?: string;
   tripLabel: string;
+  /** The trip plan's tactics (AI summary), shown above the list. */
+  tactics?: string;
   entries: PackEntry[];
   gaps: PackGap[];
   checked: Set<string>;
@@ -185,7 +187,7 @@ interface Props {
 
 /** Full-screen, thumb-friendly packing checklist built from a trip plan. */
 export default function PackChecklist({
-  title = 'Pack checklist', tripLabel, entries, gaps, checked, onToggle, onReset, onAddGaps, isAddingGaps,
+  title = 'Pack checklist', tripLabel, tactics, entries, gaps, checked, onToggle, onReset, onAddGaps, isAddingGaps,
   onReAddGap, reAddingGap, onRemoveEntry, onRestoreEntry, hiddenCount, onRestoreHidden, onAddCustom, inventory, onAddFromInventory, onClose,
 }: Props) {
   const [customName, setCustomName] = useState('');
@@ -289,6 +291,16 @@ export default function PackChecklist({
               </div>
             </div>
           </div>
+
+          {/* Tactics from the trip plan */}
+          {tactics && (
+            <div className="px-5 pt-4">
+              <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-xl">
+                <span className="text-[10px] uppercase font-bold text-amber-400 block mb-1">Tactics</span>
+                <p className="text-slate-200 leading-relaxed text-[11px] font-sans">{tactics}</p>
+              </div>
+            </div>
+          )}
 
           {/* Gear to pack */}
           <div className="px-5 pt-4">

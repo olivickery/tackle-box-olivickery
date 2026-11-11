@@ -358,6 +358,7 @@ function SavedPacks({ session }: { session: Session }) {
         <PackChecklist
           title={openPack.title}
           tripLabel={[formatTripDate(openPack.trip_date), openPack.location, openPack.species.join(', '), openPack.conditions].filter(Boolean).join(' · ')}
+          tactics={openPack.plan.trip_summary}
           entries={openEntries}
           gaps={openGaps}
           checked={new Set(openPack.checked)}
