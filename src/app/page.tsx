@@ -1431,78 +1431,80 @@ function TackleboxIQ({ session }: { session: Session }) {
             </button>
           </div>
         </div>
+
+        <div className="max-w-5xl mx-auto px-4 mt-3">
+          {/* Command row: search + the three main actions */}
+          <div className="flex items-stretch gap-2">
+            <div className="relative flex-1 min-w-0 sm:max-w-sm">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input 
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search…"
+                aria-label="Search gear by name, brand, species, specs, colour or location"
+                className={`w-full h-full min-h-11 bg-slate-950/70 border border-slate-800 focus:border-amber-500 rounded-xl pl-9 ${searchQuery ? 'pr-8' : 'pr-2'} text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 p-0.5 rounded-md"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-2 shrink-0 sm:flex-1 sm:justify-end">
+              <button
+                onClick={() => {
+                  setTripPlannerError(null);
+                  setIsTripPlannerOpen(true);
+                }}
+                className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
+                title="AI Trip Planner"
+              >
+                <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
+                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PLAN<span className="hidden sm:inline"> TRIP</span></span>
+              </button>
+
+              <Link
+                href="/packs"
+                className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
+                title="My pack lists"
+              >
+                <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
+                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span><span className="sm:hidden">S</span></span>
+              </Link>
+
+              <button 
+                onClick={() => setIsRestockOpen(true)}
+                className="relative w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
+                title="Gear to replace"
+                aria-label={`Gear to replace (${allGhostCount})`}
+              >
+                <ShoppingBag className="w-4 h-4 shrink-0 text-amber-400" />
+                <span className="text-[9px] max-[359px]:text-[8px] sm:text-xs leading-none whitespace-nowrap"><span className="sm:hidden">RESTOCK</span><span className="hidden sm:inline">GEAR TO REPLACE</span></span>
+                {allGhostCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+                    {allGhostCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 pt-4">
 
-        {/* Command row: search + the three main actions */}
-        <div className="flex items-stretch gap-2 mb-3">
-          <div className="relative flex-1 min-w-0 sm:max-w-sm">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input 
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search…"
-              aria-label="Search gear by name, brand, species, specs, colour or location"
-              className={`w-full h-full min-h-11 bg-slate-900/90 border border-slate-800 focus:border-amber-500 rounded-xl pl-9 ${searchQuery ? 'pr-8' : 'pr-2'} text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 p-0.5 rounded-md"
-                aria-label="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex gap-2 shrink-0 sm:flex-1 sm:justify-end">
-            <button
-              onClick={() => {
-                setTripPlannerError(null);
-                setIsTripPlannerOpen(true);
-              }}
-              className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition shadow-lg shadow-amber-500/10"
-              title="AI Trip Planner"
-            >
-              <Sparkles className="w-4 h-4 shrink-0" />
-              <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PLAN<span className="hidden sm:inline"> TRIP</span></span>
-            </button>
-
-            <Link
-              href="/packs"
-              className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
-              title="My pack lists"
-            >
-              <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
-              <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span><span className="sm:hidden">S</span></span>
-            </Link>
-
-            <button 
-              onClick={() => setIsRestockOpen(true)}
-              className="relative w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
-              title="Gear to replace"
-              aria-label={`Gear to replace (${allGhostCount})`}
-            >
-              <ShoppingBag className="w-4 h-4 shrink-0" />
-              <span className="text-[9px] max-[359px]:text-[8px] sm:text-xs leading-none whitespace-nowrap"><span className="sm:hidden">RESTOCK</span><span className="hidden sm:inline">GEAR TO REPLACE</span></span>
-              {allGhostCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
-                  {allGhostCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* Filter pills: full width, three equal columns */}
-        <div className="mb-5 grid grid-cols-3 gap-2 font-mono text-[11px] sm:text-xs">
+        <div className="mb-5 flex gap-2 sm:grid sm:grid-cols-3 font-mono text-[11px] sm:text-xs">
           {([
             { key: 'all', label: 'All', short: 'All', icon: null, count: items.length,
-              active: 'bg-slate-100 text-slate-950 border-slate-100', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-slate-800 text-slate-300' },
-            { key: 'favs', label: 'Favourites', short: 'Favs', icon: <Star className="w-3.5 h-3.5 fill-current shrink-0" />, count: allFavCount,
+              active: 'bg-slate-700 text-white border-slate-500', badge: 'bg-slate-950/30 text-white', idleBadge: 'bg-slate-800 text-slate-300' },
+            { key: 'favs', label: 'Favourites', short: 'Favourites', icon: <Star className="w-3.5 h-3.5 fill-current shrink-0" />, count: allFavCount,
               active: 'bg-amber-500 text-slate-950 border-amber-400', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-amber-500/15 text-amber-400' },
             { key: 'replace', label: 'To replace', short: 'Replace', icon: <Repeat className="w-3.5 h-3.5 shrink-0" />, count: allGhostCount,
               active: 'bg-red-500 text-white border-red-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-red-500/15 text-red-400' },
@@ -1517,12 +1519,13 @@ function TackleboxIQ({ session }: { session: Session }) {
                 }}
                 aria-pressed={isActive}
                 aria-label={`${pill.label} (${pill.count})`}
-                className={`min-w-0 flex items-center justify-center gap-1.5 px-2 py-2 rounded-full border transition whitespace-nowrap ${
+                className={`flex-auto sm:flex-none min-w-0 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full border transition whitespace-nowrap ${
                   isActive ? `${pill.active} font-bold` : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-slate-600'
                 }`}
               >
                 {pill.icon}
-                <span className="sm:hidden">{pill.short}</span>
+                <span className="sm:hidden max-[359px]:hidden">{pill.short}</span>
+                <span className="hidden max-[359px]:inline">{pill.key === 'favs' ? 'Favs' : pill.short}</span>
                 <span className="hidden sm:inline">{pill.label}</span>
                 <span className={`min-w-5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-center ${isActive ? pill.badge : pill.idleBadge}`}>
                   {pill.count}
@@ -1543,7 +1546,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               <div className="space-y-8">
                 
                 {showFavSection && favoriteItems.length > 0 && (
-                  <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-20">
+                  <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
                         <Star className="w-4 h-4 fill-current" /> Favourites
@@ -1615,7 +1618,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 )}
 
                 {showMyGearSection && baseMyGearItems.length > 0 && (
-                  <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-20">
+                  <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
@@ -1733,7 +1736,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 )}
 
                 {showGhostSection && ghostItems.length > 0 && (
-                  <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-20">
+                  <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-red-400 font-mono flex items-center gap-1.5">
                         <Repeat className="w-4 h-4" /> Items to replace
