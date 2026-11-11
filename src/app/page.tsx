@@ -48,7 +48,8 @@ import {
   Sparkles,
   LogOut,
   ClipboardList,
-  Share2
+  Share2,
+  Truck
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
@@ -132,6 +133,24 @@ function readOnboarding(meta: Record<string, unknown> | undefined): OnboardingSt
     swiped: o.swiped === true,
     shared: o.shared === true,
   };
+}
+
+/**
+ * Bought from the restock list (a trip-plan suggestion) and no photo yet:
+ * waiting to arrive. Adding a photo turns it into a normal gear card.
+ */
+function isOnTheWay(item: GearItem): boolean {
+  return !item.is_ghost
+    && !!item.notes?.startsWith(SUGGESTED_NOTE_PREFIX)
+    && !(item.image_urls || []).some(Boolean) && !item.image_url;
+}
+
+function OnTheWayTag({ className = '' }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 ${className}`}>
+      <Truck className="w-3 h-3" /> On its way
+    </span>
+  );
 }
 
 function GearPlaceholder({ className = '' }: { className?: string }) {
@@ -362,7 +381,22 @@ function CardCarousel({
       <div className={`absolute inset-0 ${isImageSlide ? '' : 'invisible'}`} aria-hidden={!isImageSlide}>
         {images.map((src, idx) =>
           !src ? (
-            <GearPlaceholder key="placeholder" className="absolute inset-0 w-full h-full" />
+            !isOnTheWay(item) ? (
+              <GearPlaceholder key="placeholder" className="absolute inset-0 w-full h-full" />
+            ) : (
+              <div key="on-the-way" className="absolute inset-2 rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/5 flex flex-col items-center justify-center text-center px-4 gap-2">
+                <Truck className="w-10 h-10 text-amber-400" strokeWidth={1.6} />
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-300">On its way</span>
+                <span className="text-[11px] text-slate-400 leading-snug">Add photos and specs when it arrives.</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onEditPhotos(item); }}
+                  className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-[11px] font-bold px-3 py-1.5 transition"
+                >
+                  <Camera className="w-3.5 h-3.5" /> Arrived? Add photos
+                </button>
+              </div>
+            )
           ) : idx === 0 || shouldPreload ? (
             <img
               key={`${idx}-${src}`}
@@ -1730,7 +1764,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                               <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                            <p className="text-xs text-slate-400">{item.color}</p>
+                            {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                           </div>
 
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
@@ -1848,7 +1882,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                               <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                             </div>
                             <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                            <p className="text-xs text-slate-400">{item.color}</p>
+                            {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                           </div>
 
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
@@ -1962,7 +1996,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             )}
 
             {viewMode === 'list' && (
-              <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden font-mono text-xs">
+              <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-x-auto font-mono text-xs">
                 <table className="w-full text-left">
                   <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 select-none">
                     <tr>
@@ -2005,7 +2039,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                               <Star className="w-3.5 h-3.5 fill-current text-amber-400 shrink-0" />
                             )}
                             <span className={item.is_favorite ? 'text-amber-400 font-bold' : 'text-slate-200'}>
-                              {item.brand} - {item.name}
+                              {item.brand ? `${item.brand} - ` : ''}{item.name}
                             </span>
                           </div>
                         </td>
@@ -2015,6 +2049,8 @@ function TackleboxIQ({ session }: { session: Session }) {
                         <td className="p-3">
                           {item.is_ghost ? (
                             <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Needs Replacement</span>
+                          ) : isOnTheWay(item) ? (
+                            <OnTheWayTag />
                           ) : (
                             <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Available</span>
                           )}
@@ -2298,7 +2334,11 @@ function TackleboxIQ({ session }: { session: Session }) {
             <Repeat className={`w-4 h-4 shrink-0 ${undoToast.nowGhost ? 'text-red-400' : 'text-emerald-400'}`} />
             <span className="flex-1 min-w-0 text-slate-200">
               <span className="block truncate">{undoToast.name}</span>
-              <span className="text-slate-500">{undoToast.nowGhost ? 'Moved to restock list' : 'Back in your gear'}</span>
+              <span className="text-slate-500">
+                {undoToast.nowGhost
+                  ? 'Moved to restock list'
+                  : (() => { const it = items.find(i => i.id === undoToast.id); return it && isOnTheWay(it) ? 'Added to your gear: on its way. Add photos when it arrives.' : 'Back in your gear'; })()}
+              </span>
             </span>
             <button
               onClick={() => {
@@ -2963,7 +3003,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                     </div>
                     <div className="flex flex-col gap-1.5 shrink-0">
                       <button 
-                        onClick={() => toggleGhost(item.id, item.is_ghost)}
+                        onClick={() => toggleGhost(item.id, item.is_ghost, { withUndo: true })}
                         className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
                       >
                         <Check className="w-3.5 h-3.5" />
