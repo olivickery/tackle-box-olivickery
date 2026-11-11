@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SUPPORT_EMAIL, LEGAL_UPDATED } from '../../../lib/site';
+import { AMAZON_DISCLOSURE } from '../../../lib/affiliate';
 import { LegalTitle, Section } from '../LegalSection';
 
 export const metadata: Metadata = {
@@ -66,7 +67,16 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section n={7} title="Your consumer rights">
+      <Section n={7} title="Amazon links">
+        <p>
+          Tacklebox IQ participates in the Amazon.com.au Associates Program. &ldquo;Find on
+          Amazon&rdquo; links on your restock list and trip-plan gaps take you to Amazon search results. {AMAZON_DISCLOSURE}{' '}
+          This doesn&apos;t change the price you pay. Purchases are made with Amazon under Amazon&apos;s own terms, and we
+          aren&apos;t responsible for Amazon&apos;s products, prices or delivery.
+        </p>
+      </Section>
+
+      <Section n={8} title="Your consumer rights">
         <p>
           Nothing in these terms excludes, restricts or changes any right or remedy you have under the Australian Consumer
           Law that can&apos;t lawfully be excluded. To the extent the law allows, we aren&apos;t liable for lost or damaged
@@ -74,14 +84,14 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section n={8} title="Ending your account">
+      <Section n={9} title="Ending your account">
         <p>
           You can stop using Tacklebox IQ at any time and ask us to delete your account by emailing{' '}
           <a href={`mailto:${SUPPORT_EMAIL}`} className="text-amber-400 hover:text-amber-300 font-mono">{SUPPORT_EMAIL}</a>.
         </p>
       </Section>
 
-      <Section n={9} title="Changes">
+      <Section n={10} title="Changes">
         <p>
           We may update these terms as the app develops. We&apos;ll update the date at the top of this page and, for
           significant changes, let you know by email or in the app.

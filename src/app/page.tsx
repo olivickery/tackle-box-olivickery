@@ -9,6 +9,9 @@ import Wordmark from '../components/Wordmark';
 import LegalFooter from '../components/LegalFooter';
 import PackChecklist, { GapStatusTag, ReAddGapButton, type PackEntry } from '../components/PackChecklist';
 import Link from 'next/link';
+import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
+import NamePrompt from '../components/NamePrompt';
+import { firstNameOf } from '../lib/profile';
 import {
   type GearItem, type TripPlan, type CustomPackItem,
   SUGGESTED_NOTE_PREFIX, normalizePlan, formatGearRow, formatPackRow, splitSpecies, defaultPackTitle,
@@ -43,7 +46,8 @@ import {
   Search,
   Sparkles,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  Share2
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
@@ -544,6 +548,14 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [isSharingList, setIsSharingList] = useState(false);
+  // First name from the account profile; shown on shared lists ("Oli's restock list").
+  const firstName = firstNameOf(session.user);
+  const namePromptSkipKey = `tbiq:namePromptSkipped:${session.user.id}`;
+  const [namePrompt, setNamePrompt] = useState<null | 'welcome' | 'share'>(() => {
+    if (firstNameOf(session.user)) return null;
+    try { return localStorage.getItem(`tbiq:namePromptSkipped:${session.user.id}`) ? null : 'welcome'; } catch { return null; }
+  });
 
   // Trip Planner States
   // /?planner=1 (from the pack lists page) opens the planner straight away.
@@ -1080,39 +1092,79 @@ function TackleboxIQ({ session }: { session: Session }) {
     setIsSavingPhotos(false);
   };
 
-  const handleExportRestockList = async () => {
-    if (ghostItems.length === 0) return;
-
-    const listText = ghostItems.map((item, index) => 
-      {
-        const details = [item.color, item.depth && item.depth !== 'N/A' ? item.depth : ''].filter(Boolean).join(', ');
-        return `${index + 1}. ${item.brand ? `${item.brand} - ` : ''}${item.name}${details ? ` (${details})` : ''}`;
-      }
-    ).join('\n');
-
-    const formattedExport = `Tacklebox IQ restock list:\n${listText}`;
-
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(formattedExport);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = formattedExport;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-
-      setCopiedToClipboard(true);
-      setTimeout(() => setCopiedToClipboard(false), 3000);
-    } catch (err) {
-      console.error('Failed to write to clipboard:', err);
-      alert('Could not copy automatically. Check browser clipboard permissions.');
+  const copyText = async (text: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
     }
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+  };
+
+  /**
+   * Share the restock list: saves a snapshot and shares a tackleboxiq.com/list/<id>
+   * link (plus the plain list). Amazon links live on that page, never in the
+   * shared text, because Associates links aren't allowed in emails or texts.
+   */
+  const handleShareRestockList = async (nameOverride?: string) => {
+    if (ghostItems.length === 0 || isSharingList) return;
+    const name = (nameOverride || firstName).trim();
+    if (!name) {
+      setNamePrompt('share');
+      return;
+    }
+    setIsSharingList(true);
+    const title = `${name}'s restock list`;
+
+    const snapshot = ghostItems.map(item => ({
+      brand: item.brand || '',
+      name: item.name,
+      detail: [item.color, item.depth && item.depth !== 'N/A' ? item.depth : ''].filter(Boolean).join(' · ') || (item.brand ? '' : item.type),
+    }));
+    const listText = snapshot
+      .map((item, index) => `${index + 1}. ${item.brand ? `${item.brand} ` : ''}${item.name}`)
+      .join('\n');
+
+    const { data, error } = await supabase
+      .from('shared_lists')
+      .insert({ user_id: session.user.id, kind: 'restock', title, items: snapshot })
+      .select('id')
+      .single();
+
+    if (error || !data) {
+      console.error('Failed to create share link:', error);
+      // Fall back to the plain list so the user isn't left empty-handed.
+      try { await copyText(`${title}:\n${listText}`); } catch { /* ignore */ }
+      alert("Couldn't create a share link just now, so the plain list was copied instead.");
+      setIsSharingList(false);
+      return;
+    }
+
+    const url = `${window.location.origin}/list/${data.id}`;
+    const message = `${title} on Tacklebox IQ`;
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title, text: message, url });
+      } else {
+        await copyText(`${message}: ${url}`);
+        setCopiedToClipboard(true);
+        setTimeout(() => setCopiedToClipboard(false), 3000);
+      }
+    } catch (err) {
+      // Closing the share sheet isn't an error.
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        console.error('Failed to share restock list:', err);
+        alert('Could not share automatically. Check your browser permissions.');
+      }
+    }
+    setIsSharingList(false);
   };
 
   const scrollToSection = (id: string) => {
@@ -1472,7 +1524,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 title="My pack lists"
               >
                 <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span><span className="sm:hidden">S</span></span>
+                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span></span>
               </Link>
 
               <button 
@@ -2030,9 +2082,12 @@ function TackleboxIQ({ session }: { session: Session }) {
                           <li key={idx}>
                             <div className="flex items-center justify-between gap-2">
                               <span className={gap.status === 'removed' ? 'text-slate-500 line-through font-semibold' : 'text-slate-200 font-semibold'}>{gap.item}</span>
-                              {gap.status === 'removed'
-                                ? <ReAddGapButton onClick={() => handleReAddGap(gap.item)} busy={reAddingGap === gap.item} />
-                                : <GapStatusTag status={gap.status} />}
+                              <span className="flex items-center gap-1.5 shrink-0">
+                                {gap.status === 'removed'
+                                  ? <ReAddGapButton onClick={() => handleReAddGap(gap.item)} busy={reAddingGap === gap.item} />
+                                  : <GapStatusTag status={gap.status} />}
+                                <AmazonLink name={gap.item} compact />
+                              </span>
                             </div>
                             {gap.status === 'removed' && <p className="text-[10px] font-mono text-red-400/80">Removed from restock list</p>}
                             {gap.reason && <p className="text-slate-400 leading-snug">{gap.reason}</p>}
@@ -2049,6 +2104,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                           {isAddingGaps ? 'Adding…' : `Add ${gapsLeftToAdd === 1 ? 'missing item' : `${gapsLeftToAdd} missing items`} to restock list`}
                         </button>
                       )}
+                      <AmazonDisclosure className="mt-3" />
                     </div>
                   )}
 
@@ -2075,6 +2131,23 @@ function TackleboxIQ({ session }: { session: Session }) {
             </div>
           </div>
         </div>
+      )}
+
+      {namePrompt && (
+        <NamePrompt
+          reason={namePrompt}
+          onDone={(name) => {
+            const wasShare = namePrompt === 'share';
+            setNamePrompt(null);
+            if (wasShare) handleShareRestockList(name);
+          }}
+          onSkip={() => {
+            if (namePrompt === 'welcome') {
+              try { localStorage.setItem(namePromptSkipKey, '1'); } catch { /* ignore */ }
+            }
+            setNamePrompt(null);
+          }}
+        />
       )}
 
       {isPackChecklistOpen && currentPlan && (
@@ -2765,7 +2838,8 @@ function TackleboxIQ({ session }: { session: Session }) {
                 </div>
               ) : (
                 ghostItems.map((item) => (
-                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       {item.brand
                         ? <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
@@ -2793,18 +2867,24 @@ function TackleboxIQ({ session }: { session: Session }) {
                       </button>
                     </div>
                   </div>
+                  <AmazonLink brand={item.brand} name={item.name} className="mt-2.5 w-full" />
+                  </div>
                 ))
               )}
             </div>
 
             <div className="pt-4 border-t border-slate-800 font-mono text-xs text-slate-400">
+              {ghostItems.length > 0 && <AmazonDisclosure className="mb-3 text-center" />}
               <div className="flex justify-between mb-2">
                 <span>Items to Buy:</span>
                 <span className="text-slate-200 font-bold">{ghostItems.length} Items</span>
               </div>
+              {ghostItems.length > 0 && firstName && (
+                <p className="mb-2.5 text-[11px] text-slate-500">Shares as &ldquo;{firstName}&rsquo;s restock list&rdquo;</p>
+              )}
               <button 
-                onClick={handleExportRestockList}
-                disabled={ghostItems.length === 0}
+                onClick={() => handleShareRestockList()}
+                disabled={ghostItems.length === 0 || isSharingList}
                 className={`w-full font-sans font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 ${
                   copiedToClipboard 
                     ? 'bg-emerald-500 text-slate-950' 
@@ -2814,10 +2894,18 @@ function TackleboxIQ({ session }: { session: Session }) {
                 {copiedToClipboard ? (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>Copied to Clipboard!</span>
+                    <span>Link copied!</span>
+                  </>
+                ) : isSharingList ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Creating link…</span>
                   </>
                 ) : (
-                  <span>Export list of gear to replace</span>
+                  <>
+                    <Share2 className="w-4 h-4" />
+                    <span>Share list</span>
+                  </>
                 )}
               </button>
             </div>

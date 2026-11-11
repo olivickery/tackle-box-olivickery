@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import Wordmark from './Wordmark';
 import Landing from './Landing';
 import Link from 'next/link';
+import { profileFields } from '../lib/profile';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'recovery';
 
@@ -44,6 +45,9 @@ export default function AuthGate({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -85,7 +89,11 @@ export default function AuthGate({
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
     } else if (mode === 'signup') {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: profileFields(firstName, lastName, marketingOptIn) },
+      });
       if (error) {
         setError(error.message);
       } else if (!data.session) {
@@ -169,6 +177,31 @@ export default function AuthGate({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          {mode === 'signup' && (
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                required
+                autoComplete="given-name"
+                placeholder="First name"
+                aria-label="First name"
+                maxLength={40}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="text"
+                autoComplete="family-name"
+                placeholder="Last name"
+                aria-label="Last name (optional)"
+                maxLength={40}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          )}
           {showEmail && (
             <input
               type="email"
@@ -203,6 +236,18 @@ export default function AuthGate({
               onChange={(e) => setConfirmPassword(e.target.value)}
               className={inputClass}
             />
+          )}
+
+          {mode === 'signup' && (
+            <label className="flex items-start gap-2.5 text-[11px] text-slate-400 leading-relaxed cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={marketingOptIn}
+                onChange={(e) => setMarketingOptIn(e.target.checked)}
+                className="mt-0.5 w-4 h-4 shrink-0 accent-amber-500"
+              />
+              <span>Email me fishing tips and Tacklebox IQ news. Optional, unsubscribe any time.</span>
+            </label>
           )}
 
           {mode === 'signin' && (

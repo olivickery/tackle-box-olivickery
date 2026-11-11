@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Bookmark, Check, ClipboardList, Loader2, Package, Plus, RotateCcw, ShoppingBag, Trash2, Undo2, X } from 'lucide-react';
 import InventoryPicker, { type PickerItem } from './InventoryPicker';
+import { AmazonLink, AmazonDisclosure } from './AmazonLink';
 
 export interface PackEntry {
   id: string;
@@ -377,9 +378,12 @@ export default function PackChecklist({
                   <li key={idx} className="p-2.5 rounded-xl border border-dashed border-red-500/30 bg-slate-950">
                     <div className="flex items-center justify-between gap-2">
                       <span className={gap.status === 'removed' ? 'text-slate-500 line-through' : 'text-slate-200'}>{gap.item}</span>
-                      {gap.status === 'removed'
-                        ? <ReAddGapButton onClick={() => onReAddGap(gap.item)} busy={reAddingGap === gap.item} />
-                        : <GapStatusTag status={gap.status} />}
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        {gap.status === 'removed'
+                          ? <ReAddGapButton onClick={() => onReAddGap(gap.item)} busy={reAddingGap === gap.item} />
+                          : <GapStatusTag status={gap.status} />}
+                        <AmazonLink name={gap.item} compact />
+                      </span>
                     </div>
                     {gap.status === 'removed' && <p className="text-[10px] text-red-400/80 mt-0.5">Removed from restock list</p>}
                     {gap.reason && <p className="text-[10px] text-slate-400 font-sans mt-0.5 leading-snug">{gap.reason}</p>}
@@ -396,6 +400,7 @@ export default function PackChecklist({
                   {isAddingGaps ? 'Adding…' : `Add ${gapsToAdd === 1 ? '1 item' : `${gapsToAdd} items`} to restock list`}
                 </button>
               )}
+              <AmazonDisclosure className="mt-3" />
             </div>
           )}
 
