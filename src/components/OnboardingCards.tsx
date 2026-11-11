@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Camera, Check, ChevronLeft, ChevronRight, ExternalLink, Fish, Plus, Repeat, Share2,
+  Check, ChevronLeft, ChevronRight, ExternalLink, Fish, Plus, Repeat, Share2,
   ShoppingBag, Sparkles, Star, X,
 } from 'lucide-react';
 
@@ -37,21 +37,15 @@ const glass = 'bg-white/15 border border-white/30 backdrop-blur-sm';
 function IllAdd() {
   return (
     <Stage from="#1e3a8a" to="#0ea5e9">
-      <div className="relative w-[56%] aspect-square -translate-y-[6%]">
+      <div className="relative w-[60%] aspect-square">
         {/* viewfinder corners */}
         {['top-0 left-0 border-t-4 border-l-4 rounded-tl-xl', 'top-0 right-0 border-t-4 border-r-4 rounded-tr-xl',
           'bottom-0 left-0 border-b-4 border-l-4 rounded-bl-xl', 'bottom-0 right-0 border-b-4 border-r-4 rounded-br-xl'].map(c => (
           <span key={c} className={`absolute w-8 h-8 border-white ${c}`} />
         ))}
-        <Fish className="absolute inset-0 m-auto w-[62%] h-[62%] text-white -rotate-12" strokeWidth={1.4} />
         <span className="absolute left-1 right-1 top-1/2 h-0.5 bg-amber-300 shadow-[0_0_12px_3px_rgba(252,211,77,0.7)]" />
-      </div>
-      <div className="absolute bottom-[11%] left-1/2 -translate-x-1/2 flex items-center gap-2">
-        <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-mono font-bold text-white whitespace-nowrap ${glass}`}>
-          <Camera className="w-3.5 h-3.5" /> Snap the packet
-        </span>
-        <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${glass}`}>
-          <Plus className="w-5 h-5 stroke-[3]" />
+        <span className="absolute inset-0 m-auto w-14 h-14 rounded-2xl bg-white/25 border-2 border-white/80 backdrop-blur-sm text-white flex items-center justify-center shadow-xl ring-8 ring-white/15">
+          <Plus className="w-8 h-8 stroke-[3]" />
         </span>
       </div>
     </Stage>
@@ -61,17 +55,16 @@ function IllAdd() {
 function IllSwipe() {
   return (
     <Stage from="#065f46" to="#84cc16">
-      <div className="relative w-[58%] aspect-[4/5]">
-        <div className={`absolute inset-0 translate-x-7 rotate-[8deg] rounded-2xl ${glass}`} />
+      <ChevronLeft className="absolute left-[7%] top-1/2 -translate-y-[60%] w-9 h-9 text-white" strokeWidth={3} />
+      <ChevronRight className="absolute right-[7%] top-1/2 -translate-y-[60%] w-9 h-9 text-white" strokeWidth={3} />
+      <div className="relative w-[52%] aspect-[4/5] -translate-y-[8%]">
+        <div className={`absolute inset-0 translate-x-6 rotate-[8deg] rounded-2xl ${glass}`} />
         <div className="absolute inset-0 rounded-2xl bg-white/25 border-2 border-white/70 shadow-2xl flex items-center justify-center">
-          <Fish className="w-[60%] h-[60%] text-white -rotate-12" strokeWidth={1.4} />
-          <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
-            <span className="w-4 h-2 rounded-full bg-white" /><span className="w-2 h-2 rounded-full bg-white/50" /><span className="w-2 h-2 rounded-full bg-white/50" />
-          </div>
+          <Fish className="w-[62%] h-[62%] text-white -rotate-12" strokeWidth={1.4} />
         </div>
       </div>
-      <span className={`absolute bottom-[12%] left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-3 py-1 text-xs font-mono font-bold text-white ${glass}`}>
-        <ChevronLeft className="w-4 h-4" /> SWIPE <ChevronRight className="w-4 h-4" />
+      <span className={`absolute bottom-[10%] left-1/2 -translate-x-1/2 rounded-full px-5 py-1.5 text-sm font-mono font-bold tracking-wider text-white ${glass}`}>
+        SWIPE
       </span>
     </Stage>
   );
@@ -84,7 +77,7 @@ function IllStar() {
       <span className="absolute top-[14%] right-[14%] w-14 h-14 rounded-full bg-white text-amber-500 flex items-center justify-center shadow-xl ring-8 ring-white/25">
         <Star className="w-7 h-7 fill-current" />
       </span>
-      <span className="absolute bottom-[16%] left-[14%] w-14 h-14 rounded-full bg-slate-950/70 text-white flex items-center justify-center shadow-xl ring-8 ring-black/20">
+      <span className="absolute bottom-[16%] left-[14%] w-14 h-14 rounded-full bg-white text-red-500 flex items-center justify-center shadow-xl ring-8 ring-white/25">
         <Repeat className="w-7 h-7" />
       </span>
     </Stage>
@@ -97,7 +90,7 @@ function IllPlan() {
       <div className="w-[76%] space-y-2 font-mono">
         <div className="flex items-center gap-2 text-white">
           <Sparkles className="w-7 h-7" />
-          <span className="text-base font-bold leading-tight">Tactics<br /><span className="text-xs font-normal text-white/85">for this trip</span></span>
+          <span className="text-base font-bold">Tactics</span>
         </div>
         {[['Shad 3"', true], ['Vibe 65', false], ['Leader', false]].map(([n, done]) => (
           <div key={n as string} className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-white ${glass}`}>
@@ -136,7 +129,7 @@ function IllRestock() {
 
 const STEPS: Step[] = [
   {
-    id: 'add', title: 'Add your first gear', blurb: 'Snap the packet and the details fill in.', action: 'Add gear', Illustration: IllAdd,
+    id: 'add', title: 'Add your first gear', blurb: 'Take a pic of your item and AI will complete the specs.', action: 'Add gear', Illustration: IllAdd,
     how: ['Tap the yellow + button.', 'Take a photo of the packet (or the lure).', 'Brand, model, colour and specs fill in. Check them and save.'],
   },
   {
@@ -285,7 +278,7 @@ export default function OnboardingCards({
         <button onClick={onHideAll} className="text-[11px] font-mono text-slate-500 hover:text-slate-300 transition">Hide all tips</button>
       </div>
       <p className="text-xs text-slate-400 -mt-2 mb-4">
-        These work just like your gear cards: swipe one (or tap <span className="text-slate-200">How to</span>) to see the back.
+        Explore the five tips below to get a feel for the features.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {steps.map(step => (
