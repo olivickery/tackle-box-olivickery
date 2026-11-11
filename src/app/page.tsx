@@ -1490,11 +1490,11 @@ function TackleboxIQ({ session }: { session: Session }) {
               <button 
                 onClick={() => setIsRestockOpen(true)}
                 className="relative w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
-                title="Gear to replace"
-                aria-label={`Gear to replace (${allGhostCount})`}
+                title="Replace gear"
+                aria-label={`Replace gear (${allGhostCount})`}
               >
                 <ShoppingBag className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] max-[359px]:text-[8px] sm:text-xs leading-none whitespace-nowrap"><span className="sm:hidden">RESTOCK</span><span className="hidden sm:inline">GEAR TO REPLACE</span></span>
+                <span className="text-[9px] max-[359px]:text-[8px] sm:text-xs leading-none whitespace-nowrap"><span className="sm:hidden">RESTOCK</span><span className="hidden sm:inline">REPLACE GEAR</span></span>
                 {allGhostCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
                     {allGhostCount}
