@@ -73,7 +73,7 @@ function IllSwipe() {
 function IllStar() {
   return (
     <Stage from="#9a3412" to="#fbbf24">
-      <Fish className="w-[58%] h-[58%] text-white -rotate-12" strokeWidth={1.4} />
+      <Fish className="w-[34%] h-[34%] text-white -rotate-12" strokeWidth={1.4} />
       <span className="absolute top-[14%] right-[14%] w-14 h-14 rounded-full bg-white text-amber-500 flex items-center justify-center shadow-xl ring-8 ring-white/25">
         <Star className="w-7 h-7 fill-current" />
       </span>
