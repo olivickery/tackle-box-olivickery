@@ -357,7 +357,9 @@ function CardCarousel({
               ? 'bg-amber-500 text-slate-950 border-amber-400' 
               : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
           }`}
-          title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
+          title={item.is_favorite ? "Remove from favourites" : "Add to favourites"}
+          aria-label="Favourite"
+          aria-pressed={item.is_favorite}
         >
           <Star className="w-4 h-4 fill-current" />
         </button>
@@ -530,7 +532,8 @@ function CardCarousel({
               onZoomImage(images[currentIndex]);
             }}
             className="absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
-            title="Zoom Image"
+            title="Zoom photo"
+            aria-label={`Zoom photo of ${item.name}`}
           >
             <ZoomIn className="w-4 h-4" />
           </button>}
@@ -541,33 +544,34 @@ function CardCarousel({
         <>
           <button 
             onClick={prevSlide}
-            className="hidden sm:block absolute left-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
-            aria-label="Previous Slide"
+            className="hidden sm:block absolute left-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 active:scale-95 transition z-10"
+            aria-label="Previous page"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button 
             onClick={nextSlide}
-            className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
-            aria-label="Next Slide"
+            className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 active:scale-95 transition z-10"
+            aria-label="Next page"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </>
       )}
 
-      <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none">
+      <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none" aria-hidden="true">
         <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
           {Array.from({ length: totalSlides }).map((_, idx) => (
             <span 
               key={idx} 
               className={`h-1.5 rounded-full transition-all ${
-                currentIndex === idx ? 'w-3 bg-white' : 'w-1.5 bg-slate-600'
+                currentIndex === idx ? 'w-3 bg-white' : 'w-1.5 bg-slate-500'
               }`}
             />
           ))}
         </div>
       </div>
+      <span className="sr-only" aria-live="polite">Page {currentIndex + 1} of {totalSlides}</span>
 
     </div>
   );
@@ -1807,6 +1811,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <span>Category: {activeCategoryFilter}</span>
                             <button 
                               onClick={() => setActiveCategoryFilter(null)}
+                              aria-label="Clear category filter"
                               className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -1820,6 +1825,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <span>Brand: {activeBrandFilter}</span>
                             <button 
                               onClick={() => setActiveBrandFilter(null)}
+                              aria-label="Clear brand filter"
                               className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -1833,6 +1839,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <span>Location: {activeEnvFilter}</span>
                             <button 
                               onClick={() => setActiveEnvFilter(null)}
+                              aria-label="Clear location filter"
                               className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -1940,7 +1947,8 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <button 
                               onClick={() => setItemToDelete(item)}
                               className="absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
-                              title="Delete Item Permanently"
+                              title="Delete permanently"
+                              aria-label={`Delete ${item.name} permanently`}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
