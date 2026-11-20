@@ -140,4 +140,6 @@ end;
 $$;
 
 revoke all on function public.claim_shared_card(uuid) from public;
+-- Supabase's default privileges grant anon directly, not via public.
+revoke execute on function public.claim_shared_card(uuid) from anon;
 grant execute on function public.claim_shared_card(uuid) to authenticated;
