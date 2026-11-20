@@ -436,7 +436,7 @@ function CardCarousel({
             <ChevronRight className="w-4 h-4" />
           </button>
 
-          <div className="absolute bottom-3.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none" aria-hidden="true">
+          <div className="absolute bottom-3.5 max-sm:bottom-5 max-sm:left-2.5 sm:inset-x-0 flex items-center justify-center z-10 pointer-events-none" aria-hidden="true">
             <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
               {images.map((_, idx) => (
                 <span
@@ -481,6 +481,8 @@ function GearDetailSheet({
   onFilterLocation: (env: string) => void;
 }) {
   const doneRef = useRef<HTMLButtonElement>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const longNotes = !!item.notes && (item.notes.length > 180 || item.notes.split('\n').length > 4);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
@@ -529,7 +531,7 @@ function GearDetailSheet({
         </div>
 
         {photos.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 snap-x">
+          <div className="flex gap-2 overflow-x-auto px-4 scroll-px-4 pt-3 pb-1 snap-x">
             {photos.map((src, i) => (
               <button key={src} onClick={() => onZoomImage(src)} className="shrink-0 snap-start w-28 h-28 rounded-lg overflow-hidden border border-slate-800" aria-label={`Zoom photo ${i + 1} of ${item.name}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -559,7 +561,14 @@ function GearDetailSheet({
         <div className="px-4 pt-4">
           <p className="text-xs text-slate-400 mb-1">Notes</p>
           {item.notes
-            ? <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{item.notes}</p>
+            ? <>
+                <p className={`text-sm text-slate-200 whitespace-pre-wrap leading-relaxed ${notesOpen ? '' : 'line-clamp-4'}`}>{item.notes}</p>
+                {longNotes && (
+                  <button onClick={() => setNotesOpen((o) => !o)} className="mt-1 min-h-8 text-sm font-semibold text-amber-400 hover:text-amber-300">
+                    {notesOpen ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </>
             : <p className="text-sm text-slate-400">No notes yet.</p>}
         </div>
 
@@ -1758,13 +1767,13 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <div className="space-y-1">
                               <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                                 <span className="truncate">{item.brand}</span>
-                                <span className="text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                                <span className="max-sm:hidden text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                               </div>
                               <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                               {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
                             <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
-                              <span className="truncate">{item.environment_tags?.join(' · ')}</span>
+                              <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
                               <span className="shrink-0">{item.type}</span>
                             </div>
                           </div>
@@ -1849,13 +1858,13 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <div className="space-y-1">
                               <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                                 <span className="truncate">{item.brand}</span>
-                                <span className="text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                                <span className="max-sm:hidden text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                               </div>
                               <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                               {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
                             <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
-                              <span className="truncate">{item.environment_tags?.join(' · ')}</span>
+                              <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
                               <span className="shrink-0">{item.type}</span>
                             </div>
                           </div>
