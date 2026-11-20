@@ -147,7 +147,7 @@ function isOnTheWay(item: GearItem): boolean {
 
 function OnTheWayTag({ className = '' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 ${className}`}>
+    <span className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-sky-400/40 bg-sky-400/10 text-sky-300 ${className}`}>
       <Truck className="w-3 h-3" /> On its way
     </span>
   );
@@ -386,9 +386,9 @@ function CardCarousel({
             !isOnTheWay(item) ? (
               <GearPlaceholder key="placeholder" className="absolute inset-0 w-full h-full" />
             ) : (
-              <div key="on-the-way" className="absolute inset-2 rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/5 flex flex-col items-center justify-center text-center px-4 gap-2">
-                <Truck className="w-10 h-10 text-amber-400" strokeWidth={1.6} />
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-300">On its way</span>
+              <div key="on-the-way" className="absolute inset-2 rounded-lg border-2 border-dashed border-sky-400/50 bg-sky-400/5 flex flex-col items-center justify-center text-center px-4 gap-2">
+                <Truck className="w-10 h-10 text-sky-400" strokeWidth={1.6} />
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-sky-300">On its way</span>
                 <span className="text-[11px] text-slate-400 leading-snug">Add photos and specs when it arrives.</span>
                 <button
                   type="button"
@@ -424,16 +424,16 @@ function CardCarousel({
             </div>
 
             <div className="space-y-1.5 text-[11px] pt-1">
-              <p><span className="text-slate-500">Brand:</span> <span className="text-slate-100">{item.brand}</span></p>
-              <p><span className="text-slate-500">Name:</span> <span className="text-slate-100">{item.name}</span></p>
-              <p><span className="text-slate-500">Colour:</span> <span className="text-slate-100">{item.color}</span></p>
-              {displaySpec && <p><span className="text-slate-500">Specs:</span> <span className="text-slate-100">{displaySpec}</span></p>}
-              <p><span className="text-slate-500">Type:</span> <span className="text-slate-100">{item.type}</span></p>
-              <p><span className="text-slate-500">Species:</span> <span className="text-slate-100">{item.species.join(', ')}</span></p>
+              <p><span className="text-slate-400">Brand:</span> <span className="text-slate-100">{item.brand}</span></p>
+              <p><span className="text-slate-400">Name:</span> <span className="text-slate-100">{item.name}</span></p>
+              <p><span className="text-slate-400">Colour:</span> <span className="text-slate-100">{item.color}</span></p>
+              {displaySpec && <p><span className="text-slate-400">Specs:</span> <span className="text-slate-100">{displaySpec}</span></p>}
+              <p><span className="text-slate-400">Type:</span> <span className="text-slate-100">{item.type}</span></p>
+              <p><span className="text-slate-400">Species:</span> <span className="text-slate-100">{item.species.join(', ')}</span></p>
               {item.environment_tags && item.environment_tags.length > 0 && (
-                <p><span className="text-slate-500">Locations:</span> <span className="text-slate-100">{item.environment_tags.join(', ')}</span></p>
+                <p><span className="text-slate-400">Locations:</span> <span className="text-slate-100">{item.environment_tags.join(', ')}</span></p>
               )}
-              <p><span className="text-slate-500">Date added:</span> <span className="text-slate-100">{formattedDate}</span></p>
+              <p><span className="text-slate-400">Date added:</span> <span className="text-slate-100">{formattedDate}</span></p>
             </div>
           </div>
         </div>
@@ -449,7 +449,7 @@ function CardCarousel({
             {item.notes ? (
               <p className="whitespace-pre-wrap">{item.notes}</p>
             ) : (
-              <p className="text-slate-500">No custom notes logged yet. Swipe to Manage Item to add notes!</p>
+              <p className="text-slate-400">No notes yet.</p>
             )}
           </div>
         </div>
@@ -458,7 +458,7 @@ function CardCarousel({
           <div>
             <div className="h-6 flex items-center mb-2">
               <span className="text-[11px] text-slate-100 uppercase font-bold tracking-wider leading-none">
-                Manage Item
+                Manage
               </span>
             </div>
 
@@ -469,10 +469,10 @@ function CardCarousel({
                     e.stopPropagation();
                     onEditSpecs(item);
                   }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
+                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
                 >
                   <Settings className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>SPECS</span>
+                  <span>Edit specs</span>
                 </button>
 
                 <button 
@@ -480,10 +480,10 @@ function CardCarousel({
                     e.stopPropagation();
                     onEditNotes(item);
                   }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
+                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
                 >
                   <Edit3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>NOTES</span>
+                  <span>Edit notes</span>
                 </button>
               </div>
 
@@ -493,10 +493,10 @@ function CardCarousel({
                     e.stopPropagation();
                     onEditPhotos(item);
                   }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
+                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
                 >
                   <Camera className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>IMAGES</span>
+                  <span>Photos</span>
                 </button>
 
                 <button 
@@ -504,10 +504,10 @@ function CardCarousel({
                     e.stopPropagation();
                     onToggleGhost(item.id, item.is_ghost);
                   }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
+                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
                 >
                   <Repeat className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>{item.is_ghost ? 'REPLACED' : 'REPLACE'}</span>
+                  <span>{item.is_ghost ? 'Replaced' : 'Needs replacing'}</span>
                 </button>
               </div>
 
@@ -516,10 +516,10 @@ function CardCarousel({
                   e.stopPropagation();
                   onDeleteItem(item);
                 }}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
+                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
               >
                 <Trash2 className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                <span>DELETE ITEM</span>
+                <span>Delete item</span>
               </button>
             </div>
           </div>
@@ -1629,7 +1629,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 title="AI trip planner"
               >
                 <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">PLAN<span className="hidden sm:inline"> TRIP</span></span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">Plan<span className="hidden sm:inline"> trip</span></span>
               </button>
 
               <Link
@@ -1638,7 +1638,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 title="My pack lists"
               >
                 <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span></span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">Pack<span className="hidden sm:inline"> lists</span></span>
               </Link>
 
               <button 
@@ -1648,7 +1648,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 aria-label={`Restock list (${allGhostCount})`}
               >
                 <ShoppingBag className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">RESTOCK</span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">Restock</span>
                 {allGhostCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[11px] font-bold min-w-5 h-5 px-1 rounded-full flex items-center justify-center">
                     {allGhostCount}
@@ -1731,7 +1731,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                       <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
                         <Star className="w-4 h-4 fill-current" /> Favourites
                       </span>
-                      <span className="text-xs text-slate-500 font-mono">{favoriteItems.length} Items</span>
+                      <span className="text-xs text-slate-400 font-mono">{favoriteItems.length} items</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -1773,7 +1773,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[11px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 inline-flex items-center min-h-7 px-2 rounded transition"
+                                  className="text-[11px] font-mono bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 inline-flex items-center min-h-7 px-2 rounded transition"
                                 >
                                   {env}
                                 </button>
@@ -1782,7 +1782,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[11px] font-mono uppercase inline-flex items-center min-h-7 px-2 rounded transition border ${
+                              className={`text-[11px] font-mono inline-flex items-center min-h-7 px-2 rounded transition border ${
                                 activeCategoryFilter === item.type 
                                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
                                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
@@ -1848,18 +1848,14 @@ function TackleboxIQ({ session }: { session: Session }) {
                         )}
                       </div>
 
-                      <span className="text-xs text-slate-500 font-mono">{myGearItems.length} Items</span>
+                      <span className="text-xs text-slate-400 font-mono">{myGearItems.length} items</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                       {myGearItems.map((item) => (
                         <div 
                           key={item.id}
-                          className={`relative group rounded-xl p-3 transition-all duration-300 border ${
-                            activeCategoryFilter === item.type || activeBrandFilter === item.brand
-                              ? 'bg-slate-900 border-amber-500/40 shadow-lg shadow-amber-500/5' 
-                              : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-                          }`}
+                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900/80 border-slate-800 hover:border-slate-700"
                         >
                           <div className="relative">
                             <CardCarousel 
@@ -1894,7 +1890,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[11px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 inline-flex items-center min-h-7 px-2 rounded transition"
+                                  className="text-[11px] font-mono bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 inline-flex items-center min-h-7 px-2 rounded transition"
                                 >
                                   {env}
                                 </button>
@@ -1903,7 +1899,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[11px] font-mono uppercase inline-flex items-center min-h-7 px-2 rounded transition border ${
+                              className={`text-[11px] font-mono inline-flex items-center min-h-7 px-2 rounded transition border ${
                                 activeCategoryFilter === item.type 
                                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
                                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
@@ -1924,7 +1920,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                       <span className="text-xs font-semibold uppercase tracking-wider text-red-400 font-mono flex items-center gap-1.5">
                         <Repeat className="w-4 h-4" /> Items to replace
                       </span>
-                      <span className="text-xs text-slate-500 font-mono">{ghostItems.length} Items</span>
+                      <span className="text-xs text-slate-400 font-mono">{ghostItems.length} items</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -1955,7 +1951,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
                               <span className="bg-red-500/30 text-red-300 border border-red-500/50 text-[11px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest backdrop-blur-sm">
-                                {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'To buy' : 'Needs Replacement'}
+                                {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'To buy' : 'Needs replacing'}
                               </span>
                             </div>
                           </div>
@@ -1978,7 +1974,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                               Replaced
                             </button>
                             
-                            <span className="text-[11px] font-mono text-slate-500 uppercase">{item.type}</span>
+                            <span className="text-[11px] font-mono text-slate-400">{item.type}</span>
                           </div>
                         </div>
                       ))}
