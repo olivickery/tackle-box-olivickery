@@ -352,14 +352,14 @@ function CardCarousel({
             e.stopPropagation();
             onToggleFavorite(item.id, item.is_favorite);
           }}
-          className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 ${
+          className={`absolute top-2 right-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 ${
             item.is_favorite 
-              ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
+              ? 'bg-amber-500 text-slate-950 border-amber-400' 
               : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
           }`}
           title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
         >
-          <Star className="w-3.5 h-3.5 fill-current" />
+          <Star className="w-4 h-4 fill-current" />
         </button>
       )}
 
@@ -369,11 +369,11 @@ function CardCarousel({
             e.stopPropagation();
             onToggleGhost(item.id, item.is_ghost, { withUndo: true });
           }}
-          className="absolute bottom-2 left-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
+          className="absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
           title="Lost it? Add to restock list"
           aria-label="Mark as needing replacement"
         >
-          <Repeat className="w-3.5 h-3.5" />
+          <Repeat className="w-4 h-4" />
         </button>
       )}
 
@@ -529,10 +529,10 @@ function CardCarousel({
               e.stopPropagation();
               onZoomImage(images[currentIndex]);
             }}
-            className="absolute top-2 left-2 p-1.5 rounded-full bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
+            className="absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
             title="Zoom Image"
           >
-            <ZoomIn className="w-3.5 h-3.5" />
+            <ZoomIn className="w-4 h-4" />
           </button>}
         </div>
       )}
@@ -541,17 +541,17 @@ function CardCarousel({
         <>
           <button 
             onClick={prevSlide}
-            className="hidden sm:block absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
+            className="hidden sm:block absolute left-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
             aria-label="Previous Slide"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <button 
             onClick={nextSlide}
-            className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
+            className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
             aria-label="Next Slide"
           >
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </>
       )}
@@ -1563,7 +1563,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                   if (window.matchMedia('(max-width: 639px)').matches) setPillFilter('all');
                 }}
                 aria-pressed={viewMode === 'grid'}
-                className={`p-1.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`p-2.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
                 title="Grid view"
                 aria-label="Grid view"
               >
@@ -1572,7 +1572,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               <button 
                 onClick={() => setViewMode('list')}
                 aria-pressed={viewMode === 'list'}
-                className={`p-1.5 rounded-lg transition ${viewMode === 'list' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`p-2.5 rounded-lg transition ${viewMode === 'list' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
                 title="List view"
                 aria-label="List view"
               >
@@ -1582,7 +1582,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
             <button
               onClick={() => supabase.auth.signOut()}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 transition"
+              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 transition"
               title={`Sign out (${session.user.email ?? ''})`}
               aria-label="Sign out"
             >
@@ -1753,7 +1753,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                               <button 
                                 onClick={() => handleBrandClick(item.brand)} 
-                                className="hover:text-amber-400 transition"
+                                className="inline-flex items-center min-h-7 -my-1 hover:text-amber-400 transition"
                               >
                                 {item.brand}
                               </button>
@@ -1769,7 +1769,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[11px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
+                                  className="text-[11px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 inline-flex items-center min-h-7 px-2 rounded transition"
                                 >
                                   {env}
                                 </button>
@@ -1778,7 +1778,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[11px] font-mono uppercase px-2 py-0.5 rounded transition border ${
+                              className={`text-[11px] font-mono uppercase inline-flex items-center min-h-7 px-2 rounded transition border ${
                                 activeCategoryFilter === item.type 
                                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
                                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
@@ -1807,9 +1807,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <span>Category: {activeCategoryFilter}</span>
                             <button 
                               onClick={() => setActiveCategoryFilter(null)}
-                              className="ml-1 hover:text-slate-100"
+                              className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
@@ -1820,9 +1820,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <span>Brand: {activeBrandFilter}</span>
                             <button 
                               onClick={() => setActiveBrandFilter(null)}
-                              className="ml-1 hover:text-slate-100"
+                              className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
@@ -1833,9 +1833,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <span>Location: {activeEnvFilter}</span>
                             <button 
                               onClick={() => setActiveEnvFilter(null)}
-                              className="ml-1 hover:text-slate-100"
+                              className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
@@ -1871,7 +1871,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                               <button 
                                 onClick={() => handleBrandClick(item.brand)} 
-                                className="hover:text-amber-400 transition"
+                                className="inline-flex items-center min-h-7 -my-1 hover:text-amber-400 transition"
                               >
                                 {item.brand}
                               </button>
@@ -1887,7 +1887,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[11px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
+                                  className="text-[11px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 inline-flex items-center min-h-7 px-2 rounded transition"
                                 >
                                   {env}
                                 </button>
@@ -1896,7 +1896,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[11px] font-mono uppercase px-2 py-0.5 rounded transition border ${
+                              className={`text-[11px] font-mono uppercase inline-flex items-center min-h-7 px-2 rounded transition border ${
                                 activeCategoryFilter === item.type 
                                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
                                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
@@ -1939,10 +1939,10 @@ function TackleboxIQ({ session }: { session: Session }) {
 
                             <button 
                               onClick={() => setItemToDelete(item)}
-                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
+                              className="absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
                               title="Delete Item Permanently"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                             
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
@@ -1964,7 +1964,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-[11px] font-mono uppercase px-2 py-0.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
+                              className="text-[11px] font-mono uppercase min-h-7 px-2.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
                             >
                               <Repeat className="w-3 h-3" />
                               Replaced
