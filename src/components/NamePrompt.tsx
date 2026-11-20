@@ -15,7 +15,7 @@ const inputClass =
 export default function NamePrompt({
   reason, onDone, onSkip,
 }: {
-  reason: 'welcome' | 'share';
+  reason: 'welcome' | 'share' | 'card';
   onDone: (firstName: string) => void;
   onSkip: () => void;
 }) {
@@ -45,10 +45,12 @@ export default function NamePrompt({
       <div className="min-h-full flex items-center justify-center p-4 pb-12">
         <form onSubmit={save} className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-3">
           <h2 id="name-prompt-title" className="text-lg font-bold text-slate-100">
-            {reason === 'share' ? 'Add your name to share' : 'What should we call you?'}
+            {reason !== 'welcome' ? 'Add your name to share' : 'What should we call you?'}
           </h2>
           <p className="text-xs text-slate-400 leading-relaxed">
-            {reason === 'share'
+            {reason === 'card'
+              ? 'Gift cards show your first name, like “Oli sent you…”, so people know who it’s from.'
+              : reason === 'share'
               ? 'Shared lists show your first name, like “Oli’s restock list”, so people know who sent it.'
               : 'Add your name to your account. Your first name appears on lists you share.'}
           </p>
@@ -65,12 +67,12 @@ export default function NamePrompt({
           </label>
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onSkip} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs transition">
-              {reason === 'share' ? 'Cancel' : 'Not now'}
+              {reason !== 'welcome' ? 'Cancel' : 'Not now'}
             </button>
             <button type="submit" disabled={saving || !cleanName(first)}
               className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-mono text-xs font-bold flex items-center justify-center gap-2 transition">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {reason === 'share' ? 'SAVE AND SHARE' : 'SAVE'}
+              {reason === 'share' ? 'SAVE AND SHARE' : reason === 'card' ? 'SAVE AND CONTINUE' : 'SAVE'}
             </button>
           </div>
         </form>
