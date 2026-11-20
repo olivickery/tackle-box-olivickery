@@ -49,7 +49,8 @@ import {
   LogOut,
   ClipboardList,
   Share2,
-  Truck
+  Truck,
+  MoreHorizontal
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
@@ -213,29 +214,26 @@ const compressImageCrisp = (file: File): Promise<Blob> => {
   });
 };
 
-function CardCarousel({ 
-  item, 
-  onEditNotes,
-  onEditSpecs,
+function CardCarousel({
+  item,
   onEditPhotos,
   onToggleFavorite,
   onToggleGhost,
-  onDeleteItem,
-  onZoomImage
-}: { 
+  onZoomImage,
+  onOpenDetails,
+}: {
   item: GearItem;
-  onEditNotes: (item: GearItem) => void;
-  onEditSpecs: (item: GearItem) => void;
   onEditPhotos: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
   onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
-  onDeleteItem: (item: GearItem) => void;
   onZoomImage: (url: string) => void;
+  onOpenDetails: (item: GearItem) => void;
 }) {
   const realImages = (item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]).filter(Boolean);
   const images = realImages.length > 0 ? realImages : [''];
-  
-  const totalSlides = images.length + 3;
+
+  // Photos only: specs, notes and actions live in the details sheet.
+  const totalSlides = images.length;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -306,81 +304,74 @@ function CardCarousel({
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd || totalSlides < 2) return;
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      nextSlide();
-    } else if (isRightSwipe) {
-      prevSlide();
-    }
+    if (distance > minSwipeDistance) nextSlide();
+    else if (distance < -minSwipeDistance) prevSlide();
   };
 
-  const isSpecsSlide = currentIndex === images.length;
-  const isNotesSlide = currentIndex === images.length + 1;
-  const isManageSlide = currentIndex === images.length + 2;
-  const isFirstSlide = currentIndex === 0;
-  const isImageSlide = currentIndex < images.length;
-
-  const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
-
-  const formattedDate = item.created_at 
-    ? new Date(item.created_at).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      })
-    : new Date().toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+  const hasPhoto = !!images[currentIndex];
 
   return (
-    <div 
+    <div
       ref={cardRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
     >
-      {isFirstSlide && (
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(item.id, item.is_favorite);
-          }}
-          className={`absolute top-2 right-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 ${
-            item.is_favorite 
-              ? 'bg-amber-500 text-slate-950 border-amber-400' 
-              : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
-          }`}
-          title={item.is_favorite ? "Remove from favourites" : "Add to favourites"}
-          aria-label="Favourite"
-          aria-pressed={item.is_favorite}
-        >
-          <Star className="w-4 h-4 fill-current" />
-        </button>
-      )}
+      {/* Tapping the photo opens details. Keyboard and screen-reader users get the Details button instead. */}
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-hidden="true"
+        onClick={() => onOpenDetails(item)}
+        className="absolute inset-0 z-[1] cursor-pointer"
+      />
 
-      {isFirstSlide && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleGhost(item.id, item.is_ghost, { withUndo: true });
-          }}
-          className="absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
-          title="Lost it? Add to restock list"
-          aria-label="Mark as needing replacement"
-        >
-          <Repeat className="w-4 h-4" />
-        </button>
-      )}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleFavorite(item.id, item.is_favorite);
+        }}
+        className={`absolute top-2 right-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 ${
+          item.is_favorite
+            ? 'bg-amber-500 text-slate-950 border-amber-400'
+            : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
+        }`}
+        title={item.is_favorite ? 'Remove from favourites' : 'Add to favourites'}
+        aria-label="Favourite"
+        aria-pressed={item.is_favorite}
+      >
+        <Star className="w-4 h-4 fill-current" />
+      </button>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleGhost(item.id, item.is_ghost, { withUndo: true });
+        }}
+        className="absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
+        title="Lost it? Add to restock list"
+        aria-label="Mark as needing replacement"
+      >
+        <Repeat className="w-4 h-4" />
+      </button>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenDetails(item);
+        }}
+        className="absolute bottom-2 right-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-300 border-slate-700 hover:text-white"
+        title="Details and actions"
+        aria-label={`Details for ${item.name}`}
+      >
+        <MoreHorizontal className="w-4 h-4" />
+      </button>
 
       {/* All photos stay mounted and decoded; only opacity changes on swipe. */}
-      <div className={`absolute inset-0 ${isImageSlide ? '' : 'invisible'}`} aria-hidden={!isImageSlide}>
+      <div className="absolute inset-0">
         {images.map((src, idx) =>
           !src ? (
             !isOnTheWay(item) ? (
@@ -393,7 +384,7 @@ function CardCarousel({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onEditPhotos(item); }}
-                  className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-[11px] font-bold px-3 py-1.5 transition"
+                  className="relative z-10 mt-1 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-[11px] font-bold px-3 min-h-9 transition"
                 >
                   <Camera className="w-3.5 h-3.5" /> Arrived? Add photos
                 </button>
@@ -414,165 +405,161 @@ function CardCarousel({
         )}
       </div>
 
-      {isSpecsSlide ? (
-        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
-          <div>
-            <div className="h-6 flex items-center mb-1">
-              <span className="text-[11px] text-slate-100 uppercase font-bold tracking-wider leading-none">
-                Specs
-              </span>
-            </div>
-
-            <div className="space-y-1.5 text-[11px] pt-1">
-              <p><span className="text-slate-400">Brand:</span> <span className="text-slate-100">{item.brand}</span></p>
-              <p><span className="text-slate-400">Name:</span> <span className="text-slate-100">{item.name}</span></p>
-              <p><span className="text-slate-400">Colour:</span> <span className="text-slate-100">{item.color}</span></p>
-              {displaySpec && <p><span className="text-slate-400">Specs:</span> <span className="text-slate-100">{displaySpec}</span></p>}
-              <p><span className="text-slate-400">Type:</span> <span className="text-slate-100">{item.type}</span></p>
-              <p><span className="text-slate-400">Species:</span> <span className="text-slate-100">{item.species.join(', ')}</span></p>
-              {item.environment_tags && item.environment_tags.length > 0 && (
-                <p><span className="text-slate-400">Locations:</span> <span className="text-slate-100">{item.environment_tags.join(', ')}</span></p>
-              )}
-              <p><span className="text-slate-400">Date added:</span> <span className="text-slate-100">{formattedDate}</span></p>
-            </div>
-          </div>
-        </div>
-      ) : isNotesSlide ? (
-        <div className="w-full h-full p-3 pb-6 bg-slate-900/95 flex flex-col font-mono text-xs overflow-y-auto">
-          <div className="h-6 flex items-center mb-2">
-            <span className="text-[11px] text-slate-100 uppercase font-bold tracking-wider leading-none">
-              Notes
-            </span>
-          </div>
-
-          <div className="text-slate-100 text-[11px] leading-relaxed pt-1 overflow-y-auto flex-1 pr-1">
-            {item.notes ? (
-              <p className="whitespace-pre-wrap">{item.notes}</p>
-            ) : (
-              <p className="text-slate-400">No notes yet.</p>
-            )}
-          </div>
-        </div>
-      ) : isManageSlide ? (
-        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
-          <div>
-            <div className="h-6 flex items-center mb-2">
-              <span className="text-[11px] text-slate-100 uppercase font-bold tracking-wider leading-none">
-                Manage
-              </span>
-            </div>
-
-            <div className="space-y-2 pt-1 font-mono text-[11px]">
-              <div className="grid grid-cols-2 gap-2">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditSpecs(item);
-                  }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
-                >
-                  <Settings className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>Edit specs</span>
-                </button>
-
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditNotes(item);
-                  }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>Edit notes</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditPhotos(item);
-                  }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
-                >
-                  <Camera className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>Photos</span>
-                </button>
-
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleGhost(item.id, item.is_ghost);
-                  }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
-                >
-                  <Repeat className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>{item.is_ghost ? 'Replaced' : 'Needs replacing'}</span>
-                </button>
-              </div>
-
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteItem(item);
-                }}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                <span>Delete item</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="relative w-full h-full">
-          {images[currentIndex] && <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onZoomImage(images[currentIndex]);
-            }}
-            className="absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
-            title="Zoom photo"
-            aria-label={`Zoom photo of ${item.name}`}
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>}
-        </div>
+      {hasPhoto && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onZoomImage(images[currentIndex]);
+          }}
+          className="absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
+          title="Zoom photo"
+          aria-label={`Zoom photo of ${item.name}`}
+        >
+          <ZoomIn className="w-4 h-4" />
+        </button>
       )}
 
       {totalSlides > 1 && (
         <>
-          <button 
+          <button
             onClick={prevSlide}
             className="hidden sm:block absolute left-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 active:scale-95 transition z-10"
-            aria-label="Previous page"
+            aria-label="Previous photo"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <button 
+          <button
             onClick={nextSlide}
             className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 active:scale-95 transition z-10"
-            aria-label="Next page"
+            aria-label="Next photo"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
+
+          <div className="absolute bottom-3.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none" aria-hidden="true">
+            <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
+              {images.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all ${
+                    currentIndex === idx ? 'w-3 bg-white' : 'w-1.5 bg-slate-500'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          <span className="sr-only" aria-live="polite">Photo {currentIndex + 1} of {totalSlides}</span>
         </>
       )}
+    </div>
+  );
+}
 
-      <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none" aria-hidden="true">
-        <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
-          {Array.from({ length: totalSlides }).map((_, idx) => (
-            <span 
-              key={idx} 
-              className={`h-1.5 rounded-full transition-all ${
-                currentIndex === idx ? 'w-3 bg-white' : 'w-1.5 bg-slate-500'
-              }`}
-            />
-          ))}
+function GearDetailSheet({
+  item,
+  onClose,
+  onEditSpecs,
+  onEditNotes,
+  onEditPhotos,
+  onToggleGhost,
+  onDeleteItem,
+  onFilterBrand,
+  onFilterCategory,
+  onFilterLocation,
+}: {
+  item: GearItem;
+  onClose: () => void;
+  onEditSpecs: (item: GearItem) => void;
+  onEditNotes: (item: GearItem) => void;
+  onEditPhotos: (item: GearItem) => void;
+  onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
+  onDeleteItem: (item: GearItem) => void;
+  onFilterBrand: (brand: string) => void;
+  onFilterCategory: (type: string) => void;
+  onFilterLocation: (env: string) => void;
+}) {
+  const doneRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    doneRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current(); };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+      opener?.focus?.();
+    };
+  }, []);
+
+  const spec = item.depth && item.depth !== 'N/A' ? item.depth : '';
+  const added = item.created_at ? new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const then = (fn: () => void) => () => { onClose(); fn(); };
+
+  const row = 'flex justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0';
+  const action = 'w-full flex items-center gap-3 px-4 min-h-12 text-left text-sm text-slate-100 hover:bg-slate-800 transition';
+  const chip = 'inline-flex items-center min-h-8 px-3 rounded-lg border border-slate-700 bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 transition';
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gear-detail-title"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full sm:max-w-md max-h-[88vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
+        <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-md flex items-start justify-between gap-3 px-4 pt-4 pb-3 border-b border-slate-800">
+          <div className="min-w-0">
+            <button onClick={then(() => onFilterBrand(item.brand))} className="text-xs text-slate-400 hover:text-amber-400 min-h-7 -my-1 transition" title={`Show all ${item.brand} gear`}>
+              {item.brand}
+            </button>
+            <h2 id="gear-detail-title" className="text-lg font-semibold text-slate-100 leading-tight">{item.name}</h2>
+          </div>
+          <button ref={doneRef} onClick={onClose} className="shrink-0 min-h-11 px-3 -mr-1 rounded-lg text-sm font-semibold text-amber-400 hover:bg-slate-800 transition">
+            Done
+          </button>
+        </div>
+
+        <dl className="px-4 pt-1 text-sm">
+          {item.color && <div className={row}><dt className="text-slate-400">Colour</dt><dd className="text-slate-100 text-right">{item.color}</dd></div>}
+          {spec && <div className={row}><dt className="text-slate-400">Specs</dt><dd className="text-slate-100 text-right">{spec}</dd></div>}
+          {item.species.length > 0 && <div className={row}><dt className="text-slate-400">Species</dt><dd className="text-slate-100 text-right">{item.species.join(', ')}</dd></div>}
+          {added && <div className={row}><dt className="text-slate-400">Added</dt><dd className="text-slate-100 text-right">{added}</dd></div>}
+        </dl>
+
+        <div className="px-4 pt-3">
+          <p className="text-xs text-slate-400 mb-2">Show similar gear</p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={then(() => onFilterCategory(item.type))} className={chip}><Tag className="w-3.5 h-3.5 mr-1.5 text-slate-400" />{item.type}</button>
+            {item.environment_tags?.map((env) => (
+              <button key={env} onClick={then(() => onFilterLocation(env))} className={chip}><Compass className="w-3.5 h-3.5 mr-1.5 text-slate-400" />{env}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-4 pt-4">
+          <p className="text-xs text-slate-400 mb-1">Notes</p>
+          {item.notes
+            ? <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{item.notes}</p>
+            : <p className="text-sm text-slate-400">No notes yet.</p>}
+        </div>
+
+        <div className="mx-4 mt-4 rounded-xl border border-slate-800 overflow-hidden divide-y divide-slate-800">
+          <button onClick={then(() => onEditSpecs(item))} className={action}><Settings className="w-4 h-4 text-slate-400" />Edit specs</button>
+          <button onClick={then(() => onEditNotes(item))} className={action}><Edit3 className="w-4 h-4 text-slate-400" />{item.notes ? 'Edit notes' : 'Add notes'}</button>
+          <button onClick={then(() => onEditPhotos(item))} className={action}><Camera className="w-4 h-4 text-slate-400" />Photos</button>
+          <button onClick={then(() => onToggleGhost(item.id, item.is_ghost, { withUndo: true }))} className={action}><Repeat className="w-4 h-4 text-slate-400" />{item.is_ghost ? 'Mark as replaced' : 'Mark as needing replacement'}</button>
+        </div>
+
+        <div className="mx-4 mt-3 rounded-xl border border-slate-800 overflow-hidden">
+          <button onClick={then(() => onDeleteItem(item))} className={`${action} text-red-400`}><Trash2 className="w-4 h-4" />Delete item…</button>
         </div>
       </div>
-      <span className="sr-only" aria-live="polite">Page {currentIndex + 1} of {totalSlides}</span>
-
     </div>
   );
 }
@@ -592,6 +579,8 @@ export default function Page() {
 
 function TackleboxIQ({ session }: { session: Session }) {
   const [items, setItems] = useState<GearItem[]>([]);
+  const [detailItemId, setDetailItemId] = useState<string | null>(null);
+  const detailItem = detailItemId ? items.find((i) => i.id === detailItemId) ?? null : null;
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace'>('all');
@@ -1743,53 +1732,27 @@ function TackleboxIQ({ session }: { session: Session }) {
                           <div className="relative">
                             <CardCarousel 
                               item={item} 
-                              onEditNotes={openNotesEditor} 
-                              onEditSpecs={openSpecsEditor}
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
                               onToggleGhost={toggleGhost}
-                              onDeleteItem={setItemToDelete}
                               onZoomImage={setZoomedImageUrl}
+                              onOpenDetails={(it) => setDetailItemId(it.id)}
                             />
                           </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                              <button 
-                                onClick={() => handleBrandClick(item.brand)} 
-                                className="inline-flex items-center min-h-7 -my-1 hover:text-amber-400 transition"
-                              >
-                                {item.brand}
-                              </button>
-                              <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                          <div className="cursor-pointer" onClick={() => setDetailItemId(item.id)}>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                                <span className="truncate">{item.brand}</span>
+                                <span className="text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                              </div>
+                              <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
+                              {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
-                            <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                            {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
-                          </div>
-
-                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                            <div className="flex flex-wrap gap-1">
-                              {item.environment_tags?.map((env, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[11px] font-mono bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 inline-flex items-center min-h-7 px-2 rounded transition"
-                                >
-                                  {env}
-                                </button>
-                              ))}
+                            <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                              <span className="truncate">{item.environment_tags?.join(' · ')}</span>
+                              <span className="shrink-0">{item.type}</span>
                             </div>
-                            
-                            <button 
-                              onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[11px] font-mono inline-flex items-center min-h-7 px-2 rounded transition border ${
-                                activeCategoryFilter === item.type 
-                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
-                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
-                              }`}
-                            >
-                              {item.type}
-                            </button>
                           </div>
                         </div>
                       ))}
@@ -1860,53 +1823,27 @@ function TackleboxIQ({ session }: { session: Session }) {
                           <div className="relative">
                             <CardCarousel 
                               item={item} 
-                              onEditNotes={openNotesEditor} 
-                              onEditSpecs={openSpecsEditor}
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
                               onToggleGhost={toggleGhost}
-                              onDeleteItem={setItemToDelete}
                               onZoomImage={setZoomedImageUrl}
+                              onOpenDetails={(it) => setDetailItemId(it.id)}
                             />
                           </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                              <button 
-                                onClick={() => handleBrandClick(item.brand)} 
-                                className="inline-flex items-center min-h-7 -my-1 hover:text-amber-400 transition"
-                              >
-                                {item.brand}
-                              </button>
-                              <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                          <div className="cursor-pointer" onClick={() => setDetailItemId(item.id)}>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                                <span className="truncate">{item.brand}</span>
+                                <span className="text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                              </div>
+                              <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
+                              {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
-                            <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                            {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
-                          </div>
-
-                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                            <div className="flex flex-wrap gap-1">
-                              {item.environment_tags?.map((env, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[11px] font-mono bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 inline-flex items-center min-h-7 px-2 rounded transition"
-                                >
-                                  {env}
-                                </button>
-                              ))}
+                            <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                              <span className="truncate">{item.environment_tags?.join(' · ')}</span>
+                              <span className="shrink-0">{item.type}</span>
                             </div>
-
-                            <button 
-                              onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[11px] font-mono inline-flex items-center min-h-7 px-2 rounded transition border ${
-                                activeCategoryFilter === item.type 
-                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
-                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
-                              }`}
-                            >
-                              {item.type}
-                            </button>
                           </div>
                         </div>
                       ))}
@@ -2351,6 +2288,21 @@ function TackleboxIQ({ session }: { session: Session }) {
             </button>
           </div>
         </div>
+      )}
+
+      {detailItem && (
+        <GearDetailSheet
+          item={detailItem}
+          onClose={() => setDetailItemId(null)}
+          onEditSpecs={openSpecsEditor}
+          onEditNotes={openNotesEditor}
+          onEditPhotos={openPhotosEditor}
+          onToggleGhost={toggleGhost}
+          onDeleteItem={setItemToDelete}
+          onFilterBrand={handleBrandClick}
+          onFilterCategory={handleCategoryClick}
+          onFilterLocation={(env) => { setActiveEnvFilter(env); scrollToSection('my-gear-section'); }}
+        />
       )}
 
       {zoomedImageUrl && (
