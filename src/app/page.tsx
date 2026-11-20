@@ -351,7 +351,7 @@ function CardCarousel({
           e.stopPropagation();
           onToggleGhost(item.id, item.is_ghost, { withUndo: true });
         }}
-        className="absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
+        className="max-sm:hidden absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
         title="Lost it? Add to restock list"
         aria-label="Mark as needing replacement"
       >
@@ -377,16 +377,16 @@ function CardCarousel({
             !isOnTheWay(item) ? (
               <GearPlaceholder key="placeholder" className="absolute inset-0 w-full h-full" />
             ) : (
-              <div key="on-the-way" className="absolute inset-2 rounded-lg border-2 border-dashed border-sky-400/50 bg-sky-400/5 flex flex-col items-center justify-center text-center px-4 gap-2">
-                <Truck className="w-10 h-10 text-sky-400" strokeWidth={1.6} />
+              <div key="on-the-way" className="absolute inset-2 rounded-lg border-2 border-dashed border-sky-400/50 bg-sky-400/5 flex flex-col items-center justify-center text-center px-2 sm:px-4 gap-1.5 sm:gap-2">
+                <Truck className="w-8 h-8 sm:w-10 sm:h-10 text-sky-400" strokeWidth={1.6} />
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-sky-300">On its way</span>
-                <span className="text-[11px] text-slate-400 leading-snug">Add photos and specs when it arrives.</span>
+                <span className="max-sm:hidden text-[11px] text-slate-400 leading-snug">Add photos and specs when it arrives.</span>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onEditPhotos(item); }}
                   className="relative z-10 mt-1 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-[11px] font-bold px-3 min-h-9 transition"
                 >
-                  <Camera className="w-3.5 h-3.5" /> Arrived? Add photos
+                  <Camera className="w-3.5 h-3.5" /> <span className="max-sm:hidden">Arrived? </span>Add photos
                 </button>
               </div>
             )
@@ -411,7 +411,7 @@ function CardCarousel({
             e.stopPropagation();
             onZoomImage(images[currentIndex]);
           }}
-          className="absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
+          className="max-sm:hidden absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
           title="Zoom photo"
           aria-label={`Zoom photo of ${item.name}`}
         >
@@ -466,9 +466,11 @@ function GearDetailSheet({
   onFilterBrand,
   onFilterCategory,
   onFilterLocation,
+  onZoomImage,
 }: {
   item: GearItem;
   onClose: () => void;
+  onZoomImage: (url: string) => void;
   onEditSpecs: (item: GearItem) => void;
   onEditNotes: (item: GearItem) => void;
   onEditPhotos: (item: GearItem) => void;
@@ -497,6 +499,7 @@ function GearDetailSheet({
   }, []);
 
   const spec = item.depth && item.depth !== 'N/A' ? item.depth : '';
+  const photos = (item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]).filter((u): u is string => !!u);
   const added = item.created_at ? new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const then = (fn: () => void) => () => { onClose(); fn(); };
 
@@ -524,6 +527,17 @@ function GearDetailSheet({
             Done
           </button>
         </div>
+
+        {photos.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 snap-x">
+            {photos.map((src, i) => (
+              <button key={src} onClick={() => onZoomImage(src)} className="shrink-0 snap-start w-28 h-28 rounded-lg overflow-hidden border border-slate-800" aria-label={`Zoom photo ${i + 1} of ${item.name}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
 
         <dl className="px-4 pt-1 text-sm">
           {item.color && <div className={row}><dt className="text-slate-400">Colour</dt><dd className="text-slate-100 text-right">{item.color}</dd></div>}
@@ -1715,7 +1729,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 />
                 
                 {showFavSection && favoriteItems.length > 0 && (
-                  <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-36">
+                  <div id="favourites-section" className="bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
                         <Star className="w-4 h-4 fill-current" /> Favourites
@@ -1723,11 +1737,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                       <span className="text-xs text-slate-400 font-mono">{favoriteItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                       {favoriteItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
+                          className="relative group rounded-xl p-2 sm:p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
                         >
                           <div className="relative">
                             <CardCarousel 
@@ -1761,7 +1775,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 )}
 
                 {showMyGearSection && baseMyGearItems.length > 0 && (
-                  <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-36">
+                  <div id="my-gear-section" className="bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
@@ -1814,11 +1828,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                       <span className="text-xs text-slate-400 font-mono">{myGearItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                       {myGearItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900/80 border-slate-800 hover:border-slate-700"
+                          className="relative group rounded-xl p-2 sm:p-3 transition-all duration-300 border bg-slate-900/80 border-slate-800 hover:border-slate-700"
                         >
                           <div className="relative">
                             <CardCarousel 
@@ -1852,7 +1866,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 )}
 
                 {showGhostSection && ghostItems.length > 0 && (
-                  <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-36">
+                  <div id="to-replace-section" className="bg-slate-950/80 p-3 sm:p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-red-400 font-mono flex items-center gap-1.5">
                         <Repeat className="w-4 h-4" /> Items to replace
@@ -1860,11 +1874,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                       <span className="text-xs text-slate-400 font-mono">{ghostItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                       {ghostItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40"
+                          className="relative group rounded-xl p-2 sm:p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40"
                         >
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
                             {item.image_urls?.[0] || item.image_url ? (
@@ -2293,7 +2307,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       {detailItem && (
         <GearDetailSheet
           item={detailItem}
-          onClose={() => setDetailItemId(null)}
+          onClose={() => { if (!zoomedImageUrl) setDetailItemId(null); }}
           onEditSpecs={openSpecsEditor}
           onEditNotes={openNotesEditor}
           onEditPhotos={openPhotosEditor}
@@ -2302,6 +2316,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           onFilterBrand={handleBrandClick}
           onFilterCategory={handleCategoryClick}
           onFilterLocation={(env) => { setActiveEnvFilter(env); scrollToSection('my-gear-section'); }}
+          onZoomImage={setZoomedImageUrl}
         />
       )}
 
