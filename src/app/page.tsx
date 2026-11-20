@@ -147,7 +147,7 @@ function isOnTheWay(item: GearItem): boolean {
 
 function OnTheWayTag({ className = '' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 ${className}`}>
+    <span className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 ${className}`}>
       <Truck className="w-3 h-3" /> On its way
     </span>
   );
@@ -416,7 +416,7 @@ function CardCarousel({
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center mb-1">
-              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
+              <span className="text-[11px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Specs
               </span>
             </div>
@@ -438,7 +438,7 @@ function CardCarousel({
       ) : isNotesSlide ? (
         <div className="w-full h-full p-3 pb-6 bg-slate-900/95 flex flex-col font-mono text-xs overflow-y-auto">
           <div className="h-6 flex items-center mb-2">
-            <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
+            <span className="text-[11px] text-slate-100 uppercase font-bold tracking-wider leading-none">
               Notes
             </span>
           </div>
@@ -455,12 +455,12 @@ function CardCarousel({
         <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
           <div>
             <div className="h-6 flex items-center mb-2">
-              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
+              <span className="text-[11px] text-slate-100 uppercase font-bold tracking-wider leading-none">
                 Manage Item
               </span>
             </div>
 
-            <div className="space-y-2 pt-1 font-mono text-[10px]">
+            <div className="space-y-2 pt-1 font-mono text-[11px]">
               <div className="grid grid-cols-2 gap-2">
                 <button 
                   onClick={(e) => {
@@ -1551,7 +1551,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             </div>
             <div className="translate-y-[2px] min-w-0">
               <h1 className="text-base sm:text-lg leading-none group-hover:opacity-80 transition"><Wordmark /></h1>
-              <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[389px]:hidden">Smart gear management</p>
+              <p className="text-[11px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[389px]:hidden">Smart gear management</p>
             </div>
           </button>
 
@@ -1625,7 +1625,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 title="AI trip planner"
               >
                 <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PLAN<span className="hidden sm:inline"> TRIP</span></span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">PLAN<span className="hidden sm:inline"> TRIP</span></span>
               </button>
 
               <Link
@@ -1634,7 +1634,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 title="My pack lists"
               >
                 <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span></span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span></span>
               </Link>
 
               <button 
@@ -1644,9 +1644,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                 aria-label={`Restock list (${allGhostCount})`}
               >
                 <ShoppingBag className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] max-[359px]:text-[8px] sm:text-xs leading-none whitespace-nowrap">RESTOCK</span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">RESTOCK</span>
                 {allGhostCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[11px] font-bold min-w-5 h-5 px-1 rounded-full flex items-center justify-center">
                     {allGhostCount}
                   </span>
                 )}
@@ -1687,7 +1687,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <span className="sm:hidden max-[359px]:hidden">{pill.short}</span>
                 <span className="hidden max-[359px]:inline">{pill.key === 'favs' ? 'Favs' : pill.short}</span>
                 <span className="hidden sm:inline">{pill.label}</span>
-                <span className={`min-w-5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-center ${isActive ? pill.badge : pill.idleBadge}`}>
+                <span className={`min-w-5 px-1.5 py-0.5 rounded-full text-[11px] font-bold text-center ${isActive ? pill.badge : pill.idleBadge}`}>
                   {pill.count}
                 </span>
               </button>
@@ -1769,7 +1769,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
+                                  className="text-[11px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
                                 >
                                   {env}
                                 </button>
@@ -1778,7 +1778,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
+                              className={`text-[11px] font-mono uppercase px-2 py-0.5 rounded transition border ${
                                 activeCategoryFilter === item.type 
                                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
                                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
@@ -1802,7 +1802,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         </span>
 
                         {activeCategoryFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Tag className="w-3 h-3" />
                             <span>Category: {activeCategoryFilter}</span>
                             <button 
@@ -1815,7 +1815,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         )}
 
                         {activeBrandFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Filter className="w-3 h-3" />
                             <span>Brand: {activeBrandFilter}</span>
                             <button 
@@ -1828,7 +1828,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         )}
 
                         {activeEnvFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Compass className="w-3 h-3" />
                             <span>Location: {activeEnvFilter}</span>
                             <button 
@@ -1887,7 +1887,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <button
                                   key={idx}
                                   onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
+                                  className="text-[11px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
                                 >
                                   {env}
                                 </button>
@@ -1896,7 +1896,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
                             <button 
                               onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
+                              className={`text-[11px] font-mono uppercase px-2 py-0.5 rounded transition border ${
                                 activeCategoryFilter === item.type 
                                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
                                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
@@ -1946,7 +1946,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             </button>
                             
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
-                              <span className="bg-red-500/30 text-red-300 border border-red-500/50 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest backdrop-blur-sm">
+                              <span className="bg-red-500/30 text-red-300 border border-red-500/50 text-[11px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest backdrop-blur-sm">
                                 {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'To buy' : 'Needs Replacement'}
                               </span>
                             </div>
@@ -1964,13 +1964,13 @@ function TackleboxIQ({ session }: { session: Session }) {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
+                              className="text-[11px] font-mono uppercase px-2 py-0.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
                             >
                               <Repeat className="w-3 h-3" />
                               Replaced
                             </button>
                             
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                            <span className="text-[11px] font-mono text-slate-500 uppercase">{item.type}</span>
                           </div>
                         </div>
                       ))}

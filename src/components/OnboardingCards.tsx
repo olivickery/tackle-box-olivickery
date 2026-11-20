@@ -116,7 +116,7 @@ function IllRestock() {
         {['Popper 120', '10lb braid'].map(n => (
           <div key={n} className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-white ${glass}`}>
             <span className="font-bold truncate">{n}</span>
-            <span className="ml-auto flex items-center gap-0.5 shrink-0 text-[10px] font-bold">Amazon <ExternalLink className="w-3 h-3" /></span>
+            <span className="ml-auto flex items-center gap-0.5 shrink-0 text-[11px] font-bold">Amazon <ExternalLink className="w-3 h-3" /></span>
           </div>
         ))}
         <div className="flex items-center justify-center gap-1.5 rounded-lg bg-white text-teal-800 text-xs font-bold py-1.5">
@@ -227,24 +227,24 @@ function TipCard({
       <div className="mt-3 pt-2 border-t border-slate-800/60 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <button
           onClick={() => flip(side === 0 ? 1 : 0)}
-          className="justify-self-start text-[10px] font-mono uppercase text-slate-400 hover:text-slate-200 transition"
+          className="justify-self-start text-[11px] font-mono uppercase text-slate-400 hover:text-slate-200 transition"
         >
           {side === 0 ? 'How to →' : '← Picture'}
         </button>
         {done ? (
-          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 flex items-center gap-1">
+          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 flex items-center gap-1">
             <Check className="w-3 h-3" strokeWidth={3} /> DONE
           </span>
         ) : <span />}
         {step.action ? (
           <button
             onClick={step.id === 'swipe' ? () => flip(1) : onAction}
-            className="justify-self-end text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition"
+            className="justify-self-end text-[11px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition"
           >
             {step.action}
           </button>
         ) : (
-          <button onClick={onDismiss} className="justify-self-end text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+          <button onClick={onDismiss} className="justify-self-end text-[11px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
             Got it
           </button>
         )}
