@@ -11,6 +11,8 @@ import PackChecklist, { GapStatusTag, ReAddGapButton, type PackEntry } from '../
 import Link from 'next/link';
 import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
 import NamePrompt from '../components/NamePrompt';
+import ShareCardSheet from '../components/ShareCardSheet';
+import { PENDING_CLAIM_KEY, UUID_RE } from '../lib/sharedCards';
 import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from '../components/OnboardingCards';
 import { firstNameOf } from '../lib/profile';
 import {
@@ -50,6 +52,7 @@ import {
   ClipboardList,
   Share2,
   Truck,
+  Gift,
   MoreHorizontal
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
@@ -150,6 +153,14 @@ function OnTheWayTag({ className = '' }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-sky-400/40 bg-sky-400/10 text-sky-300 ${className}`}>
       <Truck className="w-3 h-3" /> On its way
+    </span>
+  );
+}
+
+function GiftedTag({ from, className = '' }: { from: string; className?: string }) {
+  return (
+    <span title={`Gifted by ${from}`} className={`inline-flex items-center gap-1 min-w-0 max-w-full text-[11px] font-mono font-bold px-1.5 py-0.5 rounded border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-300 ${className}`}>
+      <Gift className="w-3 h-3 shrink-0" /><span className="truncate">From {from}</span>
     </span>
   );
 }
@@ -463,6 +474,7 @@ function GearDetailSheet({
   onEditPhotos,
   onToggleGhost,
   onDeleteItem,
+  onShareCard,
   onFilterBrand,
   onFilterCategory,
   onFilterLocation,
@@ -476,6 +488,7 @@ function GearDetailSheet({
   onEditPhotos: (item: GearItem) => void;
   onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
   onDeleteItem: (item: GearItem) => void;
+  onShareCard: (item: GearItem) => void;
   onFilterBrand: (brand: string) => void;
   onFilterCategory: (type: string) => void;
   onFilterLocation: (env: string) => void;
@@ -545,6 +558,7 @@ function GearDetailSheet({
           {item.color && <div className={row}><dt className="text-slate-400">Colour</dt><dd className="text-slate-100 text-right">{item.color}</dd></div>}
           {spec && <div className={row}><dt className="text-slate-400">Specs</dt><dd className="text-slate-100 text-right">{spec}</dd></div>}
           {item.species.length > 0 && <div className={row}><dt className="text-slate-400">Species</dt><dd className="text-slate-100 text-right">{item.species.join(', ')}</dd></div>}
+          {item.gifted_from && <div className={row}><dt className="text-slate-400">From</dt><dd className="text-right"><GiftedTag from={item.gifted_from} /></dd></div>}
           {added && <div className={row}><dt className="text-slate-400">Added</dt><dd className="text-slate-100 text-right">{added}</dd></div>}
         </dl>
 
@@ -577,6 +591,7 @@ function GearDetailSheet({
           <button onClick={then(() => onEditNotes(item))} className={action}><Edit3 className="w-4 h-4 text-slate-400" />{item.notes ? 'Edit notes' : 'Add notes'}</button>
           <button onClick={then(() => onEditPhotos(item))} className={action}><Camera className="w-4 h-4 text-slate-400" />Photos</button>
           <button onClick={then(() => onToggleGhost(item.id, item.is_ghost, { withUndo: true }))} className={action}><Repeat className="w-4 h-4 text-slate-400" />{item.is_ghost ? 'Mark as replaced' : 'Mark as needing replacement'}</button>
+          <button onClick={then(() => onShareCard(item))} className={action}><Gift className="w-4 h-4 text-slate-400" />Share or hand over</button>
         </div>
 
         <div className="mx-4 mt-3 rounded-xl border border-slate-800 overflow-hidden">
@@ -606,7 +621,12 @@ function TackleboxIQ({ session }: { session: Session }) {
   const detailItem = detailItemId ? items.find((i) => i.id === detailItemId) ?? null : null;
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace'>('all');
+  const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace' | 'gifted'>('all');
+  // Gift / hand-over link sheet for one card.
+  const [shareCardItemId, setShareCardItemId] = useState<string | null>(null);
+  const shareCardItem = shareCardItemId ? items.find((i) => i.id === shareCardItemId) ?? null : null;
+  // Name typed into the name prompt this visit (the session metadata catches up later).
+  const [typedFirstName, setTypedFirstName] = useState('');
   const [undoToast, setUndoToast] = useState<{ id: string; name: string; nowGhost: boolean } | null>(null);
 
   useEffect(() => {
@@ -646,7 +666,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       .then(({ error }) => { if (error) console.error('Failed to save tips progress:', error); });
   };
 
-  const [namePrompt, setNamePrompt] = useState<null | 'welcome' | 'share'>(() => {
+  const [namePrompt, setNamePrompt] = useState<null | 'welcome' | 'share' | 'card'>(() => {
     if (firstNameOf(session.user)) return null;
     try { return localStorage.getItem(`tbiq:namePromptSkipped:${session.user.id}`) ? null : 'welcome'; } catch { return null; }
   });
@@ -735,6 +755,17 @@ function TackleboxIQ({ session }: { session: Session }) {
 
   useEffect(() => {
     fetchGearItems();
+  }, []);
+
+  // Signed in from a gift link (/claim/<id>)? Go back there to add the card.
+  useEffect(() => {
+    try {
+      const pending = localStorage.getItem(PENDING_CLAIM_KEY);
+      if (pending) {
+        localStorage.removeItem(PENDING_CLAIM_KEY);
+        if (UUID_RE.test(pending)) window.location.replace(`/claim/${pending}`);
+      }
+    } catch { /* storage unavailable */ }
   }, []);
 
   const fetchGearItems = async () => {
@@ -1485,12 +1516,16 @@ function TackleboxIQ({ session }: { session: Session }) {
   const allGhostCount = items.filter(item => item.is_ghost).length;
   const allFavCount = items.filter(item => item.is_favorite && !item.is_ghost).length;
   const showFavSection = pillFilter === 'all' || pillFilter === 'favs';
-  const showMyGearSection = pillFilter === 'all';
+  const showMyGearSection = pillFilter === 'all' || pillFilter === 'gifted';
+  const allGiftedCount = items.filter(item => item.gifted_from && !item.is_ghost).length;
   const showGhostSection = pillFilter === 'all' || pillFilter === 'replace';
 
   const ghostItems = items.filter(item => item.is_ghost && matchesSearch(item));
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost && matchesSearch(item));
-  const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
+  // The Gifted pill reuses the My gear section, showing every gifted card (favourites too).
+  const baseMyGearItems = pillFilter === 'gifted'
+    ? items.filter(item => item.gifted_from && !item.is_ghost)
+    : items.filter(item => !item.is_favorite && !item.is_ghost);
 
   const myGearItems = baseMyGearItems.filter(item => {
     const matchesCategory = activeCategoryFilter ? item.type === activeCategoryFilter : true;
@@ -1504,6 +1539,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   const matchesPill = (item: GearItem) =>
     pillFilter === 'favs' ? item.is_favorite && !item.is_ghost
     : pillFilter === 'replace' ? item.is_ghost
+    : pillFilter === 'gifted' ? !!item.gifted_from && !item.is_ghost
     : true;
 
   const sortedListItems = items.filter(item => matchesPill(item) && matchesSearch(item)).sort((a, b) => {
@@ -1676,7 +1712,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
         {/* Filter pills: full width, three equal columns */}
         {/* Phones: pills only in list view (grid already shows favourites / restock sections). */}
-        <div className={`mb-5 gap-2 sm:grid sm:grid-cols-3 font-mono text-[11px] sm:text-xs ${viewMode === 'grid' ? 'hidden' : 'flex'}`}>
+        <div className={`mb-5 gap-2 sm:grid ${allGiftedCount > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} font-mono text-[11px] sm:text-xs ${viewMode === 'grid' ? 'hidden' : 'flex'}`}>
           {([
             { key: 'all', label: 'All', short: 'All', icon: null, count: items.length,
               active: 'bg-slate-700 text-white border-slate-500', badge: 'bg-slate-950/30 text-white', idleBadge: 'bg-slate-800 text-slate-300' },
@@ -1684,6 +1720,10 @@ function TackleboxIQ({ session }: { session: Session }) {
               active: 'bg-amber-500 text-slate-950 border-amber-400', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-amber-500/15 text-amber-400' },
             { key: 'replace', label: 'To replace', short: 'Replace', icon: <Repeat className="w-3.5 h-3.5 shrink-0" />, count: allGhostCount,
               active: 'bg-red-500 text-white border-red-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-red-500/15 text-red-400' },
+            ...(allGiftedCount > 0 ? [
+              { key: 'gifted', label: 'Gifted', short: 'Gifted', icon: <Gift className="w-3.5 h-3.5 shrink-0" />, count: allGiftedCount,
+                active: 'bg-fuchsia-500 text-white border-fuchsia-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-fuchsia-500/15 text-fuchsia-300' },
+            ] as const : []),
           ] as const).map((pill) => {
             const isActive = pillFilter === pill.key;
             return (
@@ -1770,7 +1810,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <span className="max-sm:hidden text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                               </div>
                               <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                              {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
+                              {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : item.gifted_from ? <GiftedTag from={item.gifted_from} className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
                             <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                               <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
@@ -1788,7 +1828,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
-                          <Package className="w-4 h-4 text-slate-400" /> My gear
+                          {pillFilter === 'gifted'
+                            ? <><Gift className="w-4 h-4 text-fuchsia-300" /> Gifted</>
+                            : <><Package className="w-4 h-4 text-slate-400" /> My gear</>}
                         </span>
 
                         {activeCategoryFilter && (
@@ -1861,7 +1903,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                                 <span className="max-sm:hidden text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                               </div>
                               <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                              {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
+                              {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : item.gifted_from ? <GiftedTag from={item.gifted_from} className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
                             <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                               <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
@@ -2001,6 +2043,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <span className={item.is_favorite ? 'text-amber-400 font-bold' : 'text-slate-200'}>
                               {item.brand ? `${item.brand} - ` : ''}{item.name}
                             </span>
+                            {item.gifted_from && <Gift className="w-3.5 h-3.5 text-fuchsia-300 shrink-0" aria-label={`Gifted by ${item.gifted_from}`} />}
                           </div>
                         </td>
                         <td className="p-3 text-slate-400">{item.type}</td>
@@ -2247,6 +2290,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           onDone={(name) => {
             const wasShare = namePrompt === 'share';
             setNamePrompt(null);
+            setTypedFirstName(name);
             if (wasShare) handleShareRestockList(name);
           }}
           onSkip={() => {
@@ -2322,10 +2366,20 @@ function TackleboxIQ({ session }: { session: Session }) {
           onEditPhotos={openPhotosEditor}
           onToggleGhost={toggleGhost}
           onDeleteItem={setItemToDelete}
+          onShareCard={(it) => setShareCardItemId(it.id)}
           onFilterBrand={handleBrandClick}
           onFilterCategory={handleCategoryClick}
           onFilterLocation={(env) => { setActiveEnvFilter(env); scrollToSection('my-gear-section'); }}
           onZoomImage={setZoomedImageUrl}
+        />
+      )}
+
+      {shareCardItem && (
+        <ShareCardSheet
+          item={shareCardItem}
+          senderName={typedFirstName || firstName}
+          onNeedName={() => setNamePrompt('card')}
+          onClose={() => setShareCardItemId(null)}
         />
       )}
 
