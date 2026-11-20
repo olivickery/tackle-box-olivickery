@@ -50,6 +50,8 @@ import {
   ClipboardList,
   Share2,
   Truck,
+  RectangleVertical,
+  Grid2x2,
   MoreHorizontal
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
@@ -221,8 +223,11 @@ function CardCarousel({
   onToggleGhost,
   onZoomImage,
   onOpenDetails,
+  wide = false,
 }: {
   item: GearItem;
+  /** Single-column view: room for every button and label on phones too. */
+  wide?: boolean;
   onEditPhotos: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
   onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
@@ -351,7 +356,7 @@ function CardCarousel({
           e.stopPropagation();
           onToggleGhost(item.id, item.is_ghost, { withUndo: true });
         }}
-        className="max-sm:hidden absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
+        className={`${wide ? '' : 'max-sm:hidden '}absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50`}
         title="Lost it? Add to restock list"
         aria-label="Mark as needing replacement"
       >
@@ -380,13 +385,13 @@ function CardCarousel({
               <div key="on-the-way" className="absolute inset-2 rounded-lg border-2 border-dashed border-sky-400/50 bg-sky-400/5 flex flex-col items-center justify-center text-center px-2 sm:px-4 gap-1.5 sm:gap-2">
                 <Truck className="w-8 h-8 sm:w-10 sm:h-10 text-sky-400" strokeWidth={1.6} />
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-sky-300">On its way</span>
-                <span className="max-sm:hidden text-[11px] text-slate-400 leading-snug">Add photos and specs when it arrives.</span>
+                <span className={`${wide ? '' : 'max-sm:hidden '}text-[11px] text-slate-400 leading-snug`}>Add photos and specs when it arrives.</span>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onEditPhotos(item); }}
                   className="relative z-10 mt-1 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-[11px] font-bold px-3 min-h-9 transition"
                 >
-                  <Camera className="w-3.5 h-3.5" /> <span className="max-sm:hidden">Arrived? </span>Add photos
+                  <Camera className="w-3.5 h-3.5" /> <span className={wide ? '' : 'max-sm:hidden'}>Arrived? </span>Add photos
                 </button>
               </div>
             )
@@ -411,7 +416,7 @@ function CardCarousel({
             e.stopPropagation();
             onZoomImage(images[currentIndex]);
           }}
-          className="max-sm:hidden absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
+          className={`${wide ? '' : 'max-sm:hidden '}absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md`}
           title="Zoom photo"
           aria-label={`Zoom photo of ${item.name}`}
         >
@@ -436,7 +441,7 @@ function CardCarousel({
             <ChevronRight className="w-4 h-4" />
           </button>
 
-          <div className="absolute bottom-3.5 max-sm:bottom-5 max-sm:left-2.5 sm:inset-x-0 flex items-center justify-center z-10 pointer-events-none" aria-hidden="true">
+          <div className={`absolute bottom-3.5 ${wide ? 'inset-x-0' : 'max-sm:bottom-5 max-sm:left-2.5 sm:inset-x-0'} flex items-center justify-center z-10 pointer-events-none`} aria-hidden="true">
             <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
               {images.map((_, idx) => (
                 <span
@@ -451,6 +456,51 @@ function CardCarousel({
           <span className="sr-only" aria-live="polite">Photo {currentIndex + 1} of {totalSlides}</span>
         </>
       )}
+    </div>
+  );
+}
+
+/** Card footer for the single-column view: location and category tags that filter the grid. */
+function CardTagFooter({
+  item, activeCategory, activeLocation, onCategory, onLocation,
+}: {
+  item: GearItem;
+  activeCategory: string | null;
+  activeLocation: string | null;
+  onCategory: (type: string) => void;
+  onLocation: (env: string) => void;
+}) {
+  return (
+    <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-end justify-between gap-2">
+      <div className="flex flex-wrap gap-1.5 min-w-0">
+        {item.environment_tags?.map((env) => (
+          <button
+            key={env}
+            onClick={(e) => { e.stopPropagation(); onLocation(env); }}
+            aria-pressed={activeLocation === env}
+            title={`Show gear for ${env}`}
+            className={`text-[11px] font-mono min-h-7 px-2 rounded border transition ${
+              activeLocation === env
+                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
+            }`}
+          >
+            {env}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onCategory(item.type); }}
+        aria-pressed={activeCategory === item.type}
+        title={`Show all ${item.type}`}
+        className={`shrink-0 text-[11px] font-mono uppercase min-h-7 px-2 rounded border transition ${
+          activeCategory === item.type
+            ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+            : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+        }`}
+      >
+        {item.type}
+      </button>
     </div>
   );
 }
@@ -605,7 +655,34 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [detailItemId, setDetailItemId] = useState<string | null>(null);
   const detailItem = detailItemId ? items.find((i) => i.id === detailItemId) ?? null : null;
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // Single column, two-column grid or list; remembered on this device.
+  const viewStorageKey = `tbiq:viewMode:${session.user.id}`;
+  const [viewMode, setViewModeState] = useState<'single' | 'grid' | 'list'>(() => {
+    try {
+      const v = localStorage.getItem(viewStorageKey);
+      return v === 'single' || v === 'grid' || v === 'list' ? v : 'grid';
+    } catch { return 'grid'; }
+  });
+  const setViewMode = (v: 'single' | 'grid' | 'list') => {
+    setViewModeState(v);
+    try { localStorage.setItem(viewStorageKey, v); } catch { /* ignore */ }
+  };
+  const cardView = viewMode !== 'list';
+  const isSingle = viewMode === 'single';
+  // Leaving list view (logo, filters) returns to whichever card view was last used.
+  const showCards = () => {
+    if (viewMode !== 'list') return;
+    let last: 'single' | 'grid' = 'grid';
+    try { if (localStorage.getItem(`${viewStorageKey}:cards`) === 'single') last = 'single'; } catch { /* ignore */ }
+    setViewMode(last);
+  };
+  useEffect(() => {
+    if (viewMode === 'list') return;
+    try { localStorage.setItem(`${viewStorageKey}:cards`, viewMode); } catch { /* ignore */ }
+  }, [viewMode, viewStorageKey]);
+  const cardGridClass = isSingle
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+    : 'grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4';
   const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace'>('all');
   const [undoToast, setUndoToast] = useState<{ id: string; name: string; nowGhost: boolean } | null>(null);
 
@@ -1299,7 +1376,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   }, []);
 
   const handleCategoryClick = (categoryType: string) => {
-    setViewMode('grid');
+    showCards();
     if (activeCategoryFilter === categoryType) {
       setActiveCategoryFilter(null);
     } else {
@@ -1309,7 +1386,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   };
 
   const handleBrandClick = (brandName: string) => {
-    setViewMode('grid');
+    showCards();
     if (activeBrandFilter === brandName) {
       setActiveBrandFilter(null);
     } else {
@@ -1552,7 +1629,7 @@ function TackleboxIQ({ session }: { session: Session }) {
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between gap-2">
           <button 
             onClick={() => {
-              setViewMode('grid');
+              showCards();
               setSearchQuery('');
               setPillFilter('all');
               setActiveCategoryFilter(null);
@@ -1573,18 +1650,24 @@ function TackleboxIQ({ session }: { session: Session }) {
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-800" role="group" aria-label="View">
-              <button 
-                onClick={() => {
-                  setViewMode('grid');
-                  if (window.matchMedia('(max-width: 639px)').matches) setPillFilter('all');
-                }}
-                aria-pressed={viewMode === 'grid'}
-                className={`p-2.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                title="Grid view"
-                aria-label="Grid view"
-              >
-                <Grid className="w-4 h-4" />
-              </button>
+              {([
+                { mode: 'single', label: 'Single column view', icon: <RectangleVertical className="w-4 h-4" /> },
+                { mode: 'grid', label: 'Two-column grid view', icon: <Grid2x2 className="w-4 h-4" /> },
+              ] as const).map(({ mode, label, icon }) => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setViewMode(mode);
+                    if (window.matchMedia('(max-width: 639px)').matches) setPillFilter('all');
+                  }}
+                  aria-pressed={viewMode === mode}
+                  className={`p-2.5 rounded-lg transition ${viewMode === mode ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                  title={label}
+                  aria-label={label}
+                >
+                  {icon}
+                </button>
+              ))}
               <button 
                 onClick={() => setViewMode('list')}
                 aria-pressed={viewMode === 'list'}
@@ -1676,7 +1759,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
         {/* Filter pills: full width, three equal columns */}
         {/* Phones: pills only in list view (grid already shows favourites / restock sections). */}
-        <div className={`mb-5 gap-2 sm:grid sm:grid-cols-3 font-mono text-[11px] sm:text-xs ${viewMode === 'grid' ? 'hidden' : 'flex'}`}>
+        <div className={`mb-5 gap-2 sm:grid sm:grid-cols-3 font-mono text-[11px] sm:text-xs ${cardView ? 'hidden' : 'flex'}`}>
           {([
             { key: 'all', label: 'All', short: 'All', icon: null, count: items.length,
               active: 'bg-slate-700 text-white border-slate-500', badge: 'bg-slate-950/30 text-white', idleBadge: 'bg-slate-800 text-slate-300' },
@@ -1718,7 +1801,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           </div>
         ) : (
           <>
-            {viewMode === 'grid' && (
+            {cardView && (
               <div className="space-y-8">
                 <OnboardingCards
                   visibleIds={visibleTipIds}
@@ -1746,11 +1829,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                       <span className="text-xs text-slate-400 font-mono">{favoriteItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                    <div className={cardGridClass}>
                       {favoriteItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-2 sm:p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
+                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5`}
                         >
                           <div className="relative">
                             <CardCarousel 
@@ -1760,6 +1843,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                               onToggleGhost={toggleGhost}
                               onZoomImage={setZoomedImageUrl}
                               onOpenDetails={(it) => setDetailItemId(it.id)}
+                              wide={isSingle}
                             />
                           </div>
 
@@ -1767,15 +1851,28 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <div className="space-y-1">
                               <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                                 <span className="truncate">{item.brand}</span>
-                                <span className="max-sm:hidden text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                                <span className={`${isSingle ? '' : 'max-sm:hidden '}text-slate-100 font-bold shrink-0`}>{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                               </div>
                               <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                               {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
-                            <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
-                              <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
-                              <span className="shrink-0">{item.type}</span>
-                            </div>
+                            {isSingle ? (
+                              <CardTagFooter
+                                item={item}
+                                activeCategory={activeCategoryFilter}
+                                activeLocation={activeEnvFilter}
+                                onCategory={handleCategoryClick}
+                                onLocation={(env) => {
+                                  setActiveEnvFilter(activeEnvFilter === env ? null : env);
+                                  if (activeEnvFilter !== env) scrollToSection('my-gear-section');
+                                }}
+                              />
+                            ) : (
+                              <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                                <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
+                                <span className="shrink-0">{item.type}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1837,11 +1934,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                       <span className="text-xs text-slate-400 font-mono">{myGearItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                    <div className={cardGridClass}>
                       {myGearItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-2 sm:p-3 transition-all duration-300 border bg-slate-900/80 border-slate-800 hover:border-slate-700"
+                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-900/80 border-slate-800 hover:border-slate-700`}
                         >
                           <div className="relative">
                             <CardCarousel 
@@ -1851,6 +1948,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                               onToggleGhost={toggleGhost}
                               onZoomImage={setZoomedImageUrl}
                               onOpenDetails={(it) => setDetailItemId(it.id)}
+                              wide={isSingle}
                             />
                           </div>
 
@@ -1858,15 +1956,28 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <div className="space-y-1">
                               <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                                 <span className="truncate">{item.brand}</span>
-                                <span className="max-sm:hidden text-slate-100 font-bold shrink-0">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                                <span className={`${isSingle ? '' : 'max-sm:hidden '}text-slate-100 font-bold shrink-0`}>{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
                               </div>
                               <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
                               {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
-                            <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
-                              <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
-                              <span className="shrink-0">{item.type}</span>
-                            </div>
+                            {isSingle ? (
+                              <CardTagFooter
+                                item={item}
+                                activeCategory={activeCategoryFilter}
+                                activeLocation={activeEnvFilter}
+                                onCategory={handleCategoryClick}
+                                onLocation={(env) => {
+                                  setActiveEnvFilter(activeEnvFilter === env ? null : env);
+                                  if (activeEnvFilter !== env) scrollToSection('my-gear-section');
+                                }}
+                              />
+                            ) : (
+                              <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                                <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
+                                <span className="shrink-0">{item.type}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1883,11 +1994,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                       <span className="text-xs text-slate-400 font-mono">{ghostItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                    <div className={cardGridClass}>
                       {ghostItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-2 sm:p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40"
+                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40`}
                         >
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
                             {item.image_urls?.[0] || item.image_url ? (
@@ -1945,7 +2056,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               </div>
             )}
 
-            {viewMode === 'grid' && pillFilter !== 'all' && (pillFilter === 'favs' ? favoriteItems.length === 0 : ghostItems.length === 0) && (
+            {cardView && pillFilter !== 'all' && (pillFilter === 'favs' ? favoriteItems.length === 0 : ghostItems.length === 0) && (
               <div className="py-16 text-center font-mono text-xs text-slate-500">
                 {searchQuery.trim()
                   ? 'Nothing here matches your search.'
@@ -2031,7 +2142,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               </div>
             )}
 
-            {viewMode === 'grid' && visibleTipIds.length === 0 && !loading && (
+            {cardView && visibleTipIds.length === 0 && !loading && (
               <div className="mt-10 flex justify-center">
                 <button
                   onClick={() => {
