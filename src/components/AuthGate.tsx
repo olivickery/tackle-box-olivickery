@@ -37,11 +37,19 @@ export default function AuthGate({
   const [checking, setChecking] = useState(true);
 
   // A reset-email link lands with "type=recovery" in the URL hash.
-  const [mode, setMode] = useState<Mode>(() =>
-    typeof window !== 'undefined' && window.location.hash.includes('type=recovery') ? 'recovery' : 'signin'
+  // /?auth=signup or /?auth=signin (e.g. from a gift link) opens that form directly.
+  const [authParam] = useState(() =>
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('auth') : null
   );
-  // Signed-out visitors see the overview page first (not when arriving from a reset link).
-  const [showLanding, setShowLanding] = useState(() => mode !== 'recovery');
+  const [mode, setMode] = useState<Mode>(() =>
+    typeof window !== 'undefined' && window.location.hash.includes('type=recovery') ? 'recovery'
+      : authParam === 'signup' ? 'signup' : 'signin'
+  );
+  // Signed-out visitors see the overview page first (not when arriving from a reset or gift link).
+  const [showLanding, setShowLanding] = useState(() => mode !== 'recovery' && authParam !== 'signup' && authParam !== 'signin');
+  useEffect(() => {
+    if (authParam) window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+  }, [authParam]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

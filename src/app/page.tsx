@@ -11,6 +11,8 @@ import PackChecklist, { GapStatusTag, ReAddGapButton, type PackEntry } from '../
 import Link from 'next/link';
 import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
 import NamePrompt from '../components/NamePrompt';
+import ShareCardSheet from '../components/ShareCardSheet';
+import { PENDING_CLAIM_KEY, UUID_RE } from '../lib/sharedCards';
 import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from '../components/OnboardingCards';
 import { firstNameOf } from '../lib/profile';
 import {
@@ -49,7 +51,11 @@ import {
   LogOut,
   ClipboardList,
   Share2,
-  Truck
+  Truck,
+  RectangleVertical,
+  Grid2x2,
+  Gift,
+  MoreHorizontal
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
@@ -147,8 +153,16 @@ function isOnTheWay(item: GearItem): boolean {
 
 function OnTheWayTag({ className = '' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 ${className}`}>
+    <span className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-sky-400/40 bg-sky-400/10 text-sky-300 ${className}`}>
       <Truck className="w-3 h-3" /> On its way
+    </span>
+  );
+}
+
+function GiftedTag({ from, className = '' }: { from: string; className?: string }) {
+  return (
+    <span title={`Gifted by ${from}`} className={`inline-flex items-center gap-1 min-w-0 max-w-full text-[11px] font-mono font-bold px-1.5 py-0.5 rounded border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-300 ${className}`}>
+      <Gift className="w-3 h-3 shrink-0" /><span className="truncate">From {from}</span>
     </span>
   );
 }
@@ -213,29 +227,29 @@ const compressImageCrisp = (file: File): Promise<Blob> => {
   });
 };
 
-function CardCarousel({ 
-  item, 
-  onEditNotes,
-  onEditSpecs,
+function CardCarousel({
+  item,
   onEditPhotos,
   onToggleFavorite,
   onToggleGhost,
-  onDeleteItem,
-  onZoomImage
-}: { 
+  onZoomImage,
+  onOpenDetails,
+  wide = false,
+}: {
   item: GearItem;
-  onEditNotes: (item: GearItem) => void;
-  onEditSpecs: (item: GearItem) => void;
+  /** Single-column view: room for every button and label on phones too. */
+  wide?: boolean;
   onEditPhotos: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
   onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
-  onDeleteItem: (item: GearItem) => void;
   onZoomImage: (url: string) => void;
+  onOpenDetails: (item: GearItem) => void;
 }) {
   const realImages = (item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]).filter(Boolean);
   const images = realImages.length > 0 ? realImages : [''];
-  
-  const totalSlides = images.length + 3;
+
+  // Photos only: specs, notes and actions live in the details sheet.
+  const totalSlides = images.length;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -306,94 +320,89 @@ function CardCarousel({
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd || totalSlides < 2) return;
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      nextSlide();
-    } else if (isRightSwipe) {
-      prevSlide();
-    }
+    if (distance > minSwipeDistance) nextSlide();
+    else if (distance < -minSwipeDistance) prevSlide();
   };
 
-  const isSpecsSlide = currentIndex === images.length;
-  const isNotesSlide = currentIndex === images.length + 1;
-  const isManageSlide = currentIndex === images.length + 2;
-  const isFirstSlide = currentIndex === 0;
-  const isImageSlide = currentIndex < images.length;
-
-  const displaySpec = item.depth && item.depth !== 'N/A' ? item.depth : '';
-
-  const formattedDate = item.created_at 
-    ? new Date(item.created_at).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      })
-    : new Date().toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+  const hasPhoto = !!images[currentIndex];
 
   return (
-    <div 
+    <div
       ref={cardRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80 group select-none"
     >
-      {isFirstSlide && (
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(item.id, item.is_favorite);
-          }}
-          className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 ${
-            item.is_favorite 
-              ? 'bg-amber-500 text-slate-950 border-amber-400 scale-110' 
-              : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
-          }`}
-          title={item.is_favorite ? "Unstar Favourite" : "Mark as Favourite"}
-        >
-          <Star className="w-3.5 h-3.5 fill-current" />
-        </button>
-      )}
+      {/* Tapping the photo opens details. Keyboard and screen-reader users get the Details button instead. */}
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-hidden="true"
+        onClick={() => onOpenDetails(item)}
+        className="absolute inset-0 z-[1] cursor-pointer"
+      />
 
-      {isFirstSlide && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleGhost(item.id, item.is_ghost, { withUndo: true });
-          }}
-          className="absolute bottom-2 left-2 p-1.5 rounded-full backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50"
-          title="Lost it? Add to restock list"
-          aria-label="Mark as needing replacement"
-        >
-          <Repeat className="w-3.5 h-3.5" />
-        </button>
-      )}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleFavorite(item.id, item.is_favorite);
+        }}
+        className={`absolute top-2 right-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 ${
+          item.is_favorite
+            ? 'bg-amber-500 text-slate-950 border-amber-400'
+            : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
+        }`}
+        title={item.is_favorite ? 'Remove from favourites' : 'Add to favourites'}
+        aria-label="Favourite"
+        aria-pressed={item.is_favorite}
+      >
+        <Star className="w-4 h-4 fill-current" />
+      </button>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleGhost(item.id, item.is_ghost, { withUndo: true });
+        }}
+        className={`${wide ? '' : 'max-sm:hidden '}absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50`}
+        title="Lost it? Add to restock list"
+        aria-label="Mark as needing replacement"
+      >
+        <Repeat className="w-4 h-4" />
+      </button>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenDetails(item);
+        }}
+        className="absolute bottom-2 right-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-300 border-slate-700 hover:text-white"
+        title="Details and actions"
+        aria-label={`Details for ${item.name}`}
+      >
+        <MoreHorizontal className="w-4 h-4" />
+      </button>
 
       {/* All photos stay mounted and decoded; only opacity changes on swipe. */}
-      <div className={`absolute inset-0 ${isImageSlide ? '' : 'invisible'}`} aria-hidden={!isImageSlide}>
+      <div className="absolute inset-0">
         {images.map((src, idx) =>
           !src ? (
             !isOnTheWay(item) ? (
               <GearPlaceholder key="placeholder" className="absolute inset-0 w-full h-full" />
             ) : (
-              <div key="on-the-way" className="absolute inset-2 rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/5 flex flex-col items-center justify-center text-center px-4 gap-2">
-                <Truck className="w-10 h-10 text-amber-400" strokeWidth={1.6} />
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-300">On its way</span>
-                <span className="text-[11px] text-slate-400 leading-snug">Add photos and specs when it arrives.</span>
+              <div key="on-the-way" className="absolute inset-2 rounded-lg border-2 border-dashed border-sky-400/50 bg-sky-400/5 flex flex-col items-center justify-center text-center px-2 sm:px-4 gap-1.5 sm:gap-2">
+                <Truck className="w-8 h-8 sm:w-10 sm:h-10 text-sky-400" strokeWidth={1.6} />
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-sky-300">On its way</span>
+                <span className={`${wide ? '' : 'max-sm:hidden '}text-[11px] text-slate-400 leading-snug`}>Add photos and specs when it arrives.</span>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onEditPhotos(item); }}
-                  className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-[11px] font-bold px-3 py-1.5 transition"
+                  className="relative z-10 mt-1 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-[11px] font-bold px-3 min-h-9 transition"
                 >
-                  <Camera className="w-3.5 h-3.5" /> Arrived? Add photos
+                  <Camera className="w-3.5 h-3.5" /> <span className={wide ? '' : 'max-sm:hidden'}>Arrived? </span>Add photos
                 </button>
               </div>
             )
@@ -412,163 +421,233 @@ function CardCarousel({
         )}
       </div>
 
-      {isSpecsSlide ? (
-        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
-          <div>
-            <div className="h-6 flex items-center mb-1">
-              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
-                Specs
-              </span>
-            </div>
-
-            <div className="space-y-1.5 text-[11px] pt-1">
-              <p><span className="text-slate-500">Brand:</span> <span className="text-slate-100">{item.brand}</span></p>
-              <p><span className="text-slate-500">Name:</span> <span className="text-slate-100">{item.name}</span></p>
-              <p><span className="text-slate-500">Colour:</span> <span className="text-slate-100">{item.color}</span></p>
-              {displaySpec && <p><span className="text-slate-500">Specs:</span> <span className="text-slate-100">{displaySpec}</span></p>}
-              <p><span className="text-slate-500">Type:</span> <span className="text-slate-100">{item.type}</span></p>
-              <p><span className="text-slate-500">Species:</span> <span className="text-slate-100">{item.species.join(', ')}</span></p>
-              {item.environment_tags && item.environment_tags.length > 0 && (
-                <p><span className="text-slate-500">Locations:</span> <span className="text-slate-100">{item.environment_tags.join(', ')}</span></p>
-              )}
-              <p><span className="text-slate-500">Date added:</span> <span className="text-slate-100">{formattedDate}</span></p>
-            </div>
-          </div>
-        </div>
-      ) : isNotesSlide ? (
-        <div className="w-full h-full p-3 pb-6 bg-slate-900/95 flex flex-col font-mono text-xs overflow-y-auto">
-          <div className="h-6 flex items-center mb-2">
-            <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
-              Notes
-            </span>
-          </div>
-
-          <div className="text-slate-100 text-[11px] leading-relaxed pt-1 overflow-y-auto flex-1 pr-1">
-            {item.notes ? (
-              <p className="whitespace-pre-wrap">{item.notes}</p>
-            ) : (
-              <p className="text-slate-500">No custom notes logged yet. Swipe to Manage Item to add notes!</p>
-            )}
-          </div>
-        </div>
-      ) : isManageSlide ? (
-        <div className="w-full h-full p-3 bg-slate-900/95 flex flex-col justify-between font-mono text-xs overflow-y-auto">
-          <div>
-            <div className="h-6 flex items-center mb-2">
-              <span className="text-[10px] text-slate-100 uppercase font-bold tracking-wider leading-none">
-                Manage Item
-              </span>
-            </div>
-
-            <div className="space-y-2 pt-1 font-mono text-[10px]">
-              <div className="grid grid-cols-2 gap-2">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditSpecs(item);
-                  }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
-                >
-                  <Settings className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>SPECS</span>
-                </button>
-
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditNotes(item);
-                  }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>NOTES</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditPhotos(item);
-                  }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
-                >
-                  <Camera className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>IMAGES</span>
-                </button>
-
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleGhost(item.id, item.is_ghost);
-                  }}
-                  className="bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
-                >
-                  <Repeat className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>{item.is_ghost ? 'REPLACED' : 'REPLACE'}</span>
-                </button>
-              </div>
-
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteItem(item);
-                }}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 p-2 rounded-lg flex items-center justify-center gap-1.5 transition font-bold uppercase"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                <span>DELETE ITEM</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="relative w-full h-full">
-          {images[currentIndex] && <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onZoomImage(images[currentIndex]);
-            }}
-            className="absolute top-2 left-2 p-1.5 rounded-full bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md"
-            title="Zoom Image"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>}
-        </div>
+      {hasPhoto && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onZoomImage(images[currentIndex]);
+          }}
+          className={`${wide ? '' : 'max-sm:hidden '}absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md`}
+          title="Zoom photo"
+          aria-label={`Zoom photo of ${item.name}`}
+        >
+          <ZoomIn className="w-4 h-4" />
+        </button>
       )}
 
       {totalSlides > 1 && (
         <>
-          <button 
+          <button
             onClick={prevSlide}
-            className="hidden sm:block absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
-            aria-label="Previous Slide"
+            className="hidden sm:block absolute left-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 active:scale-95 transition z-10"
+            aria-label="Previous photo"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <button 
+          <button
             onClick={nextSlide}
-            className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 active:scale-95 transition z-10"
-            aria-label="Next Slide"
+            className="hidden sm:block absolute right-1.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/80 text-slate-200 border border-slate-700/60 shadow-md opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 active:scale-95 transition z-10"
+            aria-label="Next photo"
           >
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
+
+          <div className={`absolute bottom-3.5 ${wide ? 'inset-x-0' : 'max-sm:bottom-5 max-sm:left-2.5 sm:inset-x-0'} flex items-center justify-center z-10 pointer-events-none`} aria-hidden="true">
+            <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
+              {images.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all ${
+                    currentIndex === idx ? 'w-3 bg-white' : 'w-1.5 bg-slate-500'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          <span className="sr-only" aria-live="polite">Photo {currentIndex + 1} of {totalSlides}</span>
         </>
       )}
+    </div>
+  );
+}
 
-      <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center z-10 pointer-events-none">
-        <div className="bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm">
-          {Array.from({ length: totalSlides }).map((_, idx) => (
-            <span 
-              key={idx} 
-              className={`h-1.5 rounded-full transition-all ${
-                currentIndex === idx ? 'w-3 bg-white' : 'w-1.5 bg-slate-600'
-              }`}
-            />
-          ))}
+/** Card footer for the single-column view: location and category tags that filter the grid. */
+function CardTagFooter({
+  item, activeCategory, activeLocation, onCategory, onLocation,
+}: {
+  item: GearItem;
+  activeCategory: string | null;
+  activeLocation: string | null;
+  onCategory: (type: string) => void;
+  onLocation: (env: string) => void;
+}) {
+  return (
+    <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-end justify-between gap-2">
+      <div className="flex flex-wrap gap-1.5 min-w-0">
+        {item.environment_tags?.map((env) => (
+          <button
+            key={env}
+            onClick={(e) => { e.stopPropagation(); onLocation(env); }}
+            aria-pressed={activeLocation === env}
+            title={`Show gear for ${env}`}
+            className={`text-[11px] font-mono min-h-7 px-2 rounded border transition ${
+              activeLocation === env
+                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
+            }`}
+          >
+            {env}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onCategory(item.type); }}
+        aria-pressed={activeCategory === item.type}
+        title={`Show all ${item.type}`}
+        className={`shrink-0 text-[11px] font-mono uppercase min-h-7 px-2 rounded border transition ${
+          activeCategory === item.type
+            ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+            : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+        }`}
+      >
+        {item.type}
+      </button>
+    </div>
+  );
+}
+
+function GearDetailSheet({
+  item,
+  onClose,
+  onEditSpecs,
+  onEditNotes,
+  onEditPhotos,
+  onToggleGhost,
+  onDeleteItem,
+  onShareCard,
+  onFilterBrand,
+  onFilterCategory,
+  onFilterLocation,
+  onZoomImage,
+}: {
+  item: GearItem;
+  onClose: () => void;
+  onZoomImage: (url: string) => void;
+  onEditSpecs: (item: GearItem) => void;
+  onEditNotes: (item: GearItem) => void;
+  onEditPhotos: (item: GearItem) => void;
+  onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
+  onDeleteItem: (item: GearItem) => void;
+  onShareCard: (item: GearItem) => void;
+  onFilterBrand: (brand: string) => void;
+  onFilterCategory: (type: string) => void;
+  onFilterLocation: (env: string) => void;
+}) {
+  const doneRef = useRef<HTMLButtonElement>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const longNotes = !!item.notes && (item.notes.length > 180 || item.notes.split('\n').length > 4);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    doneRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current(); };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+      opener?.focus?.();
+    };
+  }, []);
+
+  const spec = item.depth && item.depth !== 'N/A' ? item.depth : '';
+  const photos = (item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]).filter((u): u is string => !!u);
+  const added = item.created_at ? new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const then = (fn: () => void) => () => { onClose(); fn(); };
+
+  const row = 'flex justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0';
+  const action = 'w-full flex items-center gap-3 px-4 min-h-12 text-left text-sm text-slate-100 hover:bg-slate-800 transition';
+  const chip = 'inline-flex items-center min-h-8 px-3 rounded-lg border border-slate-700 bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 transition';
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gear-detail-title"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full sm:max-w-md max-h-[88vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
+        <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-md flex items-start justify-between gap-3 px-4 pt-4 pb-3 border-b border-slate-800">
+          <div className="min-w-0">
+            <button onClick={then(() => onFilterBrand(item.brand))} className="text-xs text-slate-400 hover:text-amber-400 min-h-7 -my-1 transition" title={`Show all ${item.brand} gear`}>
+              {item.brand}
+            </button>
+            <h2 id="gear-detail-title" className="text-lg font-semibold text-slate-100 leading-tight">{item.name}</h2>
+          </div>
+          <button ref={doneRef} onClick={onClose} className="shrink-0 min-h-11 px-3 -mr-1 rounded-lg text-sm font-semibold text-amber-400 hover:bg-slate-800 transition">
+            Done
+          </button>
+        </div>
+
+        {photos.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto px-4 scroll-px-4 pt-3 pb-1 snap-x">
+            {photos.map((src, i) => (
+              <button key={src} onClick={() => onZoomImage(src)} className="shrink-0 snap-start w-28 h-28 rounded-lg overflow-hidden border border-slate-800" aria-label={`Zoom photo ${i + 1} of ${item.name}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <dl className="px-4 pt-1 text-sm">
+          {item.color && <div className={row}><dt className="text-slate-400">Colour</dt><dd className="text-slate-100 text-right">{item.color}</dd></div>}
+          {spec && <div className={row}><dt className="text-slate-400">Specs</dt><dd className="text-slate-100 text-right">{spec}</dd></div>}
+          {item.species.length > 0 && <div className={row}><dt className="text-slate-400">Species</dt><dd className="text-slate-100 text-right">{item.species.join(', ')}</dd></div>}
+          {item.gifted_from && <div className={row}><dt className="text-slate-400">From</dt><dd className="text-right"><GiftedTag from={item.gifted_from} /></dd></div>}
+          {added && <div className={row}><dt className="text-slate-400">Added</dt><dd className="text-slate-100 text-right">{added}</dd></div>}
+        </dl>
+
+        <div className="px-4 pt-3">
+          <p className="text-xs text-slate-400 mb-2">Show similar gear</p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={then(() => onFilterCategory(item.type))} className={chip}><Tag className="w-3.5 h-3.5 mr-1.5 text-slate-400" />{item.type}</button>
+            {item.environment_tags?.map((env) => (
+              <button key={env} onClick={then(() => onFilterLocation(env))} className={chip}><Compass className="w-3.5 h-3.5 mr-1.5 text-slate-400" />{env}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-4 pt-4">
+          <p className="text-xs text-slate-400 mb-1">Notes</p>
+          {item.notes
+            ? <>
+                <p className={`text-sm text-slate-200 whitespace-pre-wrap leading-relaxed ${notesOpen ? '' : 'line-clamp-4'}`}>{item.notes}</p>
+                {longNotes && (
+                  <button onClick={() => setNotesOpen((o) => !o)} className="mt-1 min-h-8 text-sm font-semibold text-amber-400 hover:text-amber-300">
+                    {notesOpen ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </>
+            : <p className="text-sm text-slate-400">No notes yet.</p>}
+        </div>
+
+        <div className="mx-4 mt-4 rounded-xl border border-slate-800 overflow-hidden divide-y divide-slate-800">
+          <button onClick={then(() => onEditSpecs(item))} className={action}><Settings className="w-4 h-4 text-slate-400" />Edit specs</button>
+          <button onClick={then(() => onEditNotes(item))} className={action}><Edit3 className="w-4 h-4 text-slate-400" />{item.notes ? 'Edit notes' : 'Add notes'}</button>
+          <button onClick={then(() => onEditPhotos(item))} className={action}><Camera className="w-4 h-4 text-slate-400" />Photos</button>
+          <button onClick={then(() => onToggleGhost(item.id, item.is_ghost, { withUndo: true }))} className={action}><Repeat className="w-4 h-4 text-slate-400" />{item.is_ghost ? 'Mark as replaced' : 'Mark as needing replacement'}</button>
+          <button onClick={then(() => onShareCard(item))} className={action}><Gift className="w-4 h-4 text-slate-400" />Share or hand over</button>
+        </div>
+
+        <div className="mx-4 mt-3 rounded-xl border border-slate-800 overflow-hidden">
+          <button onClick={then(() => onDeleteItem(item))} className={`${action} text-red-400`}><Trash2 className="w-4 h-4" />Delete item…</button>
         </div>
       </div>
-
     </div>
   );
 }
@@ -588,9 +667,43 @@ export default function Page() {
 
 function TackleboxIQ({ session }: { session: Session }) {
   const [items, setItems] = useState<GearItem[]>([]);
+  const [detailItemId, setDetailItemId] = useState<string | null>(null);
+  const detailItem = detailItemId ? items.find((i) => i.id === detailItemId) ?? null : null;
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace'>('all');
+  // Single column, two-column grid or list; remembered on this device.
+  const viewStorageKey = `tbiq:viewMode:${session.user.id}`;
+  const [viewMode, setViewModeState] = useState<'single' | 'grid' | 'list'>(() => {
+    try {
+      const v = localStorage.getItem(viewStorageKey);
+      return v === 'single' || v === 'grid' || v === 'list' ? v : 'grid';
+    } catch { return 'grid'; }
+  });
+  const setViewMode = (v: 'single' | 'grid' | 'list') => {
+    setViewModeState(v);
+    try { localStorage.setItem(viewStorageKey, v); } catch { /* ignore */ }
+  };
+  const cardView = viewMode !== 'list';
+  const isSingle = viewMode === 'single';
+  // Leaving list view (logo, filters) returns to whichever card view was last used.
+  const showCards = () => {
+    if (viewMode !== 'list') return;
+    let last: 'single' | 'grid' = 'grid';
+    try { if (localStorage.getItem(`${viewStorageKey}:cards`) === 'single') last = 'single'; } catch { /* ignore */ }
+    setViewMode(last);
+  };
+  useEffect(() => {
+    if (viewMode === 'list') return;
+    try { localStorage.setItem(`${viewStorageKey}:cards`, viewMode); } catch { /* ignore */ }
+  }, [viewMode, viewStorageKey]);
+  const cardGridClass = isSingle
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+    : 'grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4';
+  const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace' | 'gifted'>('all');
+  // Gift / hand-over link sheet for one card.
+  const [shareCardItemId, setShareCardItemId] = useState<string | null>(null);
+  const shareCardItem = shareCardItemId ? items.find((i) => i.id === shareCardItemId) ?? null : null;
+  // Name typed into the name prompt this visit (the session metadata catches up later).
+  const [typedFirstName, setTypedFirstName] = useState('');
   const [undoToast, setUndoToast] = useState<{ id: string; name: string; nowGhost: boolean } | null>(null);
 
   useEffect(() => {
@@ -630,7 +743,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       .then(({ error }) => { if (error) console.error('Failed to save tips progress:', error); });
   };
 
-  const [namePrompt, setNamePrompt] = useState<null | 'welcome' | 'share'>(() => {
+  const [namePrompt, setNamePrompt] = useState<null | 'welcome' | 'share' | 'card'>(() => {
     if (firstNameOf(session.user)) return null;
     try { return localStorage.getItem(`tbiq:namePromptSkipped:${session.user.id}`) ? null : 'welcome'; } catch { return null; }
   });
@@ -719,6 +832,17 @@ function TackleboxIQ({ session }: { session: Session }) {
 
   useEffect(() => {
     fetchGearItems();
+  }, []);
+
+  // Signed in from a gift link (/claim/<id>)? Go back there to add the card.
+  useEffect(() => {
+    try {
+      const pending = localStorage.getItem(PENDING_CLAIM_KEY);
+      if (pending) {
+        localStorage.removeItem(PENDING_CLAIM_KEY);
+        if (UUID_RE.test(pending)) window.location.replace(`/claim/${pending}`);
+      }
+    } catch { /* storage unavailable */ }
   }, []);
 
   const fetchGearItems = async () => {
@@ -1283,7 +1407,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   }, []);
 
   const handleCategoryClick = (categoryType: string) => {
-    setViewMode('grid');
+    showCards();
     if (activeCategoryFilter === categoryType) {
       setActiveCategoryFilter(null);
     } else {
@@ -1293,7 +1417,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   };
 
   const handleBrandClick = (brandName: string) => {
-    setViewMode('grid');
+    showCards();
     if (activeBrandFilter === brandName) {
       setActiveBrandFilter(null);
     } else {
@@ -1469,12 +1593,16 @@ function TackleboxIQ({ session }: { session: Session }) {
   const allGhostCount = items.filter(item => item.is_ghost).length;
   const allFavCount = items.filter(item => item.is_favorite && !item.is_ghost).length;
   const showFavSection = pillFilter === 'all' || pillFilter === 'favs';
-  const showMyGearSection = pillFilter === 'all';
+  const showMyGearSection = pillFilter === 'all' || pillFilter === 'gifted';
+  const allGiftedCount = items.filter(item => item.gifted_from && !item.is_ghost).length;
   const showGhostSection = pillFilter === 'all' || pillFilter === 'replace';
 
   const ghostItems = items.filter(item => item.is_ghost && matchesSearch(item));
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost && matchesSearch(item));
-  const baseMyGearItems = items.filter(item => !item.is_favorite && !item.is_ghost);
+  // The Gifted pill reuses the My gear section, showing every gifted card (favourites too).
+  const baseMyGearItems = pillFilter === 'gifted'
+    ? items.filter(item => item.gifted_from && !item.is_ghost)
+    : items.filter(item => !item.is_favorite && !item.is_ghost);
 
   const myGearItems = baseMyGearItems.filter(item => {
     const matchesCategory = activeCategoryFilter ? item.type === activeCategoryFilter : true;
@@ -1488,6 +1616,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   const matchesPill = (item: GearItem) =>
     pillFilter === 'favs' ? item.is_favorite && !item.is_ghost
     : pillFilter === 'replace' ? item.is_ghost
+    : pillFilter === 'gifted' ? !!item.gifted_from && !item.is_ghost
     : true;
 
   const sortedListItems = items.filter(item => matchesPill(item) && matchesSearch(item)).sort((a, b) => {
@@ -1536,7 +1665,7 @@ function TackleboxIQ({ session }: { session: Session }) {
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between gap-2">
           <button 
             onClick={() => {
-              setViewMode('grid');
+              showCards();
               setSearchQuery('');
               setPillFilter('all');
               setActiveCategoryFilter(null);
@@ -1551,28 +1680,34 @@ function TackleboxIQ({ session }: { session: Session }) {
             </div>
             <div className="translate-y-[2px] min-w-0">
               <h1 className="text-base sm:text-lg leading-none group-hover:opacity-80 transition"><Wordmark /></h1>
-              <p className="text-[10px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[389px]:hidden">Smart gear management</p>
+              <p className="text-[11px] sm:text-xs text-slate-400 font-mono whitespace-nowrap mt-0.5 max-[389px]:hidden">Smart gear management</p>
             </div>
           </button>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-800" role="group" aria-label="View">
-              <button 
-                onClick={() => {
-                  setViewMode('grid');
-                  if (window.matchMedia('(max-width: 639px)').matches) setPillFilter('all');
-                }}
-                aria-pressed={viewMode === 'grid'}
-                className={`p-1.5 rounded-lg transition ${viewMode === 'grid' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                title="Grid view"
-                aria-label="Grid view"
-              >
-                <Grid className="w-4 h-4" />
-              </button>
+              {([
+                { mode: 'single', label: 'Single column view', icon: <RectangleVertical className="w-4 h-4" /> },
+                { mode: 'grid', label: 'Two-column grid view', icon: <Grid2x2 className="w-4 h-4" /> },
+              ] as const).map(({ mode, label, icon }) => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setViewMode(mode);
+                    if (window.matchMedia('(max-width: 639px)').matches) setPillFilter('all');
+                  }}
+                  aria-pressed={viewMode === mode}
+                  className={`p-2.5 rounded-lg transition ${viewMode === mode ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                  title={label}
+                  aria-label={label}
+                >
+                  {icon}
+                </button>
+              ))}
               <button 
                 onClick={() => setViewMode('list')}
                 aria-pressed={viewMode === 'list'}
-                className={`p-1.5 rounded-lg transition ${viewMode === 'list' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`p-2.5 rounded-lg transition ${viewMode === 'list' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'}`}
                 title="List view"
                 aria-label="List view"
               >
@@ -1582,7 +1717,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
             <button
               onClick={() => supabase.auth.signOut()}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 transition"
+              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 transition"
               title={`Sign out (${session.user.email ?? ''})`}
               aria-label="Sign out"
             >
@@ -1625,7 +1760,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 title="AI trip planner"
               >
                 <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PLAN<span className="hidden sm:inline"> TRIP</span></span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">Plan<span className="hidden sm:inline"> trip</span></span>
               </button>
 
               <Link
@@ -1634,7 +1769,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 title="My pack lists"
               >
                 <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] sm:text-xs leading-none whitespace-nowrap">PACK<span className="hidden sm:inline"> LISTS</span></span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">Pack<span className="hidden sm:inline"> lists</span></span>
               </Link>
 
               <button 
@@ -1644,9 +1779,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                 aria-label={`Restock list (${allGhostCount})`}
               >
                 <ShoppingBag className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="text-[9px] max-[359px]:text-[8px] sm:text-xs leading-none whitespace-nowrap">RESTOCK</span>
+                <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">Restock</span>
                 {allGhostCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[11px] font-bold min-w-5 h-5 px-1 rounded-full flex items-center justify-center">
                     {allGhostCount}
                   </span>
                 )}
@@ -1660,7 +1795,7 @@ function TackleboxIQ({ session }: { session: Session }) {
 
         {/* Filter pills: full width, three equal columns */}
         {/* Phones: pills only in list view (grid already shows favourites / restock sections). */}
-        <div className={`mb-5 gap-2 sm:grid sm:grid-cols-3 font-mono text-[11px] sm:text-xs ${viewMode === 'grid' ? 'hidden' : 'flex'}`}>
+        <div className={`mb-5 gap-2 sm:grid ${allGiftedCount > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} font-mono text-[11px] sm:text-xs ${cardView ? 'hidden' : 'flex'}`}>
           {([
             { key: 'all', label: 'All', short: 'All', icon: null, count: items.length,
               active: 'bg-slate-700 text-white border-slate-500', badge: 'bg-slate-950/30 text-white', idleBadge: 'bg-slate-800 text-slate-300' },
@@ -1668,6 +1803,10 @@ function TackleboxIQ({ session }: { session: Session }) {
               active: 'bg-amber-500 text-slate-950 border-amber-400', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-amber-500/15 text-amber-400' },
             { key: 'replace', label: 'To replace', short: 'Replace', icon: <Repeat className="w-3.5 h-3.5 shrink-0" />, count: allGhostCount,
               active: 'bg-red-500 text-white border-red-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-red-500/15 text-red-400' },
+            ...(allGiftedCount > 0 ? [
+              { key: 'gifted', label: 'Gifted', short: 'Gifted', icon: <Gift className="w-3.5 h-3.5 shrink-0" />, count: allGiftedCount,
+                active: 'bg-fuchsia-500 text-white border-fuchsia-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-fuchsia-500/15 text-fuchsia-300' },
+            ] as const : []),
           ] as const).map((pill) => {
             const isActive = pillFilter === pill.key;
             return (
@@ -1687,7 +1826,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <span className="sm:hidden max-[359px]:hidden">{pill.short}</span>
                 <span className="hidden max-[359px]:inline">{pill.key === 'favs' ? 'Favs' : pill.short}</span>
                 <span className="hidden sm:inline">{pill.label}</span>
-                <span className={`min-w-5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-center ${isActive ? pill.badge : pill.idleBadge}`}>
+                <span className={`min-w-5 px-1.5 py-0.5 rounded-full text-[11px] font-bold text-center ${isActive ? pill.badge : pill.idleBadge}`}>
                   {pill.count}
                 </span>
               </button>
@@ -1702,7 +1841,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           </div>
         ) : (
           <>
-            {viewMode === 'grid' && (
+            {cardView && (
               <div className="space-y-8">
                 <OnboardingCards
                   visibleIds={visibleTipIds}
@@ -1722,70 +1861,58 @@ function TackleboxIQ({ session }: { session: Session }) {
                 />
                 
                 {showFavSection && favoriteItems.length > 0 && (
-                  <div id="favourites-section" className="bg-slate-900/40 p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-36">
+                  <div id="favourites-section" className="bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
                         <Star className="w-4 h-4 fill-current" /> Favourites
                       </span>
-                      <span className="text-xs text-slate-500 font-mono">{favoriteItems.length} Items</span>
+                      <span className="text-xs text-slate-400 font-mono">{favoriteItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className={cardGridClass}>
                       {favoriteItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5"
+                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5`}
                         >
                           <div className="relative">
                             <CardCarousel 
                               item={item} 
-                              onEditNotes={openNotesEditor} 
-                              onEditSpecs={openSpecsEditor}
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
                               onToggleGhost={toggleGhost}
-                              onDeleteItem={setItemToDelete}
                               onZoomImage={setZoomedImageUrl}
+                              onOpenDetails={(it) => setDetailItemId(it.id)}
+                              wide={isSingle}
                             />
                           </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                              <button 
-                                onClick={() => handleBrandClick(item.brand)} 
-                                className="hover:text-amber-400 transition"
-                              >
-                                {item.brand}
-                              </button>
-                              <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                          <div className="cursor-pointer" onClick={() => setDetailItemId(item.id)}>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                                <span className="truncate">{item.brand}</span>
+                                <span className={`${isSingle ? '' : 'max-sm:hidden '}text-slate-100 font-bold shrink-0`}>{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                              </div>
+                              <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
+                              {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : item.gifted_from ? <GiftedTag from={item.gifted_from} className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
-                            <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                            {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
-                          </div>
-
-                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                            <div className="flex flex-wrap gap-1">
-                              {item.environment_tags?.map((env, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
-                                >
-                                  {env}
-                                </button>
-                              ))}
-                            </div>
-                            
-                            <button 
-                              onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
-                                activeCategoryFilter === item.type 
-                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
-                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
-                              }`}
-                            >
-                              {item.type}
-                            </button>
+                            {isSingle ? (
+                              <CardTagFooter
+                                item={item}
+                                activeCategory={activeCategoryFilter}
+                                activeLocation={activeEnvFilter}
+                                onCategory={handleCategoryClick}
+                                onLocation={(env) => {
+                                  setActiveEnvFilter(activeEnvFilter === env ? null : env);
+                                  if (activeEnvFilter !== env) scrollToSection('my-gear-section');
+                                }}
+                              />
+                            ) : (
+                              <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                                <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
+                                <span className="shrink-0">{item.type}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1794,116 +1921,105 @@ function TackleboxIQ({ session }: { session: Session }) {
                 )}
 
                 {showMyGearSection && baseMyGearItems.length > 0 && (
-                  <div id="my-gear-section" className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-36">
+                  <div id="my-gear-section" className="bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-2xl scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
-                          <Package className="w-4 h-4 text-slate-400" /> My gear
+                          {pillFilter === 'gifted'
+                            ? <><Gift className="w-4 h-4 text-fuchsia-300" /> Gifted</>
+                            : <><Package className="w-4 h-4 text-slate-400" /> My gear</>}
                         </span>
 
                         {activeCategoryFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Tag className="w-3 h-3" />
                             <span>Category: {activeCategoryFilter}</span>
                             <button 
                               onClick={() => setActiveCategoryFilter(null)}
-                              className="ml-1 hover:text-slate-100"
+                              aria-label="Clear category filter"
+                              className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
 
                         {activeBrandFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Filter className="w-3 h-3" />
                             <span>Brand: {activeBrandFilter}</span>
                             <button 
                               onClick={() => setActiveBrandFilter(null)}
-                              className="ml-1 hover:text-slate-100"
+                              aria-label="Clear brand filter"
+                              className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
 
                         {activeEnvFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Compass className="w-3 h-3" />
                             <span>Location: {activeEnvFilter}</span>
                             <button 
                               onClick={() => setActiveEnvFilter(null)}
-                              className="ml-1 hover:text-slate-100"
+                              aria-label="Clear location filter"
+                              className="relative ml-0.5 -mr-1.5 p-1.5 before:absolute before:-inset-1 before:content-[''] hover:text-slate-100"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
                       </div>
 
-                      <span className="text-xs text-slate-500 font-mono">{myGearItems.length} Items</span>
+                      <span className="text-xs text-slate-400 font-mono">{myGearItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className={cardGridClass}>
                       {myGearItems.map((item) => (
                         <div 
                           key={item.id}
-                          className={`relative group rounded-xl p-3 transition-all duration-300 border ${
-                            activeCategoryFilter === item.type || activeBrandFilter === item.brand
-                              ? 'bg-slate-900 border-amber-500/40 shadow-lg shadow-amber-500/5' 
-                              : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-                          }`}
+                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-900/80 border-slate-800 hover:border-slate-700`}
                         >
                           <div className="relative">
                             <CardCarousel 
                               item={item} 
-                              onEditNotes={openNotesEditor} 
-                              onEditSpecs={openSpecsEditor}
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
                               onToggleGhost={toggleGhost}
-                              onDeleteItem={setItemToDelete}
                               onZoomImage={setZoomedImageUrl}
+                              onOpenDetails={(it) => setDetailItemId(it.id)}
+                              wide={isSingle}
                             />
                           </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                              <button 
-                                onClick={() => handleBrandClick(item.brand)} 
-                                className="hover:text-amber-400 transition"
-                              >
-                                {item.brand}
-                              </button>
-                              <span className="text-slate-100 font-bold">{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                          <div className="cursor-pointer" onClick={() => setDetailItemId(item.id)}>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                                <span className="truncate">{item.brand}</span>
+                                <span className={`${isSingle ? '' : 'max-sm:hidden '}text-slate-100 font-bold shrink-0`}>{item.depth && item.depth !== 'N/A' ? item.depth : ''}</span>
+                              </div>
+                              <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
+                              {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : item.gifted_from ? <GiftedTag from={item.gifted_from} className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
                             </div>
-                            <h3 className="font-semibold text-sm text-slate-100 truncate">{item.name}</h3>
-                            {isOnTheWay(item) ? <OnTheWayTag className="mt-0.5" /> : <p className="text-xs text-slate-400">{item.color}</p>}
-                          </div>
-
-                          <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                            <div className="flex flex-wrap gap-1">
-                              {item.environment_tags?.map((env, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => setActiveEnvFilter(env)}
-                                  className="text-[9px] font-mono bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded transition"
-                                >
-                                  {env}
-                                </button>
-                              ))}
-                            </div>
-
-                            <button 
-                              onClick={() => handleCategoryClick(item.type)}
-                              className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border ${
-                                activeCategoryFilter === item.type 
-                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' 
-                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
-                              }`}
-                            >
-                              {item.type}
-                            </button>
+                            {isSingle ? (
+                              <CardTagFooter
+                                item={item}
+                                activeCategory={activeCategoryFilter}
+                                activeLocation={activeEnvFilter}
+                                onCategory={handleCategoryClick}
+                                onLocation={(env) => {
+                                  setActiveEnvFilter(activeEnvFilter === env ? null : env);
+                                  if (activeEnvFilter !== env) scrollToSection('my-gear-section');
+                                }}
+                              />
+                            ) : (
+                              <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                                <span className="max-sm:hidden truncate">{item.environment_tags?.join(' · ')}</span>
+                                <span className="shrink-0">{item.type}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1912,19 +2028,19 @@ function TackleboxIQ({ session }: { session: Session }) {
                 )}
 
                 {showGhostSection && ghostItems.length > 0 && (
-                  <div id="to-replace-section" className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-36">
+                  <div id="to-replace-section" className="bg-slate-950/80 p-3 sm:p-4 rounded-2xl border border-red-500/20 backdrop-blur-sm scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold uppercase tracking-wider text-red-400 font-mono flex items-center gap-1.5">
                         <Repeat className="w-4 h-4" /> Items to replace
                       </span>
-                      <span className="text-xs text-slate-500 font-mono">{ghostItems.length} Items</span>
+                      <span className="text-xs text-slate-400 font-mono">{ghostItems.length} items</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className={cardGridClass}>
                       {ghostItems.map((item) => (
                         <div 
                           key={item.id}
-                          className="relative group rounded-xl p-3 transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40"
+                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-950/60 border-dashed border-red-500/40`}
                         >
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-950 mb-3 border border-slate-800/80">
                             {item.image_urls?.[0] || item.image_url ? (
@@ -1939,15 +2055,16 @@ function TackleboxIQ({ session }: { session: Session }) {
 
                             <button 
                               onClick={() => setItemToDelete(item)}
-                              className="absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
-                              title="Delete Item Permanently"
+                              className="absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md transition bg-slate-900/80 text-red-400 border border-slate-700 hover:bg-red-500 hover:text-white hover:border-red-500 z-10"
+                              title="Delete permanently"
+                              aria-label={`Delete ${item.name} permanently`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                             
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-[1px]">
-                              <span className="bg-red-500/30 text-red-300 border border-red-500/50 text-[10px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest backdrop-blur-sm">
-                                {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'To buy' : 'Needs Replacement'}
+                              <span className="bg-red-500/30 text-red-300 border border-red-500/50 text-[11px] font-mono uppercase px-2 py-1 rounded font-bold tracking-widest backdrop-blur-sm">
+                                {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'To buy' : 'Needs replacing'}
                               </span>
                             </div>
                           </div>
@@ -1964,13 +2081,13 @@ function TackleboxIQ({ session }: { session: Session }) {
                           <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between">
                             <button 
                               onClick={() => toggleGhost(item.id, item.is_ghost)}
-                              className="text-[10px] font-mono uppercase px-2 py-0.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
+                              className="text-[11px] font-mono uppercase min-h-7 px-2.5 rounded transition border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1"
                             >
                               <Repeat className="w-3 h-3" />
                               Replaced
                             </button>
                             
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">{item.type}</span>
+                            <span className="text-[11px] font-mono text-slate-400">{item.type}</span>
                           </div>
                         </div>
                       ))}
@@ -1981,12 +2098,14 @@ function TackleboxIQ({ session }: { session: Session }) {
               </div>
             )}
 
-            {viewMode === 'grid' && pillFilter !== 'all' && (pillFilter === 'favs' ? favoriteItems.length === 0 : ghostItems.length === 0) && (
+            {cardView && pillFilter !== 'all' && (pillFilter === 'favs' ? favoriteItems.length === 0 : pillFilter === 'gifted' ? myGearItems.length === 0 : ghostItems.length === 0) && (
               <div className="py-16 text-center font-mono text-xs text-slate-500">
                 {searchQuery.trim()
                   ? 'Nothing here matches your search.'
                   : pillFilter === 'favs'
                     ? 'No favourites yet. Tap the star on any card to add one.'
+                    : pillFilter === 'gifted'
+                    ? 'No gifted gear yet.'
                     : 'Nothing to replace. Tap the replace icon on a card when you lose a lure.'}
               </div>
             )}
@@ -2037,6 +2156,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                             <span className={item.is_favorite ? 'text-amber-400 font-bold' : 'text-slate-200'}>
                               {item.brand ? `${item.brand} - ` : ''}{item.name}
                             </span>
+                            {item.gifted_from && <Gift className="w-3.5 h-3.5 text-fuchsia-300 shrink-0" aria-label={`Gifted by ${item.gifted_from}`} />}
                           </div>
                         </td>
                         <td className="p-3 text-slate-400">{item.type}</td>
@@ -2067,7 +2187,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               </div>
             )}
 
-            {viewMode === 'grid' && visibleTipIds.length === 0 && !loading && (
+            {cardView && visibleTipIds.length === 0 && !loading && (
               <div className="mt-10 flex justify-center">
                 <button
                   onClick={() => {
@@ -2283,6 +2403,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           onDone={(name) => {
             const wasShare = namePrompt === 'share';
             setNamePrompt(null);
+            setTypedFirstName(name);
             if (wasShare) handleShareRestockList(name);
           }}
           onSkip={() => {
@@ -2347,6 +2468,32 @@ function TackleboxIQ({ session }: { session: Session }) {
             </button>
           </div>
         </div>
+      )}
+
+      {detailItem && (
+        <GearDetailSheet
+          item={detailItem}
+          onClose={() => { if (!zoomedImageUrl) setDetailItemId(null); }}
+          onEditSpecs={openSpecsEditor}
+          onEditNotes={openNotesEditor}
+          onEditPhotos={openPhotosEditor}
+          onToggleGhost={toggleGhost}
+          onDeleteItem={setItemToDelete}
+          onShareCard={(it) => setShareCardItemId(it.id)}
+          onFilterBrand={handleBrandClick}
+          onFilterCategory={handleCategoryClick}
+          onFilterLocation={(env) => { setActiveEnvFilter(env); scrollToSection('my-gear-section'); }}
+          onZoomImage={setZoomedImageUrl}
+        />
+      )}
+
+      {shareCardItem && (
+        <ShareCardSheet
+          item={shareCardItem}
+          senderName={typedFirstName || firstName}
+          onNeedName={() => setNamePrompt('card')}
+          onClose={() => setShareCardItemId(null)}
+        />
       )}
 
       {zoomedImageUrl && (

@@ -17,6 +17,8 @@ export interface GearItem {
   species: string[];
   environment_tags?: string[];
   created_at?: string;
+  /** First name of whoever gifted / handed over this card; null for normal gear. */
+  gifted_from?: string | null;
 }
 
 export interface GapItem {
