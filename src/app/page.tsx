@@ -362,17 +362,18 @@ function CardCarousel({
         <Star className="w-4 h-4 fill-current" />
       </button>
 
-      <button
+      {/* Restock shortcut: grid view on larger screens only. Single view uses the details sheet. */}
+      {!wide && <button
         onClick={(e) => {
           e.stopPropagation();
           onToggleGhost(item.id, item.is_ghost, { withUndo: true });
         }}
-        className={`${wide ? '' : 'max-sm:hidden '}absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50`}
+        className={`max-sm:hidden absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50`}
         title="Lost it? Add to restock list"
         aria-label="Mark as needing replacement"
       >
         <Repeat className="w-4 h-4" />
-      </button>
+      </button>}
 
       <button
         onClick={(e) => {
