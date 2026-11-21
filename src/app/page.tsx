@@ -3306,14 +3306,9 @@ function TackleboxIQ({ session }: { session: Session }) {
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100">Gear to replace:</h2>
+                <h2 className="font-bold text-lg text-slate-100">Restock list</h2>
               </div>
-              <button 
-                onClick={() => setIsRestockOpen(false)}
-                className="text-slate-400 hover:text-slate-200 font-mono text-xs bg-slate-800 px-2 py-1 rounded"
-              >
-                Close
-              </button>
+              <CloseButton onClick={() => setIsRestockOpen(false)} />
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 space-y-3">

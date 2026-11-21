@@ -2,9 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import {
-  ArrowLeft, Calendar, ClipboardList, Edit3, Loader2, MapPin, Fish, Sparkles, Star, Trash2, X, AlertTriangle,
+  Calendar, ClipboardList, Edit3, Loader2, MapPin, Fish, Sparkles, Star, Trash2, X, AlertTriangle,
 } from 'lucide-react';
 import AuthGate from '../../components/AuthGate';
 import Wordmark from '../../components/Wordmark';
@@ -39,6 +40,7 @@ export default function PacksPage() {
 }
 
 function SavedPacks({ session }: { session: Session }) {
+  const router = useRouter();
   const [packs, setPacks] = useState<PackList[]>([]);
   const [items, setItems] = useState<GearItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,16 +218,18 @@ function SavedPacks({ session }: { session: Session }) {
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 py-3">
         <div className="max-w-3xl mx-auto px-4 flex items-center justify-between gap-2">
-          <Link href="/" className="flex items-center gap-2 min-w-0 text-slate-300 hover:text-white transition" aria-label="Back to my gear">
-            <ArrowLeft className="w-5 h-5 shrink-0" />
-            <span className="text-base sm:text-lg leading-none"><Wordmark /></span>
+          <Link href="/" className="min-w-0 text-base sm:text-lg leading-none hover:opacity-80 transition" aria-label="Tacklebox IQ: my gear">
+            <Wordmark />
           </Link>
-          <Link
-            href="/?planner=1"
-            className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap"
-          >
-            <Sparkles className="w-4 h-4" /> PLAN TRIP
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/?planner=1"
+              className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap"
+            >
+              <Sparkles className="w-4 h-4" /> PLAN TRIP
+            </Link>
+            <CloseButton onClick={() => router.push('/')} label="Back to my gear" />
+          </div>
         </div>
       </header>
 
