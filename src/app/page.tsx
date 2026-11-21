@@ -2721,7 +2721,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       )}
 
       {undoToast && (
-        <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:bottom-24 inset-x-4 z-50 flex justify-center pointer-events-none" role="status" aria-live="polite">
+        <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:bottom-24 inset-x-4 z-50 flex justify-center pointer-events-none" role="status" aria-live="polite">
           <div className="pointer-events-auto max-w-sm w-full flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-xl pl-4 pr-2 py-2 shadow-2xl font-mono text-xs">
             <Repeat className={`w-4 h-4 shrink-0 ${undoToast.nowGhost ? 'text-red-400' : 'text-emerald-400'}`} />
             <span className="flex-1 min-w-0 text-slate-200">
@@ -3137,7 +3137,7 @@ function TackleboxIQ({ session }: { session: Session }) {
         aria-label="Back to top"
         tabIndex={showBackToTop ? 0 : -1}
         aria-hidden={!showBackToTop}
-        className={`sm:hidden fixed right-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 w-14 h-14 rounded-2xl bg-slate-800/95 backdrop-blur border border-slate-700 text-slate-200 shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 ${
+        className={`sm:hidden fixed right-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 w-14 h-14 rounded-2xl bg-slate-800/95 backdrop-blur border border-slate-700 text-slate-200 shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 ${
           showBackToTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
         }`}
       >
@@ -3159,12 +3159,12 @@ function TackleboxIQ({ session }: { session: Session }) {
       {/* Phones: thumb-reach bottom bar with search, the three main actions and Add gear */}
       <nav
         aria-label="Main actions"
-        className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        className="sm:hidden fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-full bg-slate-800/90 backdrop-blur-xl border border-slate-700/80 shadow-2xl shadow-black/60 p-1.5"
       >
         {mobileSearchOpen ? (
-          <div className="flex items-center gap-2 h-12">
+          <div className="flex items-center gap-2 h-14">
             <div className="relative flex-1 min-w-0 h-full">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-amber-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 ref={mobileSearchRef}
                 type="search"
@@ -3174,37 +3174,38 @@ function TackleboxIQ({ session }: { session: Session }) {
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                 placeholder="Search your gear…"
                 aria-label="Search gear by name, brand, species, specs, colour or location"
-                className={`w-full h-full bg-slate-950/70 border border-slate-700 focus:border-amber-500 rounded-xl pl-9 ${searchQuery ? 'pr-9' : 'pr-3'} text-base font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
+                className={`w-full h-full bg-slate-950/70 border border-slate-700 focus:border-amber-500 rounded-full pl-10 ${searchQuery ? 'pr-10' : 'pr-4'} text-base font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
               />
               {searchQuery && (
                 <button
                   onClick={() => { setSearchQuery(''); mobileSearchRef.current?.focus(); }}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-200"
                   aria-label="Clear search"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
-            <CloseButton onClick={() => setMobileSearchOpen(false)} label="Close search" />
+            <CloseButton onClick={() => setMobileSearchOpen(false)} label="Close search" className="w-11 h-11 mr-0.5" />
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {([
               { key: 'search', label: 'Search', icon: <Search className="w-5 h-5" />, onClick: () => setMobileSearchOpen(true), active: !!searchQuery.trim() },
-              { key: 'plan', label: 'Plan', icon: <Sparkles className="w-5 h-5 text-amber-400" />, onClick: () => { setTripPlannerError(null); setIsTripPlannerOpen(true); } },
+              { key: 'plan', label: 'Plan', icon: <Sparkles className="w-5 h-5" />, onClick: () => { setTripPlannerError(null); setIsTripPlannerOpen(true); } },
               { key: 'pack', label: 'Pack', icon: <ClipboardList className="w-5 h-5" />, href: '/packs' },
               { key: 'restock', label: 'Restock', icon: <ShoppingBag className="w-5 h-5" />, onClick: () => setIsRestockOpen(true), badge: allGhostCount },
             ] as const).map((b) => {
-              const cls = `relative flex-1 min-w-0 h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition ${
-                'active' in b && b.active ? 'bg-white text-slate-950' : 'text-slate-300 hover:bg-slate-800 active:bg-slate-800'
+              const on = 'active' in b && b.active;
+              const cls = `relative flex-1 min-w-0 h-14 rounded-full flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition [&>svg]:text-amber-400 ${
+                on ? 'bg-slate-950/80 text-white ring-1 ring-amber-500/50' : 'text-slate-200 hover:bg-slate-700/60 active:bg-slate-700/60'
               }`;
               const inner = (
                 <>
                   {b.icon}
                   <span className="leading-none">{b.label}</span>
                   {'badge' in b && b.badge > 0 && (
-                    <span className="absolute top-0.5 right-[18%] bg-red-500 text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">{b.badge}</span>
+                    <span className="absolute top-1 right-[16%] bg-red-500 text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">{b.badge}</span>
                   )}
                 </>
               );
@@ -3214,7 +3215,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             })}
             <button
               onClick={() => { setExtractionError(null); setIsAddModalOpen(true); }}
-              className="shrink-0 w-14 h-12 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 shadow-lg shadow-amber-500/20 flex items-center justify-center transition"
+              className="shrink-0 w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center transition"
               aria-label="Add gear"
             >
               <Plus className="w-6 h-6 stroke-[3]" />
