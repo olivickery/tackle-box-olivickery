@@ -312,7 +312,7 @@ export default function ZoomLightbox({
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-2.5 rounded-full bg-slate-900/80 text-slate-200 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition z-50 shadow-xl"
+        className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 p-2.5 rounded-full bg-slate-900/80 text-slate-200 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition z-50 shadow-xl"
         title="Close"
         aria-label="Close"
       >
@@ -321,7 +321,7 @@ export default function ZoomLightbox({
 
       {hasMany && (
         <>
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/80 text-xs font-mono text-slate-200 pointer-events-none z-50" aria-live="polite">
+          <div className="absolute top-[calc(1.5rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/80 text-xs font-mono text-slate-200 pointer-events-none z-50" aria-live="polite">
             {index + 1} / {images.length}
           </div>
           {index > 0 && (
