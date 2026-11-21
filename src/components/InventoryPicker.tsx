@@ -43,7 +43,7 @@ export default function InventoryPicker({ items, onListIds, onAdd, onClose }: Pr
     <div className="fixed inset-0 z-[65] bg-slate-950/95 backdrop-blur-sm flex justify-center" role="dialog" aria-modal="true" aria-label="Add gear from your tackle box">
       <div className="w-full max-w-lg h-full flex flex-col bg-slate-900 sm:border-x border-slate-800 font-mono text-xs">
         {/* Header, search, type chips */}
-        <div className="px-4 pt-4 pb-3 border-b border-slate-800 space-y-3 shrink-0">
+        <div className="px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-3 border-b border-slate-800 space-y-3 shrink-0">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-sans font-bold text-lg text-slate-100">Add from your tackle box</h2>
             <CloseButton onClick={onClose} />
