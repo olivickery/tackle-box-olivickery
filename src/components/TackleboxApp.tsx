@@ -839,8 +839,8 @@ function TackleboxIQ({ session }: { session: Session }) {
     : section === 'restock' ? 'restock' : null;
   const navActive = (key: 'plan' | 'packs' | 'restock') =>
     navKey === key
-      ? 'bg-slate-950 border border-slate-950'
-      : 'bg-slate-800 hover:bg-slate-700 border border-slate-700';
+      ? 'bg-white border border-white text-slate-950 [&_svg]:text-slate-950'
+      : 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100';
   const prevSectionRef = useRef<Section>(section);
   useEffect(() => {
     const prev = prevSectionRef.current;
@@ -2066,7 +2066,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 onChange={(e) => { setSearchQuery(e.target.value); if (section !== 'gear') goHome(); }}
                 placeholder="Search…"
                 aria-label="Search gear by name, brand, species, specs, colour or location"
-                className={`w-full h-full min-h-11 bg-slate-950/70 border border-slate-800 focus:border-amber-500 rounded-xl pl-9 ${searchQuery ? 'pr-8' : 'pr-2'} text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
+                className={`w-full h-full min-h-11 bg-slate-950/70 border border-slate-800 focus:border-slate-500 rounded-xl pl-9 ${searchQuery ? 'pr-8' : 'pr-2'} text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
               />
               {searchQuery && (
                 <button 
@@ -2087,7 +2087,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                   setIsTripPlannerOpen(true);
                 }}
                 aria-current={navKey === 'plan' ? 'page' : undefined}
-                className={`w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('plan')}`}
+                className={`w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('plan')}`}
                 title="AI trip planner"
               >
                 <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
@@ -2097,7 +2097,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               <button
                 onClick={() => (navKey === 'packs' ? goHome() : goTo('/packs'))}
                 aria-current={navKey === 'packs' ? 'page' : undefined}
-                className={`w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('packs')}`}
+                className={`w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('packs')}`}
                 title="My pack lists"
               >
                 <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
@@ -2107,7 +2107,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               <button 
                 onClick={() => setIsRestockOpen(navKey !== 'restock')}
                 aria-current={navKey === 'restock' ? 'page' : undefined}
-                className={`relative w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('restock')}`}
+                className={`relative w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('restock')}`}
                 title="Restock list"
                 aria-label={`Restock list (${allGhostCount})`}
               >
@@ -3308,7 +3308,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           setExtractionError(null);
           setIsAddModalOpen(true);
         }}
-        className="hidden sm:flex fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold items-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer"
+        className={`hidden ${section === 'gear' ? 'sm:flex' : ''} fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold items-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer`}
         aria-label="Add gear"
       >
         <Plus className="w-6 h-6 stroke-[3]" />
@@ -3318,7 +3318,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       {/* Phones: fade content under the floating bar so it recedes behind it */}
       <div
         aria-hidden="true"
-        className="sm:hidden fixed inset-x-0 bottom-0 z-30 pointer-events-none h-[calc(8rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent"
+        className="sm:hidden fixed inset-x-0 bottom-0 z-30 pointer-events-none h-[calc(6.5rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent"
       />
 
       {/* Phones: thumb-reach bottom bar with search, the three main actions and Add gear */}
@@ -3339,7 +3339,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                 placeholder="Search your gear…"
                 aria-label="Search gear by name, brand, species, specs, colour or location"
-                className={`w-full h-full bg-slate-950/70 border border-slate-700 focus:border-amber-500 rounded-full pl-10 pr-4 text-base font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
+                className={`w-full h-full bg-slate-950/70 border border-slate-700 focus:border-slate-500 rounded-full pl-10 pr-4 text-base font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
               />
             </div>
             {/* One close: clears the search and shows the whole tackle box again. */}
