@@ -3308,7 +3308,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           setExtractionError(null);
           setIsAddModalOpen(true);
         }}
-        className={`hidden ${section === 'gear' ? 'sm:flex' : ''} fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-amber-500/20 font-bold items-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer`}
+        className={`hidden ${section === 'gear' ? 'sm:flex' : ''} fixed bottom-6 right-6 z-40 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-2xl shadow-xl shadow-black/40 font-bold items-center gap-2 transition hover:scale-105 active:scale-95 cursor-pointer`}
         aria-label="Add gear"
       >
         <Plus className="w-6 h-6 stroke-[3]" />
@@ -3382,7 +3382,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             {section === 'gear' ? (
               <button
                 onClick={() => { setExtractionError(null); setIsAddModalOpen(true); }}
-                className="shrink-0 w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center transition"
+                className="shrink-0 w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 flex items-center justify-center transition"
                 aria-label="Add gear"
               >
                 <Plus className="w-6 h-6 stroke-[3]" />
@@ -3390,7 +3390,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             ) : (
               <button
                 onClick={goHome}
-                className="shrink-0 w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center transition"
+                className="shrink-0 w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 flex items-center justify-center transition"
                 aria-label="Back to my gear"
                 title="Back to my gear"
               >
