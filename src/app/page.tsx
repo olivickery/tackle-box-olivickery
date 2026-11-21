@@ -647,8 +647,8 @@ function GearDetailSheet({
   const then = (fn: () => void) => () => { onClose(); fn(); };
 
   const row = 'flex justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0';
-  const tile = 'flex flex-col items-start gap-1.5 p-3 min-h-[84px] rounded-xl border border-slate-800 bg-slate-950/40 hover:bg-slate-800 hover:border-slate-700 text-left transition';
-  const editBtn = 'flex items-center justify-center gap-1.5 min-h-11 rounded-xl border border-slate-800 bg-slate-950/40 hover:bg-slate-800 text-sm text-slate-200 transition';
+  const tile = 'flex items-center gap-2.5 px-3 py-2 min-h-12 rounded-xl border border-slate-800 bg-slate-950/40 hover:bg-slate-800 hover:border-slate-700 text-left transition';
+  const editBtn = 'flex items-center justify-center gap-1.5 min-h-11 rounded-xl border border-slate-800 bg-slate-950/40 hover:bg-slate-800 text-xs text-slate-200 transition';
   const chip = 'inline-flex items-center min-h-8 px-3 rounded-lg border border-slate-700 bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 transition';
 
   return (
@@ -729,8 +729,8 @@ function GearDetailSheet({
         <div className="px-4 pt-5">
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => onAddToPack(item)} className={tile}>
-              <ListPlus className="w-5 h-5 text-amber-400" />
-              <span className="text-sm font-semibold text-slate-100 leading-tight">Add to pack list</span>
+              <ListPlus className="w-4 h-4 shrink-0 text-amber-400" />
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Add to pack list</span>
             </button>
             <button
               onClick={() => {
@@ -741,17 +741,16 @@ function GearDetailSheet({
               disabled={tipsLoading}
               className={`${tile} disabled:opacity-60`}
             >
-              <Lightbulb className="w-5 h-5 text-amber-400" />
-              <span className="text-sm font-semibold text-slate-100 leading-tight">Tips for using this item</span>
-              {!!item.tips?.length && <span className="text-xs text-slate-400">{item.tips.length} saved</span>}
+              <Lightbulb className="w-4 h-4 shrink-0 text-amber-400" />
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Tips for this item</span>
             </button>
             <button onClick={then(() => onShareCard(item))} className={tile}>
-              <Gift className="w-5 h-5 text-amber-400" />
-              <span className="text-sm font-semibold text-slate-100 leading-tight">Share or hand over</span>
+              <Gift className="w-4 h-4 shrink-0 text-amber-400" />
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Share or hand over</span>
             </button>
             <button onClick={then(() => onToggleGhost(item.id, item.is_ghost, { withUndo: true }))} className={tile}>
-              <Repeat className={`w-5 h-5 ${item.is_ghost ? 'text-emerald-400' : 'text-amber-400'}`} />
-              <span className="text-sm font-semibold text-slate-100 leading-tight">{item.is_ghost ? 'Mark as replaced' : 'Needs replacing'}</span>
+              <Repeat className={`w-4 h-4 shrink-0 ${item.is_ghost ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <span className="text-xs font-semibold text-slate-100 leading-snug">{item.is_ghost ? 'Mark as replaced' : 'Needs replacing'}</span>
             </button>
           </div>
 
