@@ -62,6 +62,7 @@ import {
   RectangleVertical,
   Grid2x2,
   Gift,
+  LayoutGrid,
   Lightbulb,
   ListPlus,
   MoreHorizontal
@@ -838,7 +839,7 @@ function TackleboxIQ({ session }: { session: Session }) {
     : section === 'restock' ? 'restock' : null;
   const navActive = (key: 'plan' | 'packs' | 'restock') =>
     navKey === key
-      ? 'bg-slate-950 border border-amber-500/60 ring-1 ring-amber-500/40'
+      ? 'bg-slate-950 border border-slate-950'
       : 'bg-slate-800 hover:bg-slate-700 border border-slate-700';
   const prevSectionRef = useRef<Section>(section);
   useEffect(() => {
@@ -3314,6 +3315,12 @@ function TackleboxIQ({ session }: { session: Session }) {
         <span className="font-sans uppercase text-xs tracking-wider">Add gear</span>
       </button>
 
+      {/* Phones: fade content under the floating bar so it recedes behind it */}
+      <div
+        aria-hidden="true"
+        className="sm:hidden fixed inset-x-0 bottom-0 z-30 pointer-events-none h-[calc(8rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent"
+      />
+
       {/* Phones: thumb-reach bottom bar with search, the three main actions and Add gear */}
       <nav
         aria-label="Main actions"
@@ -3348,7 +3355,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             ]).map((b) => {
               const on = b.active;
               const cls = `relative flex-1 min-w-0 h-14 rounded-full flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition [&>svg]:text-amber-400 ${
-                on ? 'bg-slate-950/80 text-white ring-1 ring-amber-500/50' : 'text-slate-200 hover:bg-slate-700/60 active:bg-slate-700/60'
+                on ? 'bg-slate-950/80 text-white' : 'text-slate-200 hover:bg-slate-700/60 active:bg-slate-700/60'
               }`;
               const inner = (
                 <>
@@ -3371,13 +3378,25 @@ function TackleboxIQ({ session }: { session: Session }) {
                 </button>
               );
             })}
-            <button
-              onClick={() => { setExtractionError(null); setIsAddModalOpen(true); }}
-              className="shrink-0 w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center transition"
-              aria-label="Add gear"
-            >
-              <Plus className="w-6 h-6 stroke-[3]" />
-            </button>
+            {/* Gear grid: Add gear. Other sections: back to the gear grid (thumb-reach version of the X). */}
+            {section === 'gear' ? (
+              <button
+                onClick={() => { setExtractionError(null); setIsAddModalOpen(true); }}
+                className="shrink-0 w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center transition"
+                aria-label="Add gear"
+              >
+                <Plus className="w-6 h-6 stroke-[3]" />
+              </button>
+            ) : (
+              <button
+                onClick={goHome}
+                className="shrink-0 w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center transition"
+                aria-label="Back to my gear"
+                title="Back to my gear"
+              >
+                <LayoutGrid className="w-6 h-6 stroke-[2.5]" />
+              </button>
+            )}
           </div>
         )}
       </nav>
