@@ -8,6 +8,7 @@ import {
   type GearItem, type PackList,
   formatPackRow, buildPackEntries, applyInventoryAdds, normalizePlan,
 } from '../lib/gear';
+import CloseButton from './CloseButton';
 
 const inputClass =
   'w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-base sm:text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500/60';
@@ -122,9 +123,7 @@ export default function AddToPackSheet({
             <p className="text-xs text-slate-400">Add to pack list</p>
             <h2 id="add-to-pack-title" className="text-lg font-semibold text-slate-100 leading-tight truncate">{label}</h2>
           </div>
-          <button onClick={onClose} className="shrink-0 min-h-11 px-3 -mr-1 rounded-lg text-sm font-semibold text-amber-400 hover:bg-slate-800 transition">
-            Done
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         <div className="px-4 pt-4 space-y-2">

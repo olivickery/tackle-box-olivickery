@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { Gift, Handshake, Loader2, Copy, Check, Share2, AlertTriangle } from 'lucide-react';
 import type { GearItem } from '../lib/gear';
 import { createCardLink } from '../lib/sharedCards';
+import CloseButton from './CloseButton';
 
 type Kind = 'copy' | 'transfer';
 
@@ -122,9 +123,7 @@ export default function ShareCardSheet({
             <p className="text-xs text-slate-400">Share or hand over</p>
             <h2 id="share-card-title" className="text-lg font-semibold text-slate-100 leading-tight truncate">{label}</h2>
           </div>
-          <button onClick={onClose} className="shrink-0 min-h-11 px-3 -mr-1 rounded-lg text-sm font-semibold text-amber-400 hover:bg-slate-800 transition">
-            Done
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         {!link ? (
@@ -173,21 +172,22 @@ export default function ShareCardSheet({
 
             {error && <p className="text-xs text-red-300 text-center">{error}</p>}
 
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={copyLink} className="rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold min-h-11 flex items-center justify-center gap-2 transition">
-                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied' : 'Copy link'}
-              </button>
-              {typeof navigator !== 'undefined' && typeof navigator.share === 'function' ? (
+            {typeof navigator !== 'undefined' && typeof navigator.share === 'function' ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={copyLink} className="rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold min-h-11 flex items-center justify-center gap-2 transition">
+                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Copied' : 'Copy link'}
+                </button>
                 <button onClick={shareLink} className="rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold min-h-11 flex items-center justify-center gap-2 transition">
                   <Share2 className="w-4 h-4" /> Send…
                 </button>
-              ) : (
-                <button onClick={onClose} className="rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold min-h-11 transition">
-                  Done
-                </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <button onClick={copyLink} className="w-full rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold min-h-11 flex items-center justify-center gap-2 transition">
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Copied' : 'Copy link'}
+              </button>
+            )}
           </div>
         )}
       </div>

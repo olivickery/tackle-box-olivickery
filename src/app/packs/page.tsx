@@ -16,6 +16,7 @@ import {
   formatGearRow, formatPackRow, buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, newCustomItem,
   inventoryPickerItems, applyInventoryAdds,
 } from '../../lib/gear';
+import CloseButton from '../../components/CloseButton';
 
 type SortKey = 'trip-date' | 'newest' | 'name' | 'species' | 'location';
 
@@ -389,9 +390,7 @@ function SavedPacks({ session }: { session: Session }) {
             <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl font-mono text-xs">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-sans font-bold text-lg text-slate-100">Edit pack list</h2>
-                <button onClick={() => setEditingPack(null)} className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800" aria-label="Close">
-                  <X className="w-5 h-5" />
-                </button>
+                <CloseButton onClick={() => setEditingPack(null)} />
               </div>
               <label htmlFor="edit-title" className="block text-slate-400 mb-1.5 uppercase font-bold text-[10px]">Name</label>
               <input

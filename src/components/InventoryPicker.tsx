@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Check, Package, Plus, Search, X } from 'lucide-react';
 import type { PackEntry } from './PackChecklist';
+import CloseButton from './CloseButton';
 
 export interface PickerItem extends PackEntry {
   type: string;
@@ -45,9 +46,7 @@ export default function InventoryPicker({ items, onListIds, onAdd, onClose }: Pr
         <div className="px-4 pt-4 pb-3 border-b border-slate-800 space-y-3 shrink-0">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-sans font-bold text-lg text-slate-100">Add from your tackle box</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800" aria-label="Close">
-              <X className="w-5 h-5" />
-            </button>
+            <CloseButton onClick={onClose} />
           </div>
           <div className="relative">
             <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
