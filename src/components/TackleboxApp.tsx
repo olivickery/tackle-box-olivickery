@@ -3,19 +3,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import AuthGate from '../components/AuthGate';
-import ZoomLightbox from '../components/ZoomLightbox';
-import Wordmark from '../components/Wordmark';
-import LegalFooter from '../components/LegalFooter';
-import PackChecklist, { GapStatusTag, ReAddGapButton, type PackEntry } from '../components/PackChecklist';
+import AuthGate from './AuthGate';
+import ZoomLightbox from './ZoomLightbox';
+import Wordmark from './Wordmark';
+import LegalFooter from './LegalFooter';
+import PackChecklist, { GapStatusTag, ReAddGapButton, type PackEntry } from './PackChecklist';
 import Link from 'next/link';
-import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
-import NamePrompt from '../components/NamePrompt';
-import ShareCardSheet from '../components/ShareCardSheet';
+import { usePathname, useRouter } from 'next/navigation';
+import SectionHeader from './SectionHeader';
+import PackListsSection from './PackListsSection';
+import { AmazonLink, AmazonDisclosure } from './AmazonLink';
+import NamePrompt from './NamePrompt';
+import ShareCardSheet from './ShareCardSheet';
 import { enhanceImage, enhancedPath, originalOfEnhanced, storagePathOf } from '../lib/enhance';
-import AddToPackSheet from '../components/AddToPackSheet';
+import AddToPackSheet from './AddToPackSheet';
 import { PENDING_CLAIM_KEY, UUID_RE } from '../lib/sharedCards';
-import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from '../components/OnboardingCards';
+import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from './OnboardingCards';
 import { firstNameOf } from '../lib/profile';
 import {
   type GearItem, type ItemTip, type TripPlan, type CustomPackItem,
@@ -63,7 +66,7 @@ import {
   ListPlus,
   MoreHorizontal
 } from 'lucide-react';
-import CloseButton from '../components/CloseButton';
+import CloseButton from './CloseButton';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
   'Surf & Rock',
@@ -799,11 +802,60 @@ async function authHeaders(): Promise<Record<string, string>> {
   };
 }
 
-export default function Page() {
+export default function TackleboxApp() {
   return <AuthGate>{(session) => <TackleboxIQ session={session} />}</AuthGate>;
 }
 
+type Section = 'gear' | 'plan' | 'plan-checklist' | 'packs' | 'pack-checklist' | 'restock';
+
+/** Gear grid scroll position, restored when coming back from a section. */
+let gearScrollY = 0;
+
+/** Which app section a path shows; every section has its own URL (see app/(app)). */
+function sectionOf(pathname: string): { section: Section; packId: string | null } {
+  if (pathname === '/plan') return { section: 'plan', packId: null };
+  if (pathname === '/plan/checklist') return { section: 'plan-checklist', packId: null };
+  if (pathname === '/restock') return { section: 'restock', packId: null };
+  if (pathname === '/packs') return { section: 'packs', packId: null };
+  const m = pathname.match(/^\/packs\/([^/]+)$/);
+  if (m) return { section: 'pack-checklist', packId: decodeURIComponent(m[1]) };
+  return { section: 'gear', packId: null };
+}
+
 function TackleboxIQ({ session }: { session: Session }) {
+  const router = useRouter();
+  const pathname = usePathname() || '/';
+  const { section, packId: openPackId } = sectionOf(pathname);
+  const goTo = (path: string) => {
+    if (section === 'gear') gearScrollY = window.scrollY;
+    if (path !== pathname) router.push(path);
+  };
+  const goHome = () => { if (pathname !== '/') router.push('/', { scroll: false }); };
+  /** Which nav button (desktop row and phone bar) matches the current section. */
+  const navKey: 'plan' | 'packs' | 'restock' | null =
+    section === 'plan' || section === 'plan-checklist' ? 'plan'
+    : section === 'packs' || section === 'pack-checklist' ? 'packs'
+    : section === 'restock' ? 'restock' : null;
+  const navActive = (key: 'plan' | 'packs' | 'restock') =>
+    navKey === key
+      ? 'bg-slate-950 border border-amber-500/60 ring-1 ring-amber-500/40'
+      : 'bg-slate-800 hover:bg-slate-700 border border-slate-700';
+  const prevSectionRef = useRef<Section>(section);
+  useEffect(() => {
+    const prev = prevSectionRef.current;
+    prevSectionRef.current = section;
+    if (prev === section) return;
+    if (section === 'gear') {
+      const y = gearScrollY;
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [section]);
+  // Old "/?planner=1" links open the planner section.
+  useEffect(() => {
+    if (pathname === '/' && new URLSearchParams(window.location.search).has('planner')) router.replace('/plan');
+  }, [pathname, router]);
   const [items, setItems] = useState<GearItem[]>([]);
   const [detailItemId, setDetailItemId] = useState<string | null>(null);
   const detailItem = detailItemId ? items.find((i) => i.id === detailItemId) ?? null : null;
@@ -854,7 +906,7 @@ function TackleboxIQ({ session }: { session: Session }) {
     const t = setTimeout(() => setUndoToast(null), 5000);
     return () => clearTimeout(t);
   }, [undoToast]);
-  const [isRestockOpen, setIsRestockOpen] = useState(false);
+  const setIsRestockOpen = (open: boolean) => (open ? goTo('/restock') : goHome());
   // Phones: the bottom bar's Search button swaps the bar for a search field.
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileSearchRef = useRef<HTMLInputElement>(null);
@@ -905,16 +957,8 @@ function TackleboxIQ({ session }: { session: Session }) {
     try { return localStorage.getItem(`tbiq:namePromptSkipped:${session.user.id}`) ? null : 'welcome'; } catch { return null; }
   });
 
-  // Trip Planner States
-  // /?planner=1 (from the pack lists page) opens the planner straight away.
-  const [isTripPlannerOpen, setIsTripPlannerOpen] = useState(
-    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('planner')
-  );
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('planner')) {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-  }, []);
+  // Trip Planner States (the planner is the /plan section)
+  const setIsTripPlannerOpen = (open: boolean) => (open ? goTo('/plan') : goHome());
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   // Last trip saved on this device (the app only renders client-side, behind AuthGate).
   const tripStorageKey = `tbiq:lastTrip:${session.user.id}`;
@@ -926,7 +970,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [tripPlannerError, setTripPlannerError] = useState<string | null>(null);
   const [packChecked, setPackChecked] = useState<string[]>(savedTrip?.checked ?? []);
   const [addedGapItems, setAddedGapItems] = useState<string[]>(savedTrip?.addedGaps ?? []);
-  const [isPackChecklistOpen, setIsPackChecklistOpen] = useState(false);
+  const setIsPackChecklistOpen = (open: boolean) => (open ? goTo('/plan/checklist') : goTo('/plan'));
   const [isAddingGaps, setIsAddingGaps] = useState(false);
   const [savedPackId, setSavedPackId] = useState<string | null>(savedTrip?.packId ?? null);
   const [hiddenPackItems, setHiddenPackItems] = useState<string[]>(savedTrip?.hidden ?? []);
@@ -1484,7 +1528,7 @@ function TackleboxIQ({ session }: { session: Session }) {
    * shared text, because Associates links aren't allowed in emails or texts.
    */
   const handleShareRestockList = async (nameOverride?: string) => {
-    if (ghostItems.length === 0 || isSharingList) return;
+    if (restockItems.length === 0 || isSharingList) return;
     const name = (nameOverride || firstName).trim();
     if (!name) {
       setNamePrompt('share');
@@ -1493,7 +1537,7 @@ function TackleboxIQ({ session }: { session: Session }) {
     setIsSharingList(true);
     const title = `${name}'s restock list`;
 
-    const snapshot = ghostItems.map(item => ({
+    const snapshot = restockItems.map(item => ({
       brand: item.brand || '',
       name: item.name,
       detail: [item.color, item.depth && item.depth !== 'N/A' ? item.depth : ''].filter(Boolean).join(' · ') || (item.brand ? '' : item.type),
@@ -1880,6 +1924,8 @@ function TackleboxIQ({ session }: { session: Session }) {
   const showGhostSection = pillFilter === 'all' || pillFilter === 'replace';
 
   const ghostItems = items.filter(item => item.is_ghost && matchesSearch(item));
+  // The restock section always shows the whole list (search only filters the gear grid).
+  const restockItems = items.filter(item => item.is_ghost);
   const favoriteItems = items.filter(item => item.is_favorite && !item.is_ghost && matchesSearch(item));
   // The Gifted pill reuses the My gear section, showing every gifted card (favourites too).
   const baseMyGearItems = pillFilter === 'gifted'
@@ -1967,7 +2013,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           </button>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-800" role="group" aria-label="View">
+            <div className={`${section === 'gear' ? 'flex' : 'hidden'} bg-slate-950/60 p-1 rounded-xl border border-slate-800`} role="group" aria-label="View">
               {([
                 { mode: 'single', label: 'Single column view', icon: <RectangleVertical className="w-4 h-4" /> },
                 { mode: 'grid', label: 'Two-column grid view', icon: <Grid2x2 className="w-4 h-4" /> },
@@ -2016,7 +2062,7 @@ function TackleboxIQ({ session }: { session: Session }) {
               <input 
                 type="search"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); if (section !== 'gear') goHome(); }}
                 placeholder="Search…"
                 aria-label="Search gear by name, brand, species, specs, colour or location"
                 className={`w-full h-full min-h-11 bg-slate-950/70 border border-slate-800 focus:border-amber-500 rounded-xl pl-9 ${searchQuery ? 'pr-8' : 'pr-2'} text-base sm:text-xs font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
@@ -2035,28 +2081,32 @@ function TackleboxIQ({ session }: { session: Session }) {
             <div className="flex gap-2 shrink-0 sm:flex-1 sm:justify-end">
               <button
                 onClick={() => {
+                  if (navKey === 'plan') { goHome(); return; }
                   setTripPlannerError(null);
                   setIsTripPlannerOpen(true);
                 }}
-                className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
+                aria-current={navKey === 'plan' ? 'page' : undefined}
+                className={`w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('plan')}`}
                 title="AI trip planner"
               >
                 <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
                 <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">Plan<span className="hidden sm:inline"> trip</span></span>
               </button>
 
-              <Link
-                href="/packs"
-                className="w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
+              <button
+                onClick={() => (navKey === 'packs' ? goHome() : goTo('/packs'))}
+                aria-current={navKey === 'packs' ? 'page' : undefined}
+                className={`w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('packs')}`}
                 title="My pack lists"
               >
                 <ClipboardList className="w-4 h-4 shrink-0 text-amber-400" />
                 <span className="text-[11px] sm:text-xs leading-none whitespace-nowrap">Pack<span className="hidden sm:inline"> lists</span></span>
-              </Link>
+              </button>
 
               <button 
-                onClick={() => setIsRestockOpen(true)}
-                className="relative w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition"
+                onClick={() => setIsRestockOpen(navKey !== 'restock')}
+                aria-current={navKey === 'restock' ? 'page' : undefined}
+                className={`relative w-[60px] max-[359px]:w-[50px] sm:w-auto min-h-11 sm:px-4 rounded-xl text-slate-100 font-mono font-bold flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 transition ${navActive('restock')}`}
                 title="Restock list"
                 aria-label={`Restock list (${allGhostCount})`}
               >
@@ -2073,6 +2123,7 @@ function TackleboxIQ({ session }: { session: Session }) {
         </div>
       </header>
 
+      {section === 'gear' ? (
       <main className="max-w-5xl mx-auto px-4 pt-4">
 
         {/* Filter pills: full width, three equal columns */}
@@ -2495,21 +2546,17 @@ function TackleboxIQ({ session }: { session: Session }) {
         )}
 
       </main>
-
-      <LegalFooter className="mt-8" />
-
-      {/* AI trip planner modal */}
-      {isTripPlannerOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto font-mono text-xs">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100 font-sans">AI trip planner</h2>
-              </div>
-              <CloseButton onClick={() => setIsTripPlannerOpen(false)} />
-            </div>
-
+      ) : (<>
+      <main className="max-w-3xl mx-auto px-4 pt-5">
+        {section === 'plan' && (
+          <div className="font-mono text-xs">
+            <SectionHeader
+              icon={<Sparkles />}
+              title="AI trip planner"
+              subtitle="Pick your trip; the planner chooses from your tackle box."
+              onClose={goHome}
+            />
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl px-5 pb-5 pt-1">
             <div className="mt-4 space-y-4">
               <div>
                 <label htmlFor="trip-location" className="block text-slate-300 mb-1.5 font-sans font-semibold text-xs">Where are you fishing?</label>
@@ -2668,29 +2715,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                 </div>
               )}
             </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {namePrompt && (
-        <NamePrompt
-          reason={namePrompt}
-          onDone={(name) => {
-            const wasShare = namePrompt === 'share';
-            setNamePrompt(null);
-            setTypedFirstName(name);
-            if (wasShare) handleShareRestockList(name);
-          }}
-          onSkip={() => {
-            if (namePrompt === 'welcome') {
-              try { localStorage.setItem(namePromptSkipKey, '1'); } catch { /* ignore */ }
-            }
-            setNamePrompt(null);
-          }}
-        />
-      )}
-
-      {isPackChecklistOpen && currentPlan && (
+        {section === 'plan-checklist' && (currentPlan ? (
         <PackChecklist
           tripLabel={[tripLocation, tripSpeciesInput, tripConditions].filter(Boolean).join(' · ')}
           tactics={currentPlan.trip_summary}
@@ -2717,6 +2746,135 @@ function TackleboxIQ({ session }: { session: Session }) {
             onSave: handleSavePackList,
           }}
           onClose={() => setIsPackChecklistOpen(false)}
+        />
+      ) : (
+          <div className="font-mono text-xs">
+            <SectionHeader icon={<ClipboardList />} title="Pack checklist" onClose={() => goTo('/plan')} closeLabel="Back to the trip planner" />
+            <p className="text-slate-400">Plan a trip first, then generate its pack checklist.</p>
+          </div>
+        ))}
+
+        {(section === 'packs' || section === 'pack-checklist') && (
+          <PackListsSection
+            session={session}
+            items={items}
+            setItems={setItems}
+            openPackId={openPackId}
+            onOpenPack={(id) => goTo(`/packs/${encodeURIComponent(id)}`)}
+            onClosePack={() => goTo('/packs')}
+            onClose={goHome}
+            onPlanTrip={() => goTo('/plan')}
+          />
+        )}
+
+        {section === 'restock' && (
+          <div className="font-mono text-xs">
+            <SectionHeader
+              icon={<ShoppingBag />}
+              title="Restock list"
+              subtitle="Gear to replace or buy, with links to find it."
+              onClose={goHome}
+            />
+            <div className="space-y-3">
+              {restockItems.length === 0 ? (
+                <div className="text-center py-12 text-slate-500 font-mono text-xs">
+                  <p>Zero items to replace.</p>
+                  <p className="mt-1">Tap &ldquo;Replace it&rdquo; on any item&apos;s details to build your shopping list.</p>
+                </div>
+              ) : (
+                restockItems.map((item) => (
+                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      {item.brand
+                        ? <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
+                        : <span className="text-[10px] font-mono text-red-400 uppercase">{item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'From trip plan' : item.type}</span>}
+                      <h4 className="font-semibold text-sm text-slate-200">{item.name}</h4>
+                      <p className="text-xs text-slate-400 font-mono">
+                        {[item.color && `Colour: ${item.color}`, item.depth && item.depth !== 'N/A' ? item.depth : '', !item.color && item.type].filter(Boolean).join(' | ')}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      <button 
+                        onClick={() => toggleGhost(item.id, item.is_ghost, { withUndo: true })}
+                        className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'Bought' : 'Replaced'}
+                      </button>
+                      <button 
+                        onClick={() => removeFromRestock(item)}
+                        className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
+                        aria-label={`Remove ${item.name} from restock list`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <AmazonLink brand={item.brand} name={item.name} className="mt-2.5 w-full" />
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 font-mono text-xs text-slate-400">
+              {restockItems.length > 0 && <AmazonDisclosure className="mb-3 text-center" />}
+              <div className="flex justify-between mb-2">
+                <span>Items to Buy:</span>
+                <span className="text-slate-200 font-bold">{restockItems.length} Items</span>
+              </div>
+              {restockItems.length > 0 && firstName && (
+                <p className="mb-2.5 text-[11px] text-slate-500">Shares as &ldquo;{firstName}&rsquo;s restock list&rdquo;</p>
+              )}
+              <button 
+                onClick={() => handleShareRestockList()}
+                disabled={restockItems.length === 0 || isSharingList}
+                className={`w-full font-sans font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 ${
+                  copiedToClipboard 
+                    ? 'bg-emerald-500 text-slate-950' 
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50'
+                }`}
+              >
+                {copiedToClipboard ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Link copied!</span>
+                  </>
+                ) : isSharingList ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Creating link…</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4" />
+                    <span>Share list</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+      </>)}
+
+      <LegalFooter className="mt-8" />
+
+      {namePrompt && (
+        <NamePrompt
+          reason={namePrompt}
+          onDone={(name) => {
+            const wasShare = namePrompt === 'share';
+            setNamePrompt(null);
+            setTypedFirstName(name);
+            if (wasShare) handleShareRestockList(name);
+          }}
+          onSkip={() => {
+            if (namePrompt === 'welcome') {
+              try { localStorage.setItem(namePromptSkipKey, '1'); } catch { /* ignore */ }
+            }
+            setNamePrompt(null);
+          }}
         />
       )}
 
@@ -3191,12 +3349,12 @@ function TackleboxIQ({ session }: { session: Session }) {
         ) : (
           <div className="flex items-center gap-1">
             {([
-              { key: 'search', label: 'Search', icon: <Search className="w-4 h-4" />, onClick: () => setMobileSearchOpen(true), active: !!searchQuery.trim() },
-              { key: 'plan', label: 'Plan', icon: <Sparkles className="w-4 h-4" />, onClick: () => { setTripPlannerError(null); setIsTripPlannerOpen(true); } },
-              { key: 'pack', label: 'Pack', icon: <ClipboardList className="w-4 h-4" />, href: '/packs' },
-              { key: 'restock', label: 'Restock', icon: <ShoppingBag className="w-4 h-4" />, onClick: () => setIsRestockOpen(true), badge: allGhostCount },
-            ] as const).map((b) => {
-              const on = 'active' in b && b.active;
+              { key: 'search', label: 'Search', icon: <Search className="w-4 h-4" />, onClick: () => { goHome(); setMobileSearchOpen(true); }, active: section === 'gear' && !!searchQuery.trim(), badge: 0 },
+              { key: 'plan', label: 'Plan', icon: <Sparkles className="w-4 h-4" />, onClick: () => { if (navKey === 'plan') { goHome(); return; } setTripPlannerError(null); setIsTripPlannerOpen(true); }, active: navKey === 'plan', badge: 0 },
+              { key: 'pack', label: 'Pack', icon: <ClipboardList className="w-4 h-4" />, onClick: () => (navKey === 'packs' ? goHome() : goTo('/packs')), active: navKey === 'packs', badge: 0 },
+              { key: 'restock', label: 'Restock', icon: <ShoppingBag className="w-4 h-4" />, onClick: () => setIsRestockOpen(navKey !== 'restock'), active: navKey === 'restock', badge: allGhostCount },
+            ]).map((b) => {
+              const on = b.active;
               const cls = `relative flex-1 min-w-0 h-14 rounded-full flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition [&>svg]:text-amber-400 ${
                 on ? 'bg-slate-950/80 text-white ring-1 ring-amber-500/50' : 'text-slate-200 hover:bg-slate-700/60 active:bg-slate-700/60'
               }`;
@@ -3204,14 +3362,22 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <>
                   {b.icon}
                   <span className="leading-none">{b.label}</span>
-                  {'badge' in b && b.badge > 0 && (
+                  {b.badge > 0 && (
                     <span className="absolute top-1 right-[16%] bg-red-500 text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">{b.badge}</span>
                   )}
                 </>
               );
-              return 'href' in b
-                ? <Link key={b.key} href={b.href} className={cls} aria-label="My pack lists">{inner}</Link>
-                : <button key={b.key} onClick={b.onClick} className={cls} aria-label={b.key === 'restock' ? `Restock list (${allGhostCount})` : b.key === 'plan' ? 'AI trip planner' : searchQuery ? `Search: ${searchQuery}` : 'Search'}>{inner}</button>;
+              return (
+                <button
+                  key={b.key}
+                  onClick={b.onClick}
+                  className={cls}
+                  aria-current={on && b.key !== 'search' ? 'page' : undefined}
+                  aria-label={b.key === 'restock' ? `Restock list (${allGhostCount})` : b.key === 'plan' ? 'AI trip planner' : b.key === 'pack' ? 'My pack lists' : searchQuery ? `Search: ${searchQuery}` : 'Search'}
+                >
+                  {inner}
+                </button>
+              );
             })}
             <button
               onClick={() => { setExtractionError(null); setIsAddModalOpen(true); }}
@@ -3475,100 +3641,6 @@ function TackleboxIQ({ session }: { session: Session }) {
                 )}
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {isRestockOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
-          <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 p-6 flex flex-col h-full">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100">Restock list</h2>
-              </div>
-              <CloseButton onClick={() => setIsRestockOpen(false)} />
-            </div>
-
-            <div className="flex-1 overflow-y-auto py-4 space-y-3">
-              {ghostItems.length === 0 ? (
-                <div className="text-center py-12 text-slate-500 font-mono text-xs">
-                  <p>Zero items to replace.</p>
-                  <p className="mt-1">Tap "Replace" on any item to build your shopping list!</p>
-                </div>
-              ) : (
-                ghostItems.map((item) => (
-                  <div key={item.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      {item.brand
-                        ? <span className="text-[10px] font-mono text-amber-400 uppercase">{item.brand}</span>
-                        : <span className="text-[10px] font-mono text-red-400 uppercase">{item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'From trip plan' : item.type}</span>}
-                      <h4 className="font-semibold text-sm text-slate-200">{item.name}</h4>
-                      <p className="text-xs text-slate-400 font-mono">
-                        {[item.color && `Colour: ${item.color}`, item.depth && item.depth !== 'N/A' ? item.depth : '', !item.color && item.type].filter(Boolean).join(' | ')}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1.5 shrink-0">
-                      <button 
-                        onClick={() => toggleGhost(item.id, item.is_ghost, { withUndo: true })}
-                        className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        {item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? 'Bought' : 'Replaced'}
-                      </button>
-                      <button 
-                        onClick={() => removeFromRestock(item)}
-                        className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center justify-center gap-1"
-                        aria-label={`Remove ${item.name} from restock list`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                  <AmazonLink brand={item.brand} name={item.name} className="mt-2.5 w-full" />
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-slate-800 font-mono text-xs text-slate-400">
-              {ghostItems.length > 0 && <AmazonDisclosure className="mb-3 text-center" />}
-              <div className="flex justify-between mb-2">
-                <span>Items to Buy:</span>
-                <span className="text-slate-200 font-bold">{ghostItems.length} Items</span>
-              </div>
-              {ghostItems.length > 0 && firstName && (
-                <p className="mb-2.5 text-[11px] text-slate-500">Shares as &ldquo;{firstName}&rsquo;s restock list&rdquo;</p>
-              )}
-              <button 
-                onClick={() => handleShareRestockList()}
-                disabled={ghostItems.length === 0 || isSharingList}
-                className={`w-full font-sans font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 ${
-                  copiedToClipboard 
-                    ? 'bg-emerald-500 text-slate-950' 
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50'
-                }`}
-              >
-                {copiedToClipboard ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Link copied!</span>
-                  </>
-                ) : isSharingList ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Creating link…</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-4 h-4" />
-                    <span>Share list</span>
-                  </>
-                )}
-              </button>
-            </div>
           </div>
         </div>
       )}

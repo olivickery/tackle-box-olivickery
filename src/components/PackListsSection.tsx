@@ -1,23 +1,19 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import {
-  Calendar, ClipboardList, Edit3, Loader2, MapPin, Fish, Sparkles, Star, Trash2, X, AlertTriangle,
+  Calendar, ClipboardList, Edit3, Loader2, MapPin, Fish, Sparkles, Star, Trash2, AlertTriangle,
 } from 'lucide-react';
-import AuthGate from '../../components/AuthGate';
-import Wordmark from '../../components/Wordmark';
-import LegalFooter from '../../components/LegalFooter';
-import PackChecklist, { type PackEntry } from '../../components/PackChecklist';
-import { supabase } from '../../lib/supabase';
+import PackChecklist, { type PackEntry } from './PackChecklist';
+import SectionHeader from './SectionHeader';
+import { supabase } from '../lib/supabase';
 import {
   type GearItem, type PackList,
-  formatGearRow, formatPackRow, buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, newCustomItem,
+  formatPackRow, buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, newCustomItem,
   inventoryPickerItems, applyInventoryAdds,
-} from '../../lib/gear';
-import CloseButton from '../../components/CloseButton';
+} from '../lib/gear';
+import CloseButton from './CloseButton';
 
 type SortKey = 'trip-date' | 'newest' | 'name' | 'species' | 'location';
 
@@ -35,20 +31,36 @@ function formatTripDate(d: string | null): string {
   return date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export default function PacksPage() {
-  return <AuthGate>{(session) => <SavedPacks session={session} />}</AuthGate>;
-}
-
-function SavedPacks({ session }: { session: Session }) {
-  const router = useRouter();
+/**
+ * "My pack lists" section (/packs) and a saved list's checklist (/packs/<id>).
+ * Gear comes from the app shell, so restock changes made here show everywhere.
+ */
+export default function PackListsSection({
+  session,
+  items,
+  setItems,
+  openPackId,
+  onOpenPack,
+  onClosePack,
+  onClose,
+  onPlanTrip,
+}: {
+  session: Session;
+  items: GearItem[];
+  setItems: React.Dispatch<React.SetStateAction<GearItem[]>>;
+  /** The list whose checklist is showing (from the URL), or null for the list of lists. */
+  openPackId: string | null;
+  onOpenPack: (id: string) => void;
+  onClosePack: () => void;
+  onClose: () => void;
+  onPlanTrip: () => void;
+}) {
   const [packs, setPacks] = useState<PackList[]>([]);
-  const [items, setItems] = useState<GearItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('trip-date');
   const [favouritesOnly, setFavouritesOnly] = useState(false);
 
-  const [openPackId, setOpenPackId] = useState<string | null>(null);
   const [editingPack, setEditingPack] = useState<PackList | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDate, setEditDate] = useState('');
@@ -61,10 +73,7 @@ function SavedPacks({ session }: { session: Session }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [packsRes, gearRes] = await Promise.all([
-        supabase.from('pack_lists').select('*').order('created_at', { ascending: false }),
-        supabase.from('gear_items').select('*'),
-      ]);
+      const packsRes = await supabase.from('pack_lists').select('*').order('created_at', { ascending: false });
       if (cancelled) return;
       if (packsRes.error) {
         console.error('Failed to load pack lists:', packsRes.error);
@@ -72,7 +81,6 @@ function SavedPacks({ session }: { session: Session }) {
       } else {
         setPacks((packsRes.data || []).map(formatPackRow));
       }
-      if (!gearRes.error) setItems((gearRes.data || []).map(formatGearRow));
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -139,7 +147,7 @@ function SavedPacks({ session }: { session: Session }) {
     setPackToDelete(null);
   };
 
-  const openPack = packs.find(p => p.id === openPackId) || null;
+  const openPack = (openPackId && packs.find(p => p.id === openPackId)) || null;
   const openEntries = buildPackEntries(openPack?.plan ?? null, items, {
     hidden: openPack?.hidden_items, custom: openPack?.custom_items,
   });
@@ -215,29 +223,15 @@ function SavedPacks({ session }: { session: Session }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
-      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 py-3">
-        <div className="max-w-3xl mx-auto px-4 flex items-center justify-between gap-2">
-          <Link href="/" className="min-w-0 text-base sm:text-lg leading-none hover:opacity-80 transition" aria-label="Tacklebox IQ: my gear">
-            <Wordmark />
-          </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href="/?planner=1"
-              className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 transition whitespace-nowrap"
-            >
-              <Sparkles className="w-4 h-4" /> PLAN TRIP
-            </Link>
-            <CloseButton onClick={() => router.push('/')} label="Back to my gear" />
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 pt-6 pb-16">
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <ClipboardList className="w-6 h-6 text-amber-500" /> My pack lists
-        </h1>
-        <p className="text-xs text-slate-400 font-mono mt-1">Saved trip plans and packing checklists.</p>
+    <>
+      {openPackId ? null : (
+      <div>
+        <SectionHeader
+          icon={<ClipboardList />}
+          title="My pack lists"
+          subtitle="Saved trip plans and packing checklists."
+          onClose={onClose}
+        />
 
         {/* Controls */}
         <div className="mt-5 flex flex-wrap items-center gap-2 font-mono text-xs">
@@ -281,9 +275,9 @@ function SavedPacks({ session }: { session: Session }) {
                 <>
                   <p>No saved pack lists yet.</p>
                   <p className="mt-1">Plan a trip, then tap <span className="text-slate-200">Save pack list</span>.</p>
-                  <Link href="/?planner=1" className="inline-flex items-center gap-1.5 mt-4 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold transition">
+                  <button onClick={onPlanTrip} className="inline-flex items-center gap-1.5 mt-4 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold transition">
                     <Sparkles className="w-4 h-4" /> Plan a trip
-                  </Link>
+                  </button>
                 </>
               )}
             </div>
@@ -297,7 +291,7 @@ function SavedPacks({ session }: { session: Session }) {
                 <article key={pack.id} className="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 transition">
                   <div className="flex items-start gap-3">
                     <button
-                      onClick={() => setOpenPackId(pack.id)}
+                      onClick={() => onOpenPack(pack.id)}
                       className="min-w-0 flex-1 text-left"
                     >
                       <h2 className="font-bold text-base text-slate-100 leading-snug">{pack.title}</h2>
@@ -330,7 +324,7 @@ function SavedPacks({ session }: { session: Session }) {
 
                   <div className="mt-3 flex gap-2 font-mono text-xs">
                     <button
-                      onClick={() => setOpenPackId(pack.id)}
+                      onClick={() => onOpenPack(pack.id)}
                       className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-white text-slate-950 font-sans font-bold flex items-center justify-center gap-1.5 transition"
                     >
                       <ClipboardList className="w-4 h-4" /> Open
@@ -354,11 +348,19 @@ function SavedPacks({ session }: { session: Session }) {
             })
           )}
         </div>
-      </main>
+      </div>
+      )}
 
-      <LegalFooter />
-
-      {/* Checklist */}
+      {/* Checklist (/packs/<id>) */}
+      {openPackId && !openPack && !loading && (
+        <div>
+          <SectionHeader icon={<ClipboardList />} title="Pack list not found" onClose={onClosePack} closeLabel="Back to my pack lists" />
+          <p className="text-xs text-slate-400 font-mono">It may have been deleted.</p>
+        </div>
+      )}
+      {openPackId && !openPack && loading && (
+        <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-amber-500" /></div>
+      )}
       {openPack && (
         <PackChecklist
           title={openPack.title}
@@ -383,7 +385,7 @@ function SavedPacks({ session }: { session: Session }) {
             const next = applyInventoryAdds(openPack.plan, items, openPack.hidden_items, openPack.custom_items, ids);
             updatePack(openPack.id, { hidden_items: next.hidden, custom_items: next.custom });
           }}
-          onClose={() => setOpenPackId(null)}
+          onClose={onClosePack}
         />
       )}
 
@@ -457,6 +459,6 @@ function SavedPacks({ session }: { session: Session }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

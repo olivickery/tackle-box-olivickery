@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Bookmark, Check, ClipboardList, Loader2, Package, Plus, RotateCcw, ShoppingBag, Trash2, Undo2, X } from 'lucide-react';
 import InventoryPicker, { type PickerItem } from './InventoryPicker';
 import { AmazonLink, AmazonDisclosure } from './AmazonLink';
-import CloseButton from './CloseButton';
+import SectionHeader from './SectionHeader';
 
 export interface PackEntry {
   id: string;
@@ -195,7 +195,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** Full-screen, thumb-friendly packing checklist built from a trip plan. */
+/** Thumb-friendly packing checklist built from a trip plan; rendered as an app section page. */
 export default function PackChecklist({
   title = 'Pack checklist', tripLabel, tactics, entries, gaps, checked, onToggle, onReset, onAddGaps, isAddingGaps,
   onReAddGap, reAddingGap, onRemoveEntry, onRestoreEntry, hiddenCount, onRestoreHidden, onAddCustom, inventory, onAddFromInventory, save, onClose,
@@ -275,22 +275,13 @@ export default function PackChecklist({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-sm overflow-y-auto" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="min-h-full flex items-start sm:items-center justify-center p-3 sm:p-4">
-        <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl font-mono text-xs pb-12 sm:pb-6">
-          {/* Header + progress */}
-          <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur rounded-t-2xl px-5 pt-5 pb-4 border-b border-slate-800">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="font-sans font-bold text-lg text-slate-100 flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-amber-400 shrink-0" /> <span className="truncate">{title}</span>
-                </h2>
-                <p className="text-[11px] text-slate-400 mt-0.5 truncate">{tripLabel}</p>
-              </div>
-              <CloseButton onClick={onClose} label="Close checklist" />
-            </div>
-
-            <div className="mt-4">
+    <section aria-label={title}>
+      <SectionHeader icon={<ClipboardList />} title={title} subtitle={tripLabel} onClose={onClose} closeLabel="Close checklist" />
+      <div>
+        <div className="w-full bg-slate-900 border border-slate-800 rounded-2xl font-mono text-xs pb-6">
+          {/* Progress */}
+          <div className="rounded-t-2xl px-5 pt-4 pb-4 border-b border-slate-800">
+            <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className={allPacked ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
                   {allPacked ? 'All packed. Tight lines!' : `${packed} of ${total} packed`}
@@ -480,7 +471,7 @@ export default function PackChecklist({
 
       {/* Undo after a removal */}
       {lastRemoved && (
-        <div className="fixed bottom-6 inset-x-4 z-[61] flex justify-center pointer-events-none" role="status" aria-live="polite">
+        <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:bottom-6 inset-x-4 z-[61] flex justify-center pointer-events-none" role="status" aria-live="polite">
           <div className="pointer-events-auto max-w-sm w-full flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-2 py-2 shadow-2xl font-mono text-xs">
             <Trash2 className="w-4 h-4 text-red-400 shrink-0" />
             <span className="flex-1 min-w-0 text-slate-200 truncate">Removed {lastRemoved.name}</span>
@@ -493,6 +484,6 @@ export default function PackChecklist({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
