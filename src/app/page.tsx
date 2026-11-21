@@ -12,11 +12,12 @@ import Link from 'next/link';
 import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
 import NamePrompt from '../components/NamePrompt';
 import ShareCardSheet from '../components/ShareCardSheet';
+import AddToPackSheet from '../components/AddToPackSheet';
 import { PENDING_CLAIM_KEY, UUID_RE } from '../lib/sharedCards';
 import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from '../components/OnboardingCards';
 import { firstNameOf } from '../lib/profile';
 import {
-  type GearItem, type TripPlan, type CustomPackItem,
+  type GearItem, type ItemTip, type TripPlan, type CustomPackItem,
   SUGGESTED_NOTE_PREFIX, normalizePlan, formatGearRow, formatPackRow, splitSpecies, defaultPackTitle,
   buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, normalizeCustomItems, newCustomItem,
   inventoryPickerItems, applyInventoryAdds,
@@ -55,6 +56,8 @@ import {
   RectangleVertical,
   Grid2x2,
   Gift,
+  Lightbulb,
+  ListPlus,
   MoreHorizontal
 } from 'lucide-react';
 const PRESET_ENVIRONMENTS = [
@@ -502,6 +505,55 @@ function CardTagFooter({
   );
 }
 
+/** "Tips for using this item": AI tactics kept on the item, each removable. */
+function ItemTipsPanel({
+  tips, loading, error, onDelete, onMore,
+}: {
+  tips: ItemTip[];
+  loading: boolean;
+  error: string | null;
+  onDelete: (id: string) => void;
+  onMore: () => void;
+}) {
+  if (tips.length === 0 && !loading && !error) return null;
+  return (
+    <div id="item-tips-panel" className="px-4 pt-4 scroll-mt-20">
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <span className="text-[11px] uppercase font-bold text-amber-400 flex items-center gap-1.5"><Lightbulb className="w-3.5 h-3.5" /> Tactics</span>
+          {tips.length > 0 && !loading && (
+            <button onClick={onMore} className="text-xs font-semibold text-amber-400 hover:text-amber-300 min-h-8 px-1">More tips</button>
+          )}
+        </div>
+        {tips.length > 0 && (
+          <ul className="divide-y divide-amber-500/15">
+            {tips.map((t) => (
+              <li key={t.id} className="flex items-start gap-2 py-2.5">
+                <div className="min-w-0 flex-1">
+                  {t.title && <p className="text-xs font-semibold text-amber-200">{t.title}</p>}
+                  <p className="text-sm text-slate-200 leading-relaxed">{t.tip}</p>
+                </div>
+                <button
+                  onClick={() => onDelete(t.id)}
+                  className="shrink-0 -mr-1.5 p-2 rounded-lg text-slate-400 hover:text-red-300 hover:bg-slate-800/60 transition"
+                  aria-label={`Delete tip: ${t.title || t.tip.slice(0, 40)}`}
+                  title="Delete this tip"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {loading && (
+          <p className="flex items-center gap-2 text-sm text-slate-300 py-2"><Loader2 className="w-4 h-4 animate-spin text-amber-400" /> Asking the AI guide…</p>
+        )}
+        {error && !loading && <p className="text-xs text-red-300 py-1.5">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
 function GearDetailSheet({
   item,
   onClose,
@@ -511,6 +563,11 @@ function GearDetailSheet({
   onToggleGhost,
   onDeleteItem,
   onShareCard,
+  onAddToPack,
+  onGetTips,
+  onDeleteTip,
+  tipsLoading,
+  tipsError,
   onFilterBrand,
   onFilterCategory,
   onFilterLocation,
@@ -525,6 +582,11 @@ function GearDetailSheet({
   onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
   onDeleteItem: (item: GearItem) => void;
   onShareCard: (item: GearItem) => void;
+  onAddToPack: (item: GearItem) => void;
+  onGetTips: (item: GearItem) => void;
+  onDeleteTip: (item: GearItem, tipId: string) => void;
+  tipsLoading: boolean;
+  tipsError: string | null;
   onFilterBrand: (brand: string) => void;
   onFilterCategory: (type: string) => void;
   onFilterLocation: (env: string) => void;
@@ -611,6 +673,14 @@ function GearDetailSheet({
           </div>
         </div>
 
+        <ItemTipsPanel
+          tips={item.tips || []}
+          loading={tipsLoading}
+          error={tipsError}
+          onDelete={(id) => onDeleteTip(item, id)}
+          onMore={() => onGetTips(item)}
+        />
+
         <div className="px-4 pt-4">
           <p className="text-xs text-slate-400 mb-1">Notes</p>
           {item.notes
@@ -631,6 +701,17 @@ function GearDetailSheet({
           <button onClick={then(() => onEditPhotos(item))} className={action}><Camera className="w-4 h-4 text-slate-400" />Photos</button>
           <button onClick={then(() => onToggleGhost(item.id, item.is_ghost, { withUndo: true }))} className={action}><Repeat className="w-4 h-4 text-slate-400" />{item.is_ghost ? 'Mark as replaced' : 'Mark as needing replacement'}</button>
           <button onClick={then(() => onShareCard(item))} className={action}><Gift className="w-4 h-4 text-slate-400" />Share or hand over</button>
+          <button onClick={() => onAddToPack(item)} className={action}><ListPlus className="w-4 h-4 text-slate-400" />Add to pack list</button>
+          <button
+            onClick={() => {
+              onGetTips(item);
+              requestAnimationFrame(() => document.getElementById('item-tips-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+            }}
+            disabled={tipsLoading}
+            className={`${action} disabled:opacity-60`}
+          >
+            <Lightbulb className="w-4 h-4 text-slate-400" />{item.tips?.length ? 'More tips for using this item' : 'Tips for using this item'}
+          </button>
         </div>
 
         <div className="mx-4 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 overflow-hidden">
@@ -688,6 +769,11 @@ function TackleboxIQ({ session }: { session: Session }) {
     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
     : 'grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4';
   const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace' | 'gifted'>('all');
+  // "Add to pack list" sheet and AI item tips, opened from the details sheet.
+  const [addToPackItemId, setAddToPackItemId] = useState<string | null>(null);
+  const addToPackItem = addToPackItemId ? items.find((i) => i.id === addToPackItemId) ?? null : null;
+  const [tipsLoadingId, setTipsLoadingId] = useState<string | null>(null);
+  const [tipsError, setTipsError] = useState<{ id: string; message: string } | null>(null);
   // Gift / hand-over link sheet for one card.
   const [shareCardItemId, setShareCardItemId] = useState<string | null>(null);
   const shareCardItem = shareCardItemId ? items.find((i) => i.id === shareCardItemId) ?? null : null;
@@ -1381,6 +1467,62 @@ function TackleboxIQ({ session }: { session: Session }) {
       }
     }
     setIsSharingList(false);
+  };
+
+  /** Saves an item's kept tips (optimistic; rolls back if the save fails). */
+  const saveTips = async (item: GearItem, tips: ItemTip[]) => {
+    const previous = item.tips || [];
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, tips } : i)));
+    const { error } = await supabase.from('gear_items').update({ tips }).eq('id', item.id);
+    if (error) {
+      console.error('Failed to save tips:', error);
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, tips: previous } : i)));
+      setTipsError({ id: item.id, message: "Couldn't save the tips. Please try again." });
+      return false;
+    }
+    return true;
+  };
+
+  const handleGetTips = async (item: GearItem) => {
+    if (tipsLoadingId) return;
+    setTipsLoadingId(item.id);
+    setTipsError(null);
+    const existing = item.tips || [];
+    try {
+      const res = await fetch('/api/item-tips', {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({
+          item: {
+            brand: item.brand, name: item.name, type: item.type, color: item.color, depth: item.depth,
+            species: item.species, environment_tags: item.environment_tags,
+            // Trip-planner placeholders say nothing about the item itself.
+            notes: item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? '' : item.notes,
+          },
+          avoid: existing.map((t) => `${t.title}: ${t.tip}`),
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setTipsError({ id: item.id, message: data?.error || 'Could not get tips just now. Please try again.' });
+      } else {
+        const fresh: ItemTip[] = (data.tips as { title: string; tip: string }[]).map((t) => ({
+          id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          title: t.title,
+          tip: t.tip,
+        }));
+        await saveTips(item, [...existing, ...fresh]);
+      }
+    } catch (err) {
+      console.error('Item tips failed:', err);
+      setTipsError({ id: item.id, message: 'Could not reach the AI guide. Check your connection and try again.' });
+    }
+    setTipsLoadingId(null);
+  };
+
+  const handleDeleteTip = (item: GearItem, tipId: string) => {
+    setTipsError(null);
+    saveTips(item, (item.tips || []).filter((t) => t.id !== tipId));
   };
 
   const scrollToSection = (id: string) => {
@@ -2473,10 +2615,24 @@ function TackleboxIQ({ session }: { session: Session }) {
           onToggleGhost={toggleGhost}
           onDeleteItem={setItemToDelete}
           onShareCard={(it) => setShareCardItemId(it.id)}
+          onAddToPack={(it) => setAddToPackItemId(it.id)}
+          onGetTips={handleGetTips}
+          onDeleteTip={handleDeleteTip}
+          tipsLoading={tipsLoadingId === detailItem.id}
+          tipsError={tipsError?.id === detailItem.id ? tipsError.message : null}
           onFilterBrand={handleBrandClick}
           onFilterCategory={handleCategoryClick}
           onFilterLocation={(env) => { setActiveEnvFilter(env); scrollToSection('my-gear-section'); }}
           onZoomImage={openZoom}
+        />
+      )}
+
+      {addToPackItem && (
+        <AddToPackSheet
+          item={addToPackItem}
+          items={items}
+          userId={session.user.id}
+          onClose={() => setAddToPackItemId(null)}
         />
       )}
 

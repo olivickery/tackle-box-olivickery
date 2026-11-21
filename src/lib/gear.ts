@@ -19,6 +19,14 @@ export interface GearItem {
   created_at?: string;
   /** First name of whoever gifted / handed over this card; null for normal gear. */
   gifted_from?: string | null;
+  /** AI "Tips for using this item" tactics the user has kept. */
+  tips?: ItemTip[] | null;
+}
+
+export interface ItemTip {
+  id: string;
+  title: string;
+  tip: string;
 }
 
 export interface GapItem {
