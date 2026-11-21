@@ -3332,19 +3332,11 @@ function TackleboxIQ({ session }: { session: Session }) {
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                 placeholder="Search your gear…"
                 aria-label="Search gear by name, brand, species, specs, colour or location"
-                className={`w-full h-full bg-slate-950/70 border border-slate-700 focus:border-amber-500 rounded-full pl-10 ${searchQuery ? 'pr-10' : 'pr-4'} text-base font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
+                className={`w-full h-full bg-slate-950/70 border border-slate-700 focus:border-amber-500 rounded-full pl-10 pr-4 text-base font-mono text-slate-100 placeholder-slate-500 outline-none transition [&::-webkit-search-cancel-button]:hidden`}
               />
-              {searchQuery && (
-                <button
-                  onClick={() => { setSearchQuery(''); mobileSearchRef.current?.focus(); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-200"
-                  aria-label="Clear search"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
             </div>
-            <CloseButton onClick={() => setMobileSearchOpen(false)} label="Close search" className="w-11 h-11 mr-0.5" />
+            {/* One close: clears the search and shows the whole tackle box again. */}
+            <CloseButton onClick={() => { setSearchQuery(''); setMobileSearchOpen(false); }} label="Clear and close search" className="w-11 h-11 mr-0.5" />
           </div>
         ) : (
           <div className="flex items-center gap-1">
