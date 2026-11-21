@@ -356,7 +356,7 @@ function CardCarousel({
         }}
         className={`absolute top-2 right-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 ${
           item.is_favorite
-            ? 'bg-amber-500 text-slate-950 border-amber-400'
+            ? 'bg-white text-slate-950 border-white'
             : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
         }`}
         title={item.is_favorite ? 'Remove from favourites' : 'Add to favourites'}
@@ -484,8 +484,8 @@ function CardTagFooter({
             title={`Show gear for ${env}`}
             className={`text-[11px] font-mono min-h-7 px-2 rounded border transition ${
               activeLocation === env
-                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
+                ? 'bg-white text-slate-950 border-white font-bold'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-slate-100'
             }`}
           >
             {env}
@@ -498,7 +498,7 @@ function CardTagFooter({
         title={`Show all ${item.type}`}
         className={`shrink-0 text-[11px] font-mono uppercase min-h-7 px-2 rounded border transition ${
           activeCategory === item.type
-            ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+            ? 'bg-white text-slate-950 border-white font-bold'
             : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
         }`}
       >
@@ -2004,7 +2004,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             { key: 'all', label: 'All', short: 'All', icon: null, count: items.length,
               active: 'bg-slate-700 text-white border-slate-500', badge: 'bg-slate-950/30 text-white', idleBadge: 'bg-slate-800 text-slate-300' },
             { key: 'favs', label: 'Favourites', short: 'Favourites', icon: <Star className="w-3.5 h-3.5 fill-current shrink-0" />, count: allFavCount,
-              active: 'bg-amber-500 text-slate-950 border-amber-400', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-amber-500/15 text-amber-400' },
+              active: 'bg-white text-slate-950 border-white', badge: 'bg-slate-950/10 text-slate-950', idleBadge: 'bg-slate-700 text-slate-100' },
             { key: 'replace', label: 'To replace', short: 'Replace', icon: <Repeat className="w-3.5 h-3.5 shrink-0" />, count: allGhostCount,
               active: 'bg-red-500 text-white border-red-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-red-500/15 text-red-400' },
             ...(allGiftedCount > 0 ? [
@@ -2065,9 +2065,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                 />
                 
                 {showFavSection && favoriteItems.length > 0 && (
-                  <div id="favourites-section" className="bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-36">
+                  <div id="favourites-section" className="bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-slate-700 backdrop-blur-sm shadow-2xl scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-100 font-mono flex items-center gap-1.5">
                         <Star className="w-4 h-4 fill-current" /> Favourites
                       </span>
                       <span className="text-xs text-slate-400 font-mono">{favoriteItems.length} items</span>
@@ -2077,7 +2077,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                       {favoriteItems.map((item) => (
                         <div 
                           key={item.id}
-                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5`}
+                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-900 border-slate-500/60 shadow-lg`}
                         >
                           <div className="relative">
                             <CardCarousel 
@@ -2134,7 +2134,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         </span>
 
                         {activeCategoryFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 text-slate-100 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Tag className="w-3 h-3" />
                             <span>Category: {activeCategoryFilter}</span>
                             <button 
@@ -2148,7 +2148,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         )}
 
                         {activeBrandFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 text-slate-100 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Filter className="w-3 h-3" />
                             <span>Brand: {activeBrandFilter}</span>
                             <button 
@@ -2162,7 +2162,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         )}
 
                         {activeEnvFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 text-slate-100 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Compass className="w-3 h-3" />
                             <span>Location: {activeEnvFilter}</span>
                             <button 
@@ -2353,9 +2353,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                         <td className="p-3 font-sans font-semibold">
                           <div className="flex items-center gap-1.5">
                             {item.is_favorite && (
-                              <Star className="w-3.5 h-3.5 fill-current text-amber-400 shrink-0" />
+                              <Star className="w-3.5 h-3.5 fill-current text-white shrink-0" />
                             )}
-                            <span className={item.is_favorite ? 'text-amber-400 font-bold' : 'text-slate-200'}>
+                            <span className={item.is_favorite ? 'text-white font-bold' : 'text-slate-200'}>
                               {item.brand ? `${item.brand} - ` : ''}{item.name}
                             </span>
                             {item.gifted_from && <Gift className="w-3.5 h-3.5 text-fuchsia-300 shrink-0" aria-label={`Gifted by ${item.gifted_from}`} />}

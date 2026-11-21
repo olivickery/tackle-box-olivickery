@@ -252,7 +252,7 @@ function SavedPacks({ session }: { session: Session }) {
             onClick={() => setFavouritesOnly(v => !v)}
             aria-pressed={favouritesOnly}
             className={`ml-auto flex items-center gap-1.5 px-3 py-2 rounded-full border transition ${
-              favouritesOnly ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-600'
+              favouritesOnly ? 'bg-white text-slate-950 border-white font-bold' : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-600'
             }`}
           >
             <Star className="w-3.5 h-3.5 fill-current" /> Favourites
@@ -306,7 +306,7 @@ function SavedPacks({ session }: { session: Session }) {
                     <button
                       onClick={() => updatePack(pack.id, { is_favorite: !pack.is_favorite })}
                       className={`p-1.5 rounded-full border transition shrink-0 ${
-                        pack.is_favorite ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-950 text-slate-500 border-slate-700 hover:text-slate-200'
+                        pack.is_favorite ? 'bg-white text-slate-950 border-white' : 'bg-slate-950 text-slate-500 border-slate-700 hover:text-slate-200'
                       }`}
                       aria-label={pack.is_favorite ? 'Remove from favourites' : 'Add to favourites'}
                       aria-pressed={pack.is_favorite}

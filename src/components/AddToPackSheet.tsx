@@ -156,7 +156,7 @@ export default function AddToPackSheet({
                     <ClipboardList className={`w-4 h-4 shrink-0 ${on ? 'text-emerald-400' : 'text-slate-400'}`} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-100">
-                        {p.is_favorite && <Star className="w-3.5 h-3.5 fill-current text-amber-400 shrink-0" />}
+                        {p.is_favorite && <Star className="w-3.5 h-3.5 fill-current text-white shrink-0" />}
                         <span className="truncate">{p.title}</span>
                       </span>
                       {(date || p.location) && (
