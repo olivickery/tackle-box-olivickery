@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
 const DOUBLE_TAP_MS = 280;
 const SWIPE_CLOSE_PX = 110;
+const SWIPE_NEXT_PX = 60;
 
 type Point = { x: number; y: number };
 type View = { scale: number; x: number; y: number };
@@ -21,13 +22,36 @@ const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y)
  * The page viewport stays locked (no global pinch) so the iOS input-zoom fix
  * in layout.tsx is preserved; zoom happens only inside this overlay.
  */
-export default function ZoomLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+export default function ZoomLightbox({
+  images,
+  startIndex = 0,
+  onClose,
+}: {
+  /** All of the item's photos; swipe sideways (or use the arrows) to move between them. */
+  images: string[];
+  startIndex?: number;
+  onClose: () => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  const [index, setIndex] = useState(() => clamp(startIndex, 0, Math.max(0, images.length - 1)));
+  const src = images[index];
+  const hasMany = images.length > 1;
   const [view, setView] = useState<View>({ scale: 1, x: 0, y: 0 });
   const [animate, setAnimate] = useState(false);
   const [dragDown, setDragDown] = useState(0);
+  const [dragX, setDragX] = useState(0);
+
+  /** Show photo `i`, unzoomed. `fromX` starts it offset so it slides into place. */
+  const go = useCallback((i: number, fromX = 0) => {
+    if (i < 0 || i >= images.length) return;
+    setAnimate(false);
+    setIndex(i);
+    setView({ scale: 1, x: 0, y: 0 });
+    setDragX(fromX);
+    if (fromX) requestAnimationFrame(() => requestAnimationFrame(() => { setAnimate(true); setDragX(0); }));
+  }, [images.length]);
 
   // Gesture bookkeeping lives in refs so pointer handlers never read stale state.
   const viewRef = useRef(view);
@@ -40,6 +64,7 @@ export default function ZoomLightbox({ src, onClose }: { src: string; onClose: (
     startPoint: Point; // single-finger start, or pinch midpoint
     startDist: number; // pinch only
     moved: boolean;
+    axis: 'x' | 'y' | null; // unzoomed single-finger drag: sideways = next photo, down = close
   } | null>(null);
   const lastTap = useRef<{ t: number; p: Point } | null>(null);
 
@@ -75,9 +100,15 @@ export default function ZoomLightbox({ src, onClose }: { src: string; onClose: (
     setView({ scale: 1, x: 0, y: 0 });
   };
 
-  // Escape to close, lock background scroll while open.
+  // Escape to close, arrows to change photo, lock background scroll while open.
+  const indexRef = useRef(index);
+  useEffect(() => { indexRef.current = index; }, [index]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowRight') go(indexRef.current + 1, 80);
+      else if (e.key === 'ArrowLeft') go(indexRef.current - 1, -80);
+    };
     window.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -85,7 +116,7 @@ export default function ZoomLightbox({ src, onClose }: { src: string; onClose: (
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [onClose]);
+  }, [onClose, go]);
 
   // Trackpad pinch / ctrl+wheel / mouse wheel zoom on desktop (needs non-passive listener).
   useEffect(() => {
@@ -107,8 +138,8 @@ export default function ZoomLightbox({ src, onClose }: { src: string; onClose: (
     const v = viewRef.current;
     gesture.current =
       pts.length >= 2
-        ? { startView: v, startPoint: mid(pts[0], pts[1]), startDist: dist(pts[0], pts[1]), moved: true }
-        : { startView: v, startPoint: pts[0], startDist: 0, moved: false };
+        ? { startView: v, startPoint: mid(pts[0], pts[1]), startDist: dist(pts[0], pts[1]), moved: true, axis: null }
+        : { startView: v, startPoint: pts[0], startDist: 0, moved: false, axis: null };
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -142,8 +173,14 @@ export default function ZoomLightbox({ src, onClose }: { src: string; onClose: (
     if (g.startView.scale > 1.01) {
       setView(clampView({ ...g.startView, x: g.startView.x + dx, y: g.startView.y + dy }));
     } else {
-      // Not zoomed: a downward drag previews swipe-to-close.
-      setDragDown(Math.max(0, dy));
+      // Not zoomed: sideways drag previews the next / previous photo, a downward drag previews close.
+      if (!g.axis && Math.hypot(dx, dy) > 8) g.axis = hasMany && Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (g.axis === 'x') {
+        const atEnd = (dx < 0 && index === images.length - 1) || (dx > 0 && index === 0);
+        setDragX(atEnd ? dx / 3 : dx);
+      } else if (g.axis === 'y') {
+        setDragDown(Math.max(0, dy));
+      }
     }
   };
 
@@ -160,6 +197,13 @@ export default function ZoomLightbox({ src, onClose }: { src: string; onClose: (
     }
     gesture.current = null;
 
+    if (dragX !== 0) {
+      const w = containerRef.current?.clientWidth || 400;
+      if (dragX < -SWIPE_NEXT_PX && index < images.length - 1) go(index + 1, w * 0.35);
+      else if (dragX > SWIPE_NEXT_PX && index > 0) go(index - 1, -w * 0.35);
+      else { setAnimate(true); setDragX(0); }
+      return;
+    }
     if (dragDown > SWIPE_CLOSE_PX) {
       onClose();
       return;
@@ -208,24 +252,58 @@ export default function ZoomLightbox({ src, onClose }: { src: string; onClose: (
       <button
         onClick={onClose}
         className="absolute top-4 right-4 p-2.5 rounded-full bg-slate-900/80 text-slate-200 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition z-50 shadow-xl"
-        title="Close Zoom"
+        title="Close"
+        aria-label="Close"
       >
         <X className="w-6 h-6" />
       </button>
 
+      {hasMany && (
+        <>
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/80 text-xs font-mono text-slate-200 pointer-events-none z-50" aria-live="polite">
+            {index + 1} / {images.length}
+          </div>
+          {index > 0 && (
+            <button
+              onClick={() => go(index - 1, -80)}
+              className="max-sm:hidden absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-slate-900/80 text-slate-200 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition z-50 shadow-xl"
+              aria-label="Previous photo"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          {index < images.length - 1 && (
+            <button
+              onClick={() => go(index + 1, 80)}
+              className="max-sm:hidden absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-slate-900/80 text-slate-200 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition z-50 shadow-xl"
+              aria-label="Next photo"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+        </>
+      )}
+
       <img
+        key={src}
         ref={imgRef}
         src={src}
-        alt="Zoomed detail view"
+        alt={hasMany ? `Photo ${index + 1} of ${images.length}` : 'Zoomed photo'}
         draggable={false}
         className="max-w-[calc(100vw-2rem)] max-h-[90vh] object-contain rounded-xl shadow-2xl will-change-transform"
         style={{
-          transform: `translate3d(${view.x}px, ${view.y + dragDown}px, 0) scale(${view.scale})`,
+          transform: `translate3d(${view.x + dragX}px, ${view.y + dragDown}px, 0) scale(${view.scale})`,
           transition: animate ? 'transform 220ms ease-out' : 'none',
           cursor: view.scale > 1.01 ? 'grab' : 'zoom-in',
         }}
         onTransitionEnd={() => setAnimate(false)}
       />
+
+      {/* Warm the neighbouring photos so a swipe doesn't flash empty. */}
+      {[index - 1, index + 1].filter((i) => i >= 0 && i < images.length).map((i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={`pre-${images[i]}`} src={images[i]} alt="" aria-hidden="true" className="hidden" />
+      ))}
 
       {view.scale > 1.01 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/80 text-[11px] font-mono text-slate-300 pointer-events-none">

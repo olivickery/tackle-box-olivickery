@@ -231,7 +231,6 @@ function CardCarousel({
   item,
   onEditPhotos,
   onToggleFavorite,
-  onToggleGhost,
   onZoomImage,
   onOpenDetails,
   wide = false,
@@ -241,8 +240,7 @@ function CardCarousel({
   wide?: boolean;
   onEditPhotos: (item: GearItem) => void;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
-  onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
-  onZoomImage: (url: string) => void;
+  onZoomImage: (url: string, all?: string[]) => void;
   onOpenDetails: (item: GearItem) => void;
 }) {
   const realImages = (item.image_urls && item.image_urls.length > 0 ? item.image_urls : [item.image_url]).filter(Boolean);
@@ -362,19 +360,6 @@ function CardCarousel({
         <Star className="w-4 h-4 fill-current" />
       </button>
 
-      {/* Restock shortcut: grid view on larger screens only. Single view uses the details sheet. */}
-      {!wide && <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleGhost(item.id, item.is_ghost, { withUndo: true });
-        }}
-        className={`max-sm:hidden absolute bottom-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 bg-slate-900/80 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-500/50`}
-        title="Lost it? Add to restock list"
-        aria-label="Mark as needing replacement"
-      >
-        <Repeat className="w-4 h-4" />
-      </button>}
-
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -426,7 +411,7 @@ function CardCarousel({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onZoomImage(images[currentIndex]);
+            onZoomImage(images[currentIndex], realImages);
           }}
           className={`${wide ? '' : 'max-sm:hidden '}absolute top-2 left-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] bg-slate-900/80 text-slate-300 border border-slate-700/80 hover:text-white hover:bg-slate-800 transition z-20 backdrop-blur-md`}
           title="Zoom photo"
@@ -533,7 +518,7 @@ function GearDetailSheet({
 }: {
   item: GearItem;
   onClose: () => void;
-  onZoomImage: (url: string) => void;
+  onZoomImage: (url: string, all?: string[]) => void;
   onEditSpecs: (item: GearItem) => void;
   onEditNotes: (item: GearItem) => void;
   onEditPhotos: (item: GearItem) => void;
@@ -595,9 +580,12 @@ function GearDetailSheet({
         </div>
 
         {photos.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto px-4 scroll-px-4 pt-3 pb-1 snap-x">
+          <div
+            className="grid gap-2 px-4 pt-3 pb-1"
+            style={{ gridTemplateColumns: `repeat(${Math.min(photos.length, 4)}, minmax(0, 1fr))` }}
+          >
             {photos.map((src, i) => (
-              <button key={src} onClick={() => onZoomImage(src)} className="shrink-0 snap-start w-28 h-28 rounded-lg overflow-hidden border border-slate-800" aria-label={`Zoom photo ${i + 1} of ${item.name}`}>
+              <button key={src} onClick={() => onZoomImage(src, photos)} className={`${photos.length === 1 ? 'aspect-[4/3]' : 'aspect-square'} rounded-lg overflow-hidden border border-slate-800`} aria-label={`Zoom photo ${i + 1} of ${item.name}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt="" className="w-full h-full object-cover" />
               </button>
@@ -645,8 +633,8 @@ function GearDetailSheet({
           <button onClick={then(() => onShareCard(item))} className={action}><Gift className="w-4 h-4 text-slate-400" />Share or hand over</button>
         </div>
 
-        <div className="mx-4 mt-3 rounded-xl border border-slate-800 overflow-hidden">
-          <button onClick={then(() => onDeleteItem(item))} className={`${action} text-red-400`}><Trash2 className="w-4 h-4" />Delete item…</button>
+        <div className="mx-4 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 overflow-hidden">
+          <button onClick={then(() => onDeleteItem(item))} className="w-full flex items-center gap-3 px-4 min-h-12 text-left text-sm font-semibold text-red-300 hover:bg-red-500/20 transition"><Trash2 className="w-4 h-4" />Delete</button>
         </div>
       </div>
     </div>
@@ -789,7 +777,13 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Zoom Lightbox State
-  const [zoomedImageUrl, setZoomedImageUrl] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<{ images: string[]; index: number } | null>(null);
+  const zoomedImageUrl = zoom ? zoom.images[zoom.index] : null;
+  /** Open the photo viewer on `url`, able to swipe through `all` of the item's photos. */
+  const openZoom = (url: string, all?: string[]) => {
+    const images = all && all.length ? all : [url];
+    setZoom({ images, index: Math.max(0, images.indexOf(url)) });
+  };
 
   // Deletion Modal State
   const [itemToDelete, setItemToDelete] = useState<GearItem | null>(null);
@@ -1881,8 +1875,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                               item={item} 
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
-                              onToggleGhost={toggleGhost}
-                              onZoomImage={setZoomedImageUrl}
+                              onZoomImage={openZoom}
                               onOpenDetails={(it) => setDetailItemId(it.id)}
                               wide={isSingle}
                             />
@@ -1988,8 +1981,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                               item={item} 
                               onEditPhotos={openPhotosEditor}
                               onToggleFavorite={toggleFavorite}
-                              onToggleGhost={toggleGhost}
-                              onZoomImage={setZoomedImageUrl}
+                              onZoomImage={openZoom}
                               onOpenDetails={(it) => setDetailItemId(it.id)}
                               wide={isSingle}
                             />
@@ -2484,7 +2476,7 @@ function TackleboxIQ({ session }: { session: Session }) {
           onFilterBrand={handleBrandClick}
           onFilterCategory={handleCategoryClick}
           onFilterLocation={(env) => { setActiveEnvFilter(env); scrollToSection('my-gear-section'); }}
-          onZoomImage={setZoomedImageUrl}
+          onZoomImage={openZoom}
         />
       )}
 
@@ -2498,7 +2490,7 @@ function TackleboxIQ({ session }: { session: Session }) {
       )}
 
       {zoomedImageUrl && (
-        <ZoomLightbox src={zoomedImageUrl} onClose={() => setZoomedImageUrl(null)} />
+        <ZoomLightbox images={zoom!.images} startIndex={zoom!.index} onClose={() => setZoom(null)} />
       )}
 
       {itemToEditPhotos && (
