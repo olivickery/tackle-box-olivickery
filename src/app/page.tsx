@@ -751,7 +751,7 @@ function GearDetailSheet({
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => onAddToPack(item)} className={tile}>
               <ListPlus className="w-4 h-4 shrink-0 text-amber-400" />
-              <span className="text-xs font-semibold text-slate-100 leading-snug">Add to pack list</span>
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Add to list</span>
             </button>
             <button
               onClick={() => {
@@ -763,15 +763,15 @@ function GearDetailSheet({
               className={`${tile} disabled:opacity-60`}
             >
               <Lightbulb className="w-4 h-4 shrink-0 text-amber-400" />
-              <span className="text-xs font-semibold text-slate-100 leading-snug">Tips for this item</span>
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Get Tactics</span>
             </button>
             <button onClick={then(() => onShareCard(item))} className={tile}>
               <Gift className="w-4 h-4 shrink-0 text-amber-400" />
-              <span className="text-xs font-semibold text-slate-100 leading-snug">Share or hand over</span>
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Share or gift</span>
             </button>
             <button onClick={then(() => onToggleGhost(item.id, item.is_ghost, { withUndo: true }))} className={tile}>
               <Repeat className={`w-4 h-4 shrink-0 ${item.is_ghost ? 'text-emerald-400' : 'text-amber-400'}`} />
-              <span className="text-xs font-semibold text-slate-100 leading-snug">{item.is_ghost ? 'Mark as replaced' : 'Needs replacing'}</span>
+              <span className="text-xs font-semibold text-slate-100 leading-snug">{item.is_ghost ? 'Mark replaced' : 'Replace it'}</span>
             </button>
           </div>
 
