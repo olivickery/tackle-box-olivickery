@@ -54,6 +54,9 @@ export default function ZoomLightbox({
   const hasMany = images.length > 1 && !previewing;
   const canEdit = !!onSaveEnhanced;
   const isEnhanced = !!originalOfEnhanced(current);
+  // Already-enhanced photos show just a wand icon; tapping it reveals Enhance / Revert.
+  const [toolsOpen, setToolsOpen] = useState(false);
+  useEffect(() => { setToolsOpen(false); }, [current]);
 
   // Drop a preview (and free its memory) when it's no longer needed.
   const clearPreview = useCallback(() => {
@@ -380,6 +383,15 @@ export default function ZoomLightbox({
                 {busy === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Save
               </button>
             </div>
+          ) : isEnhanced && !toolsOpen && !busy ? (
+            <button
+              onClick={() => setToolsOpen(true)}
+              aria-label="Photo tools: enhance again or revert"
+              title="Enhanced photo: tap for Enhance or Revert"
+              className="w-11 h-11 rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-300 hover:bg-slate-800 flex items-center justify-center shadow-xl backdrop-blur-md transition"
+            >
+              <Wand2 className="w-4 h-4" />
+            </button>
           ) : (
             <div className="flex items-center gap-2">
               <button
