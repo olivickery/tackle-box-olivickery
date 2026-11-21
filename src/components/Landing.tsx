@@ -297,7 +297,7 @@ export default function Landing({ onGetStarted, onSignIn }: { onGetStarted: () =
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-slate-950">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+      <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <div className="max-w-3xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AppIcon size="sm" />
