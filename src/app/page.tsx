@@ -3137,7 +3137,7 @@ function TackleboxIQ({ session }: { session: Session }) {
         aria-label="Back to top"
         tabIndex={showBackToTop ? 0 : -1}
         aria-hidden={!showBackToTop}
-        className={`sm:hidden fixed right-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 w-14 h-14 rounded-2xl bg-slate-800/95 backdrop-blur border border-slate-700 text-slate-200 shadow-lg shadow-black/40 flex items-center justify-center transition-all duration-200 active:scale-95 ${
+        className={`sm:hidden fixed right-[19px] bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+5.125rem)] z-40 w-14 h-14 rounded-full bg-slate-800/90 backdrop-blur-xl border border-slate-700/80 text-slate-200 shadow-2xl shadow-black/60 flex items-center justify-center transition-all duration-200 active:scale-95 ${
           showBackToTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
         }`}
       >
