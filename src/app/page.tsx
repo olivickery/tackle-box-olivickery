@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
 import NamePrompt from '../components/NamePrompt';
 import ShareCardSheet from '../components/ShareCardSheet';
+import { enhancedPath, originalOfEnhanced, storagePathOf } from '../lib/enhance';
 import AddToPackSheet from '../components/AddToPackSheet';
 import { PENDING_CLAIM_KEY, UUID_RE } from '../lib/sharedCards';
 import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from '../components/OnboardingCards';
@@ -1536,6 +1537,54 @@ function TackleboxIQ({ session }: { session: Session }) {
     setIsSharingList(false);
   };
 
+  /** Replaces one photo URL on whichever item owns it, in the database, the grid and the open viewer. */
+  const swapPhoto = async (oldUrl: string, newUrl: string): Promise<boolean> => {
+    const item = items.find((i) => (i.image_urls || []).includes(oldUrl) || i.image_url === oldUrl);
+    if (!item) return false;
+    const urls = (item.image_urls?.length ? item.image_urls : [item.image_url]).map((u) => (u === oldUrl ? newUrl : u));
+    const cover = item.image_url === oldUrl || !item.image_url ? urls[0] : item.image_url;
+    const { error } = await supabase.from('gear_items').update({ image_url: cover, image_urls: urls }).eq('id', item.id);
+    if (error) {
+      console.error('Failed to update photos:', error);
+      return false;
+    }
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, image_url: cover, image_urls: urls } : i)));
+    setZoom((z) => (z ? { ...z, images: z.images.map((u) => (u === oldUrl ? newUrl : u)) } : z));
+    return true;
+  };
+
+  /** Enhance in the photo viewer: upload the corrected copy and use it in place of the original. */
+  const handleSaveEnhanced = async (originalUrl: string, blob: Blob): Promise<boolean> => {
+    // Re-enhancing an enhanced copy still points back to the true original.
+    const trueOriginal = originalOfEnhanced(originalUrl) || originalUrl;
+    const path = enhancedPath(session.user.id, trueOriginal);
+    const { error } = await supabase.storage.from('tackle-vault-images').upload(path, blob, { contentType: 'image/jpeg' });
+    if (error) {
+      console.error('Failed to upload enhanced photo:', error);
+      return false;
+    }
+    const newUrl = supabase.storage.from('tackle-vault-images').getPublicUrl(path).data.publicUrl;
+    const ok = await swapPhoto(originalUrl, newUrl);
+    // Replacing an earlier enhanced copy: tidy the old file away (best effort).
+    if (ok && originalOfEnhanced(originalUrl)) {
+      const oldPath = storagePathOf(originalUrl, 'tackle-vault-images');
+      if (oldPath?.startsWith(`${session.user.id}/`)) supabase.storage.from('tackle-vault-images').remove([oldPath]);
+    }
+    return ok;
+  };
+
+  /** Revert in the photo viewer: put the original back and delete the enhanced copy. */
+  const handleRevertEnhanced = async (enhancedUrl: string): Promise<boolean> => {
+    const original = originalOfEnhanced(enhancedUrl);
+    if (!original) return false;
+    const ok = await swapPhoto(enhancedUrl, original);
+    if (ok) {
+      const path = storagePathOf(enhancedUrl, 'tackle-vault-images');
+      if (path?.startsWith(`${session.user.id}/`)) supabase.storage.from('tackle-vault-images').remove([path]);
+    }
+    return ok;
+  };
+
   /** Saves an item's kept tips (optimistic; rolls back if the save fails). */
   const saveTips = async (item: GearItem, tips: ItemTip[]) => {
     const previous = item.tips || [];
@@ -2708,7 +2757,13 @@ function TackleboxIQ({ session }: { session: Session }) {
       )}
 
       {zoomedImageUrl && (
-        <ZoomLightbox images={zoom!.images} startIndex={zoom!.index} onClose={() => setZoom(null)} />
+        <ZoomLightbox
+          images={zoom!.images}
+          startIndex={zoom!.index}
+          onClose={() => setZoom(null)}
+          onSaveEnhanced={handleSaveEnhanced}
+          onRevertEnhanced={handleRevertEnhanced}
+        />
       )}
 
       {itemToEditPhotos && (

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Wand2, Loader2, Check, Undo2 } from 'lucide-react';
+import { enhanceImage, originalOfEnhanced } from '../lib/enhance';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -26,18 +27,75 @@ export default function ZoomLightbox({
   images,
   startIndex = 0,
   onClose,
+  onSaveEnhanced,
+  onRevertEnhanced,
 }: {
   /** All of the item's photos; swipe sideways (or use the arrows) to move between them. */
   images: string[];
   startIndex?: number;
   onClose: () => void;
+  /** Saves an enhanced copy in place of `src`; resolves once the photo list has been updated. */
+  onSaveEnhanced?: (src: string, blob: Blob) => Promise<boolean>;
+  /** Swaps an enhanced copy back to its original. */
+  onRevertEnhanced?: (src: string) => Promise<boolean>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
   const [index, setIndex] = useState(() => clamp(startIndex, 0, Math.max(0, images.length - 1)));
-  const src = images[index];
-  const hasMany = images.length > 1;
+  const current = images[index];
+  // Enhance preview: shown in place of the photo until saved or cancelled.
+  const [preview, setPreview] = useState<{ url: string; blob: Blob; for: string } | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [busy, setBusy] = useState<null | 'enhancing' | 'saving' | 'reverting'>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const previewing = !!preview && preview.for === current;
+  const src = previewing && !showOriginal ? preview.url : current;
+  const hasMany = images.length > 1 && !previewing;
+  const canEdit = !!onSaveEnhanced;
+  const isEnhanced = !!originalOfEnhanced(current);
+  // Already-enhanced photos show just a wand icon; tapping it reveals Enhance / Revert.
+  const [toolsOpen, setToolsOpen] = useState(false);
+  useEffect(() => { setToolsOpen(false); }, [current]);
+
+  // Drop a preview (and free its memory) when it's no longer needed.
+  const clearPreview = useCallback(() => {
+    setPreview((p) => { if (p) URL.revokeObjectURL(p.url); return null; });
+    setShowOriginal(false);
+  }, []);
+  useEffect(() => () => { setPreview((p) => { if (p) URL.revokeObjectURL(p.url); return null; }); }, []);
+
+  const runEnhance = async () => {
+    setBusy('enhancing');
+    setEditError(null);
+    try {
+      const blob = await enhanceImage(current);
+      setPreview((p) => { if (p) URL.revokeObjectURL(p.url); return { url: URL.createObjectURL(blob), blob, for: current }; });
+      setShowOriginal(false);
+    } catch (err) {
+      console.error('Enhance failed:', err);
+      setEditError("Couldn't enhance this photo. Please try again.");
+    }
+    setBusy(null);
+  };
+
+  const saveEnhanced = async () => {
+    if (!preview || !onSaveEnhanced) return;
+    setBusy('saving');
+    setEditError(null);
+    const ok = await onSaveEnhanced(current, preview.blob);
+    setBusy(null);
+    if (ok) clearPreview(); else setEditError("Couldn't save the enhanced photo. Please try again.");
+  };
+
+  const revert = async () => {
+    if (!onRevertEnhanced) return;
+    setBusy('reverting');
+    setEditError(null);
+    const ok = await onRevertEnhanced(current);
+    setBusy(null);
+    if (!ok) setEditError("Couldn't restore the original. Please try again.");
+  };
   const [view, setView] = useState<View>({ scale: 1, x: 0, y: 0 });
   const [animate, setAnimate] = useState(false);
   const [dragDown, setDragDown] = useState(0);
@@ -103,9 +161,12 @@ export default function ZoomLightbox({
   // Escape to close, arrows to change photo, lock background scroll while open.
   const indexRef = useRef(index);
   useEffect(() => { indexRef.current = index; }, [index]);
+  const previewingRef = useRef(false);
+  useEffect(() => { previewingRef.current = previewing; }, [previewing]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      else if (previewingRef.current) return;
       else if (e.key === 'ArrowRight') go(indexRef.current + 1, 80);
       else if (e.key === 'ArrowLeft') go(indexRef.current - 1, -80);
     };
@@ -299,6 +360,61 @@ export default function ZoomLightbox({
         onTransitionEnd={() => setAnimate(false)}
       />
 
+      {canEdit && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 w-[calc(100%-2rem)] max-w-sm">
+          {editError && <p className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-xs text-red-200 text-center">{editError}</p>}
+          {previewing ? (
+            <div className="flex items-center gap-2 p-1.5 rounded-full bg-slate-900/90 border border-slate-700 shadow-xl backdrop-blur-md">
+              <button
+                onClick={() => setShowOriginal((o) => !o)}
+                aria-pressed={showOriginal}
+                className="px-3 min-h-10 rounded-full text-xs font-semibold text-slate-200 hover:bg-slate-800 transition"
+              >
+                {showOriginal ? 'Showing original' : 'Compare'}
+              </button>
+              <button onClick={clearPreview} disabled={!!busy} className="px-3 min-h-10 rounded-full text-xs font-semibold text-slate-300 hover:bg-slate-800 transition disabled:opacity-50">
+                Cancel
+              </button>
+              <button
+                onClick={saveEnhanced}
+                disabled={!!busy}
+                className="px-4 min-h-10 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-60"
+              >
+                {busy === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Save
+              </button>
+            </div>
+          ) : isEnhanced && !toolsOpen && !busy ? (
+            <button
+              onClick={() => setToolsOpen(true)}
+              aria-label="Photo tools: enhance again or revert"
+              title="Enhanced photo: tap for Enhance or Revert"
+              className="w-11 h-11 rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-300 hover:bg-slate-800 flex items-center justify-center shadow-xl backdrop-blur-md transition"
+            >
+              <Wand2 className="w-4 h-4" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={runEnhance}
+                disabled={!!busy}
+                className="px-4 min-h-11 rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-300 hover:bg-slate-800 text-sm font-semibold flex items-center gap-2 shadow-xl backdrop-blur-md transition disabled:opacity-60"
+              >
+                {busy === 'enhancing' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Enhance
+              </button>
+              {isEnhanced && onRevertEnhanced && (
+                <button
+                  onClick={revert}
+                  disabled={!!busy}
+                  className="px-4 min-h-11 rounded-full bg-slate-900/90 border border-slate-700 text-slate-200 hover:bg-slate-800 text-sm font-semibold flex items-center gap-2 shadow-xl backdrop-blur-md transition disabled:opacity-60"
+                >
+                  {busy === 'reverting' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />} Revert
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Warm the neighbouring photos so a swipe doesn't flash empty. */}
       {[index - 1, index + 1].filter((i) => i >= 0 && i < images.length).map((i) => (
         // eslint-disable-next-line @next/next/no-img-element
@@ -306,7 +422,7 @@ export default function ZoomLightbox({
       ))}
 
       {view.scale > 1.01 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/80 text-[11px] font-mono text-slate-300 pointer-events-none">
+        <div className={`absolute ${canEdit ? 'bottom-24' : 'bottom-6'} left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/80 text-[11px] font-mono text-slate-300 pointer-events-none`}>
           {view.scale.toFixed(1)}×
         </div>
       )}
