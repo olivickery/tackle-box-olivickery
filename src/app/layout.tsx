@@ -5,7 +5,9 @@ export const metadata: Metadata = {
   title: 'Tacklebox IQ – Smart gear management',
   description: 'AI-assisted fishing tackle inventory manager and trip planner.',
   applicationName: 'Tacklebox IQ',
-  appleWebApp: { title: 'Tacklebox IQ', statusBarStyle: 'black-translucent' },
+  // Home-screen app: an opaque black status bar, so the page starts below it and iOS
+  // has nothing to blur behind the clock (the translucent style let content run under it).
+  appleWebApp: { capable: true, title: 'Tacklebox IQ', statusBarStyle: 'black' },
 };
 
 export const viewport: Viewport = {
