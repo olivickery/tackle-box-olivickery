@@ -3191,10 +3191,10 @@ function TackleboxIQ({ session }: { session: Session }) {
         ) : (
           <div className="flex items-center gap-1">
             {([
-              { key: 'search', label: 'Search', icon: <Search className="w-5 h-5" />, onClick: () => setMobileSearchOpen(true), active: !!searchQuery.trim() },
-              { key: 'plan', label: 'Plan', icon: <Sparkles className="w-5 h-5" />, onClick: () => { setTripPlannerError(null); setIsTripPlannerOpen(true); } },
-              { key: 'pack', label: 'Pack', icon: <ClipboardList className="w-5 h-5" />, href: '/packs' },
-              { key: 'restock', label: 'Restock', icon: <ShoppingBag className="w-5 h-5" />, onClick: () => setIsRestockOpen(true), badge: allGhostCount },
+              { key: 'search', label: 'Search', icon: <Search className="w-4 h-4" />, onClick: () => setMobileSearchOpen(true), active: !!searchQuery.trim() },
+              { key: 'plan', label: 'Plan', icon: <Sparkles className="w-4 h-4" />, onClick: () => { setTripPlannerError(null); setIsTripPlannerOpen(true); } },
+              { key: 'pack', label: 'Pack', icon: <ClipboardList className="w-4 h-4" />, href: '/packs' },
+              { key: 'restock', label: 'Restock', icon: <ShoppingBag className="w-4 h-4" />, onClick: () => setIsRestockOpen(true), badge: allGhostCount },
             ] as const).map((b) => {
               const on = 'active' in b && b.active;
               const cls = `relative flex-1 min-w-0 h-14 rounded-full flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition [&>svg]:text-amber-400 ${
