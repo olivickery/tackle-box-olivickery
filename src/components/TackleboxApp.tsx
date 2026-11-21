@@ -3348,21 +3348,21 @@ function TackleboxIQ({ session }: { session: Session }) {
         ) : (
           <div className="flex items-center gap-1">
             {([
-              { key: 'search', label: 'Search', icon: <Search className="w-4 h-4" />, onClick: () => { goHome(); setMobileSearchOpen(true); }, active: section === 'gear' && !!searchQuery.trim(), badge: 0 },
-              { key: 'plan', label: 'Plan', icon: <Sparkles className="w-4 h-4" />, onClick: () => { if (navKey === 'plan') { goHome(); return; } setTripPlannerError(null); setIsTripPlannerOpen(true); }, active: navKey === 'plan', badge: 0 },
-              { key: 'pack', label: 'Pack', icon: <ClipboardList className="w-4 h-4" />, onClick: () => (navKey === 'packs' ? goHome() : goTo('/packs')), active: navKey === 'packs', badge: 0 },
-              { key: 'restock', label: 'Restock', icon: <ShoppingBag className="w-4 h-4" />, onClick: () => setIsRestockOpen(navKey !== 'restock'), active: navKey === 'restock', badge: allGhostCount },
+              { key: 'search', label: 'Search', icon: <Search className="w-[22px] h-[22px] stroke-[1.75]" />, onClick: () => { goHome(); setMobileSearchOpen(true); }, active: section === 'gear' && !!searchQuery.trim(), badge: 0 },
+              { key: 'plan', label: 'Plan', icon: <Sparkles className="w-[22px] h-[22px] stroke-[1.75]" />, onClick: () => { if (navKey === 'plan') { goHome(); return; } setTripPlannerError(null); setIsTripPlannerOpen(true); }, active: navKey === 'plan', badge: 0 },
+              { key: 'pack', label: 'Pack', icon: <ClipboardList className="w-[22px] h-[22px] stroke-[1.75]" />, onClick: () => (navKey === 'packs' ? goHome() : goTo('/packs')), active: navKey === 'packs', badge: 0 },
+              { key: 'restock', label: 'Restock', icon: <ShoppingBag className="w-[22px] h-[22px] stroke-[1.75]" />, onClick: () => setIsRestockOpen(navKey !== 'restock'), active: navKey === 'restock', badge: allGhostCount },
             ]).map((b) => {
               const on = b.active;
-              const cls = `relative flex-1 min-w-0 h-14 rounded-full flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition [&>svg]:text-amber-400 ${
+              const cls = `relative flex-1 min-w-0 h-14 rounded-full flex items-center justify-center transition [&>svg]:text-amber-400 ${
                 on ? 'bg-slate-950/80 text-white' : 'text-slate-200 hover:bg-slate-700/60 active:bg-slate-700/60'
               }`;
               const inner = (
                 <>
                   {b.icon}
-                  <span className="leading-none">{b.label}</span>
+                  <span className="sr-only">{b.label}</span>
                   {b.badge > 0 && (
-                    <span className="absolute top-1 right-[16%] bg-red-500 text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">{b.badge}</span>
+                    <span className="absolute top-2 right-[22%] bg-red-500 text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">{b.badge}</span>
                   )}
                 </>
               );
