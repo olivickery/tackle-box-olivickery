@@ -13,7 +13,14 @@ async function loadBitmap(src: string): Promise<ImageBitmap> {
   return createImageBitmap(await res.blob());
 }
 
-export async function enhanceImage(src: string): Promise<Blob> {
+/**
+ * `onlyIfNeeded` (used when photos are added): returns null for photos that
+ * already use the full brightness range and aren't dark, so good shots are
+ * left exactly as taken.
+ */
+export async function enhanceImage(src: string, opts: { onlyIfNeeded: true }): Promise<Blob | null>;
+export async function enhanceImage(src: string, opts?: { onlyIfNeeded?: false }): Promise<Blob>;
+export async function enhanceImage(src: string, opts: { onlyIfNeeded?: boolean } = {}): Promise<Blob | null> {
   const bitmap = await loadBitmap(src);
   const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
   const w = Math.round(bitmap.width * scale);
@@ -54,6 +61,12 @@ export async function enhanceImage(src: string): Promise<Blob> {
 
   // Gentle midtone lift for dark shots: aim the average towards ~0.5, never darken.
   const mean = (lumSum / samples - lo) / range;
+
+  if (opts.onlyIfNeeded) {
+    const flat = lo > 14 || hi < 240;           // washed out / grey, or no true whites
+    const dark = lumSum / samples / 255 < 0.38;  // underexposed overall
+    if (!flat && !dark) return null;
+  }
   const gamma = mean > 0.05 && mean < 0.45 ? Math.min(1, Math.max(0.7, Math.log(0.5) / Math.log(mean))) : 1;
 
   const lut = new Uint8ClampedArray(256);
