@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
 import NamePrompt from '../components/NamePrompt';
 import ShareCardSheet from '../components/ShareCardSheet';
-import { enhancedPath, originalOfEnhanced, storagePathOf } from '../lib/enhance';
+import { enhanceImage, enhancedPath, originalOfEnhanced, storagePathOf } from '../lib/enhance';
 import AddToPackSheet from '../components/AddToPackSheet';
 import { PENDING_CLAIM_KEY, UUID_RE } from '../lib/sharedCards';
 import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from '../components/OnboardingCards';
@@ -858,6 +858,16 @@ function TackleboxIQ({ session }: { session: Session }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  // Auto-enhance new photos before upload (and before the AI scan); remembered on this device.
+  const autoEnhanceKey = `tbiq:autoEnhance:${session.user.id}`;
+  const [autoEnhance, setAutoEnhanceState] = useState(() => {
+    try { return localStorage.getItem(autoEnhanceKey) !== 'off'; } catch { return true; }
+  });
+  const setAutoEnhance = (on: boolean) => {
+    setAutoEnhanceState(on);
+    try { localStorage.setItem(autoEnhanceKey, on ? 'on' : 'off'); } catch { /* ignore */ }
+  };
+  const [lastUploadEnhanced, setLastUploadEnhanced] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
@@ -1392,28 +1402,15 @@ function TackleboxIQ({ session }: { session: Session }) {
     if (!file) return;
 
     setIsUploading(true);
+    e.target.value = '';
 
-    const compressedBlob = await compressImageCrisp(file);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${session.user.id}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('tackle-vault-images')
-      .upload(filePath, compressedBlob);
-
-    if (uploadError) {
-      console.error('Error uploading image:', uploadError);
-      alert('Image upload failed.');
+    const url = await uploadNewPhoto(file);
+    if (!url) {
+      alert('Image upload failed. Please try again.');
       setIsUploading(false);
       return;
     }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('tackle-vault-images')
-      .getPublicUrl(filePath);
-
-    setModalPhotos(prev => [...prev, publicUrlData.publicUrl]);
+    setModalPhotos(prev => [...prev, url]);
     setIsUploading(false);
   };
 
@@ -1679,35 +1676,63 @@ function TackleboxIQ({ session }: { session: Session }) {
     }
   };
 
+  /**
+   * Compresses and uploads a new photo. With auto-enhance on, a flat or dark
+   * shot is corrected first; the original is uploaded alongside so Revert in
+   * the photo viewer still works. Returns the URL to use, or null on failure.
+   */
+  const uploadNewPhoto = async (file: File): Promise<string | null> => {
+    const compressedBlob = await compressImageCrisp(file);
+    const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const filePath = `${session.user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const bucket = supabase.storage.from('tackle-vault-images');
+    const originalUrl = bucket.getPublicUrl(filePath).data.publicUrl;
+
+    let enhanced: Blob | null = null;
+    if (autoEnhance) {
+      const local = URL.createObjectURL(compressedBlob);
+      try {
+        enhanced = await enhanceImage(local, { onlyIfNeeded: true });
+      } catch (err) {
+        console.warn('Auto-enhance skipped:', err);
+      } finally {
+        URL.revokeObjectURL(local);
+      }
+    }
+
+    const enhancedFile = enhanced ? enhancedPath(session.user.id, originalUrl) : null;
+    const [orig, enh] = await Promise.all([
+      bucket.upload(filePath, compressedBlob),
+      enhanced && enhancedFile ? bucket.upload(enhancedFile, enhanced, { contentType: 'image/jpeg' }) : Promise.resolve(null),
+    ]);
+    if (orig.error) {
+      console.error('Error uploading image:', orig.error);
+      return null;
+    }
+    if (enh && !enh.error && enhancedFile) {
+      setLastUploadEnhanced(true);
+      return bucket.getPublicUrl(enhancedFile).data.publicUrl;
+    }
+    if (enh?.error) console.warn('Enhanced copy failed to upload; using the original:', enh.error);
+    setLastUploadEnhanced(false);
+    return originalUrl;
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
     setExtractionError(null);
+    e.target.value = '';
 
-    const compressedBlob = await compressImageCrisp(file);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${session.user.id}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('tackle-vault-images')
-      .upload(filePath, compressedBlob);
-
-    if (uploadError) {
-      console.error('Error uploading image:', uploadError);
-      alert('Image upload failed. Ensure bucket policies are saved.');
+    const publicUrl = await uploadNewPhoto(file);
+    if (!publicUrl) {
+      alert('Image upload failed. Please try again.');
       setIsUploading(false);
       return;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from('tackle-vault-images')
-      .getPublicUrl(filePath);
-
-    const publicUrl = publicUrlData.publicUrl;
-    
     const updatedUrls = [...formData.image_urls, publicUrl];
     setFormData(prev => ({ ...prev, image_urls: updatedUrls }));
     setIsUploading(false);
@@ -2837,6 +2862,19 @@ function TackleboxIQ({ session }: { session: Session }) {
                 )}
               </div>
 
+              <label className="mb-4 flex items-center justify-between gap-3 px-3 min-h-11 rounded-xl border border-slate-800 bg-slate-950/40 cursor-pointer select-none">
+                <span className="flex items-center gap-2 text-xs text-slate-300 font-sans">
+                  <Wand2 className="w-3.5 h-3.5 text-amber-400" /> Auto-enhance new photos
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={autoEnhance}
+                  onChange={(ev) => setAutoEnhance(ev.target.checked)}
+                  className="w-4 h-4 accent-amber-500"
+                />
+              </label>
+
               <div className="flex gap-3 pt-4 border-t border-slate-800">
                 <button 
                   onClick={() => setItemToEditPhotos(null)}
@@ -3168,6 +3206,20 @@ function TackleboxIQ({ session }: { session: Session }) {
                     ))}
                   </div>
                 )}
+
+                <label className="flex items-center justify-between gap-3 px-3 min-h-11 rounded-xl border border-slate-800 bg-slate-950/40 cursor-pointer select-none">
+                  <span className="flex items-center gap-2 text-xs text-slate-300 font-sans">
+                    <Wand2 className="w-3.5 h-3.5 text-amber-400" /> Auto-enhance photos
+                    {lastUploadEnhanced && autoEnhance && <span className="text-[11px] text-slate-500">· last photo enhanced</span>}
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={autoEnhance}
+                    onChange={(ev) => setAutoEnhance(ev.target.checked)}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                </label>
 
                 {formData.image_urls.length < 4 && (
                   <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl cursor-pointer transition">
