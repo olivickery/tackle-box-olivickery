@@ -136,8 +136,11 @@ export default function AuthGate({
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-slate-500 animate-spin" />
+      <div className="min-h-screen bg-slate-950 flex flex-col">
+        <div className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 h-[calc(4rem+env(safe-area-inset-top))]" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-slate-500 animate-spin" />
+        </div>
       </div>
     );
   }
@@ -166,7 +169,21 @@ export default function AuthGate({
   const showPassword = mode !== 'forgot';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      {/* Solid pinned header, like the rest of the app, so iOS tints the status bar dark. */}
+      <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+        <div className="max-w-5xl mx-auto px-4 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setShowLanding(true)}
+            className="text-base sm:text-lg leading-none hover:opacity-80 transition"
+            aria-label="About Tacklebox IQ"
+          >
+            <Wordmark />
+          </button>
+        </div>
+      </header>
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
         <h1 className="text-xl leading-none mb-1"><Wordmark /></h1>
         <p className="text-xs text-slate-400 font-mono mb-6">{SUBTITLES[mode]}</p>
@@ -306,6 +323,7 @@ export default function AuthGate({
             ← About Tacklebox IQ
           </button>
         )}
+      </div>
       </div>
     </div>
   );
