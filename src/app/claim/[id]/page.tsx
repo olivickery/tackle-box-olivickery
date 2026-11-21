@@ -50,7 +50,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
-      <header className="border-b border-slate-800/80 bg-slate-900/60 pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-900 pt-[env(safe-area-inset-top)]">
         <div className="max-w-xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <Link href="/" className="text-base leading-none hover:opacity-80 transition"><Wordmark /></Link>
           <Link href="/" className="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 transition whitespace-nowrap">Open the app</Link>
