@@ -1990,7 +1990,7 @@ function TackleboxIQ({ session }: { session: Session }) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-32 selection:bg-amber-500 selection:text-slate-950">
       
-      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+      <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between gap-2">
           <button 
             onClick={() => {
