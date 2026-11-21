@@ -13,6 +13,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Lets env(safe-area-inset-bottom) report the iPhone home-indicator space for the bottom bar.
   viewportFit: 'cover',
+  // Safari tints the status-bar strip from this; match the app header so it reads as one dark bar.
+  themeColor: '#0f172a',
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({
@@ -21,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="bg-slate-950 [color-scheme:dark]">
       <body className="bg-slate-950 text-slate-100 antialiased">
         {children}
       </body>
