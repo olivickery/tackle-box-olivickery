@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Bookmark, Check, ClipboardList, Loader2, Package, Plus, RotateCcw, ShoppingBag, Trash2, Undo2, X } from 'lucide-react';
 import InventoryPicker, { type PickerItem } from './InventoryPicker';
 import { AmazonLink, AmazonDisclosure } from './AmazonLink';
+import CloseButton from './CloseButton';
 
 export interface PackEntry {
   id: string;
@@ -286,9 +287,7 @@ export default function PackChecklist({
                 </h2>
                 <p className="text-[11px] text-slate-400 mt-0.5 truncate">{tripLabel}</p>
               </div>
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800 shrink-0" aria-label="Close checklist">
-                <X className="w-5 h-5" />
-              </button>
+              <CloseButton onClick={onClose} label="Close checklist" />
             </div>
 
             <div className="mt-4">
@@ -465,12 +464,6 @@ export default function PackChecklist({
               className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1.5 transition disabled:opacity-40"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Uncheck all
-            </button>
-            <button
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-sans font-bold transition"
-            >
-              Done
             </button>
           </div>
         </div>

@@ -71,9 +71,9 @@ function MiniHeader() {
   );
 }
 
-function AmberTag({ children }: { children: React.ReactNode }) {
+function LocationTag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[7px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1 py-px rounded">{children}</span>
+    <span className="text-[7px] font-mono bg-slate-800 text-slate-300 border border-slate-700 px-1 py-px rounded">{children}</span>
   );
 }
 
@@ -107,7 +107,7 @@ function ScreenTray() {
       </div>
       <div className="flex gap-1 text-[7px] font-mono">
         <span className="px-2 py-0.5 rounded-full bg-slate-700 border border-slate-500 text-white font-bold">All 36</span>
-        <span className="flex-1 text-center py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">★ Favourites <span className="text-amber-400">6</span></span>
+        <span className="flex-1 text-center py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">★ Favourites <span className="text-white">6</span></span>
         <span className="flex-1 text-center py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">Replace <span className="text-red-400">1</span></span>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -115,10 +115,10 @@ function ScreenTray() {
           <div key={l.name} className="rounded-lg bg-slate-900 border border-slate-800 p-1 flex flex-col gap-1">
             <div className="relative">
               <LureSwatch from={l.from} to={l.to} className="aspect-[4/3]" />
-              {l.fav && <Star className="absolute top-1 right-1 w-2.5 h-2.5 text-amber-400 fill-amber-400" />}
+              {l.fav && <Star className="absolute top-1 right-1 w-2.5 h-2.5 text-white fill-white" />}
             </div>
             <span className="text-[8px] font-bold text-slate-100 leading-none">{l.name}</span>
-            <AmberTag>{l.tag}</AmberTag>
+            <LocationTag>{l.tag}</LocationTag>
           </div>
         ))}
       </div>

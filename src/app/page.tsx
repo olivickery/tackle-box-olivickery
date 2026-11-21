@@ -12,11 +12,12 @@ import Link from 'next/link';
 import { AmazonLink, AmazonDisclosure } from '../components/AmazonLink';
 import NamePrompt from '../components/NamePrompt';
 import ShareCardSheet from '../components/ShareCardSheet';
+import AddToPackSheet from '../components/AddToPackSheet';
 import { PENDING_CLAIM_KEY, UUID_RE } from '../lib/sharedCards';
 import OnboardingCards, { ONBOARDING_STEP_IDS, type OnboardingStepId } from '../components/OnboardingCards';
 import { firstNameOf } from '../lib/profile';
 import {
-  type GearItem, type TripPlan, type CustomPackItem,
+  type GearItem, type ItemTip, type TripPlan, type CustomPackItem,
   SUGGESTED_NOTE_PREFIX, normalizePlan, formatGearRow, formatPackRow, splitSpecies, defaultPackTitle,
   buildPackEntries, buildPackGaps, addGapsToRestock, countHiddenGear, normalizeCustomItems, newCustomItem,
   inventoryPickerItems, applyInventoryAdds,
@@ -39,6 +40,8 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  FileText,
   Edit3,
   Filter,
   Check,
@@ -55,8 +58,11 @@ import {
   RectangleVertical,
   Grid2x2,
   Gift,
+  Lightbulb,
+  ListPlus,
   MoreHorizontal
 } from 'lucide-react';
+import CloseButton from '../components/CloseButton';
 const PRESET_ENVIRONMENTS = [
   'Estuary & River',
   'Surf & Rock',
@@ -350,7 +356,7 @@ function CardCarousel({
         }}
         className={`absolute top-2 right-2 p-2.5 rounded-full before:absolute before:-inset-1 before:content-[''] backdrop-blur-md border transition z-20 ${
           item.is_favorite
-            ? 'bg-amber-500 text-slate-950 border-amber-400'
+            ? 'bg-white text-slate-950 border-white'
             : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
         }`}
         title={item.is_favorite ? 'Remove from favourites' : 'Add to favourites'}
@@ -478,8 +484,8 @@ function CardTagFooter({
             title={`Show gear for ${env}`}
             className={`text-[11px] font-mono min-h-7 px-2 rounded border transition ${
               activeLocation === env
-                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
+                ? 'bg-white text-slate-950 border-white font-bold'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-slate-100'
             }`}
           >
             {env}
@@ -492,12 +498,83 @@ function CardTagFooter({
         title={`Show all ${item.type}`}
         className={`shrink-0 text-[11px] font-mono uppercase min-h-7 px-2 rounded border transition ${
           activeCategory === item.type
-            ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+            ? 'bg-white text-slate-950 border-white font-bold'
             : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
         }`}
       >
         {item.type}
       </button>
+    </div>
+  );
+}
+
+/** "Tips for using this item": AI tactics kept on the item, each removable. Collapsed until opened. */
+function ItemTipsPanel({
+  tips, loading, error, open, onToggle, onDelete, onMore,
+}: {
+  tips: ItemTip[];
+  loading: boolean;
+  error: string | null;
+  open: boolean;
+  onToggle: () => void;
+  onDelete: (id: string) => void;
+  onMore: () => void;
+}) {
+  if (tips.length === 0 && !loading && !error) return null;
+  const expanded = open || (tips.length === 0 && (loading || !!error));
+  return (
+    <div id="item-tips-panel" className="px-4 pt-4 scroll-mt-20">
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl">
+        <button
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-controls="item-tips-list"
+          className="w-full flex items-center justify-between gap-2 px-3.5 min-h-12 text-left"
+        >
+          <span className="text-[11px] uppercase font-bold text-amber-400 flex items-center gap-1.5">
+            <Lightbulb className="w-3.5 h-3.5" /> Tactics
+            {tips.length > 0 && <span className="normal-case font-semibold text-amber-200/80">· {tips.length} {tips.length === 1 ? 'tip' : 'tips'}</span>}
+          </span>
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+            {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {expanded ? 'Hide' : 'Show'}
+            <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          </span>
+        </button>
+        {expanded && (
+          <div id="item-tips-list" className="px-3.5 pb-3">
+            {tips.length > 0 && (
+              <ul className="divide-y divide-amber-500/15 border-t border-amber-500/15">
+                {tips.map((t) => (
+                  <li key={t.id} className="flex items-start gap-2 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      {t.title && <p className="text-xs font-semibold text-amber-200">{t.title}</p>}
+                      <p className="text-sm text-slate-200 leading-relaxed">{t.tip}</p>
+                    </div>
+                    <button
+                      onClick={() => onDelete(t.id)}
+                      className="shrink-0 -mr-1.5 p-2 rounded-lg text-slate-400 hover:text-red-300 hover:bg-slate-800/60 transition"
+                      aria-label={`Delete tip: ${t.title || t.tip.slice(0, 40)}`}
+                      title="Delete this tip"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {loading && (
+              <p className="flex items-center gap-2 text-sm text-slate-300 py-2"><Loader2 className="w-4 h-4 animate-spin text-amber-400" /> Asking the AI guide…</p>
+            )}
+            {error && !loading && <p className="text-xs text-red-300 py-1.5">{error}</p>}
+            {tips.length > 0 && !loading && (
+              <button onClick={onMore} className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 min-h-9">
+                <Plus className="w-3.5 h-3.5" /> More tips
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -511,6 +588,11 @@ function GearDetailSheet({
   onToggleGhost,
   onDeleteItem,
   onShareCard,
+  onAddToPack,
+  onGetTips,
+  onDeleteTip,
+  tipsLoading,
+  tipsError,
   onFilterBrand,
   onFilterCategory,
   onFilterLocation,
@@ -525,13 +607,22 @@ function GearDetailSheet({
   onToggleGhost: (id: string, currentStatus: boolean, opts?: { withUndo?: boolean }) => void;
   onDeleteItem: (item: GearItem) => void;
   onShareCard: (item: GearItem) => void;
+  onAddToPack: (item: GearItem) => void;
+  onGetTips: (item: GearItem) => void;
+  onDeleteTip: (item: GearItem, tipId: string) => void;
+  tipsLoading: boolean;
+  tipsError: string | null;
   onFilterBrand: (brand: string) => void;
   onFilterCategory: (type: string) => void;
   onFilterLocation: (env: string) => void;
 }) {
   const doneRef = useRef<HTMLButtonElement>(null);
   const [notesOpen, setNotesOpen] = useState(false);
-  const longNotes = !!item.notes && (item.notes.length > 180 || item.notes.split('\n').length > 4);
+  // Tactics start collapsed; they open when the user asks for tips.
+  const [tipsOpen, setTipsOpen] = useState(false);
+  useEffect(() => { if (tipsLoading) setTipsOpen(true); }, [tipsLoading]);
+  const scrollToTips = () =>
+    requestAnimationFrame(() => document.getElementById('item-tips-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
@@ -555,7 +646,8 @@ function GearDetailSheet({
   const then = (fn: () => void) => () => { onClose(); fn(); };
 
   const row = 'flex justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0';
-  const action = 'w-full flex items-center gap-3 px-4 min-h-12 text-left text-sm text-slate-100 hover:bg-slate-800 transition';
+  const tile = 'flex items-center gap-2.5 px-3 py-2 min-h-12 rounded-xl border border-slate-800 bg-slate-950/40 hover:bg-slate-800 hover:border-slate-700 text-left transition';
+  const editBtn = 'flex items-center justify-center gap-1.5 min-h-11 rounded-xl border border-slate-800 bg-slate-950/40 hover:bg-slate-800 text-xs text-slate-200 transition';
   const chip = 'inline-flex items-center min-h-8 px-3 rounded-lg border border-slate-700 bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 transition';
 
   return (
@@ -574,9 +666,7 @@ function GearDetailSheet({
             </button>
             <h2 id="gear-detail-title" className="text-lg font-semibold text-slate-100 leading-tight">{item.name}</h2>
           </div>
-          <button ref={doneRef} onClick={onClose} className="shrink-0 min-h-11 px-3 -mr-1 rounded-lg text-sm font-semibold text-amber-400 hover:bg-slate-800 transition">
-            Done
-          </button>
+          <CloseButton ref={doneRef} onClick={onClose} />
         </div>
 
         {photos.length > 0 && (
@@ -611,30 +701,88 @@ function GearDetailSheet({
           </div>
         </div>
 
-        <div className="px-4 pt-4">
-          <p className="text-xs text-slate-400 mb-1">Notes</p>
-          {item.notes
-            ? <>
-                <p className={`text-sm text-slate-200 whitespace-pre-wrap leading-relaxed ${notesOpen ? '' : 'line-clamp-4'}`}>{item.notes}</p>
-                {longNotes && (
-                  <button onClick={() => setNotesOpen((o) => !o)} className="mt-1 min-h-8 text-sm font-semibold text-amber-400 hover:text-amber-300">
-                    {notesOpen ? 'Show less' : 'Show more'}
-                  </button>
-                )}
-              </>
-            : <p className="text-sm text-slate-400">No notes yet.</p>}
+        <ItemTipsPanel
+          tips={item.tips || []}
+          loading={tipsLoading}
+          error={tipsError}
+          open={tipsOpen}
+          onToggle={() => setTipsOpen((o) => !o)}
+          onDelete={(id) => onDeleteTip(item, id)}
+          onMore={() => onGetTips(item)}
+        />
+
+        <div className="px-4 pt-3">
+          <div className="bg-slate-950/40 border border-slate-800 rounded-xl">
+            {item.notes ? (
+              <button
+                onClick={() => setNotesOpen((o) => !o)}
+                aria-expanded={notesOpen}
+                aria-controls="item-notes-body"
+                className="w-full flex items-center justify-between gap-2 px-3.5 min-h-12 text-left"
+              >
+                <span className="text-[11px] uppercase font-bold text-slate-300 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" /> Notes
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+                  {notesOpen ? 'Hide' : 'Show'}
+                  <ChevronDown className={`w-4 h-4 transition-transform ${notesOpen ? 'rotate-180' : ''}`} />
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={then(() => onEditNotes(item))}
+                className="w-full flex items-center justify-between gap-2 px-3.5 min-h-12 text-left"
+              >
+                <span className="text-[11px] uppercase font-bold text-slate-300 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" /> Notes
+                </span>
+                <span className="flex items-center gap-1 text-xs font-semibold text-amber-400"><Plus className="w-3.5 h-3.5" /> Add notes</span>
+              </button>
+            )}
+            {item.notes && notesOpen && (
+              <div id="item-notes-body" className="px-3.5 pb-3 border-t border-slate-800 pt-2.5">
+                <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{item.notes}</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="mx-4 mt-4 rounded-xl border border-slate-800 overflow-hidden divide-y divide-slate-800">
-          <button onClick={then(() => onEditSpecs(item))} className={action}><Settings className="w-4 h-4 text-slate-400" />Edit specs</button>
-          <button onClick={then(() => onEditNotes(item))} className={action}><Edit3 className="w-4 h-4 text-slate-400" />{item.notes ? 'Edit notes' : 'Add notes'}</button>
-          <button onClick={then(() => onEditPhotos(item))} className={action}><Camera className="w-4 h-4 text-slate-400" />Photos</button>
-          <button onClick={then(() => onToggleGhost(item.id, item.is_ghost, { withUndo: true }))} className={action}><Repeat className="w-4 h-4 text-slate-400" />{item.is_ghost ? 'Mark as replaced' : 'Mark as needing replacement'}</button>
-          <button onClick={then(() => onShareCard(item))} className={action}><Gift className="w-4 h-4 text-slate-400" />Share or hand over</button>
-        </div>
+        <div className="px-4 pt-5">
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => onAddToPack(item)} className={tile}>
+              <ListPlus className="w-4 h-4 shrink-0 text-amber-400" />
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Add to list</span>
+            </button>
+            <button
+              onClick={() => {
+                const tipCount = item.tips?.length ?? 0;
+                if (tipCount > 0) setTipsOpen(true); else onGetTips(item);
+                scrollToTips();
+              }}
+              disabled={tipsLoading}
+              className={`${tile} disabled:opacity-60`}
+            >
+              <Lightbulb className="w-4 h-4 shrink-0 text-amber-400" />
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Get Tactics</span>
+            </button>
+            <button onClick={then(() => onShareCard(item))} className={tile}>
+              <Gift className="w-4 h-4 shrink-0 text-amber-400" />
+              <span className="text-xs font-semibold text-slate-100 leading-snug">Share or gift</span>
+            </button>
+            <button onClick={then(() => onToggleGhost(item.id, item.is_ghost, { withUndo: true }))} className={tile}>
+              <Repeat className={`w-4 h-4 shrink-0 ${item.is_ghost ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <span className="text-xs font-semibold text-slate-100 leading-snug">{item.is_ghost ? 'Mark replaced' : 'Replace it'}</span>
+            </button>
+          </div>
 
-        <div className="mx-4 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 overflow-hidden">
-          <button onClick={then(() => onDeleteItem(item))} className="w-full flex items-center gap-3 px-4 min-h-12 text-left text-sm font-semibold text-red-300 hover:bg-red-500/20 transition"><Trash2 className="w-4 h-4" />Delete</button>
+          <p className="text-xs text-slate-400 mt-4 mb-2">Edit</p>
+          <div className="grid grid-cols-3 gap-2">
+            <button onClick={then(() => onEditSpecs(item))} className={editBtn}><Settings className="w-4 h-4 text-slate-400" />Specs</button>
+            <button onClick={then(() => onEditNotes(item))} className={editBtn}><FileText className="w-4 h-4 text-slate-400" />Notes</button>
+            <button onClick={then(() => onEditPhotos(item))} className={editBtn}><Camera className="w-4 h-4 text-slate-400" />Photos</button>
+          </div>
+
+          <button onClick={then(() => onDeleteItem(item))} className="mt-4 w-full flex items-center justify-center gap-2 min-h-12 rounded-xl border border-red-500/30 bg-red-500/10 text-sm font-semibold text-red-300 hover:bg-red-500/20 transition"><Trash2 className="w-4 h-4" />Delete</button>
         </div>
       </div>
     </div>
@@ -688,6 +836,11 @@ function TackleboxIQ({ session }: { session: Session }) {
     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
     : 'grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4';
   const [pillFilter, setPillFilter] = useState<'all' | 'favs' | 'replace' | 'gifted'>('all');
+  // "Add to pack list" sheet and AI item tips, opened from the details sheet.
+  const [addToPackItemId, setAddToPackItemId] = useState<string | null>(null);
+  const addToPackItem = addToPackItemId ? items.find((i) => i.id === addToPackItemId) ?? null : null;
+  const [tipsLoadingId, setTipsLoadingId] = useState<string | null>(null);
+  const [tipsError, setTipsError] = useState<{ id: string; message: string } | null>(null);
   // Gift / hand-over link sheet for one card.
   const [shareCardItemId, setShareCardItemId] = useState<string | null>(null);
   const shareCardItem = shareCardItemId ? items.find((i) => i.id === shareCardItemId) ?? null : null;
@@ -1383,6 +1536,62 @@ function TackleboxIQ({ session }: { session: Session }) {
     setIsSharingList(false);
   };
 
+  /** Saves an item's kept tips (optimistic; rolls back if the save fails). */
+  const saveTips = async (item: GearItem, tips: ItemTip[]) => {
+    const previous = item.tips || [];
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, tips } : i)));
+    const { error } = await supabase.from('gear_items').update({ tips }).eq('id', item.id);
+    if (error) {
+      console.error('Failed to save tips:', error);
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, tips: previous } : i)));
+      setTipsError({ id: item.id, message: "Couldn't save the tips. Please try again." });
+      return false;
+    }
+    return true;
+  };
+
+  const handleGetTips = async (item: GearItem) => {
+    if (tipsLoadingId) return;
+    setTipsLoadingId(item.id);
+    setTipsError(null);
+    const existing = item.tips || [];
+    try {
+      const res = await fetch('/api/item-tips', {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({
+          item: {
+            brand: item.brand, name: item.name, type: item.type, color: item.color, depth: item.depth,
+            species: item.species, environment_tags: item.environment_tags,
+            // Trip-planner placeholders say nothing about the item itself.
+            notes: item.notes?.startsWith(SUGGESTED_NOTE_PREFIX) ? '' : item.notes,
+          },
+          avoid: existing.map((t) => `${t.title}: ${t.tip}`),
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setTipsError({ id: item.id, message: data?.error || 'Could not get tips just now. Please try again.' });
+      } else {
+        const fresh: ItemTip[] = (data.tips as { title: string; tip: string }[]).map((t) => ({
+          id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          title: t.title,
+          tip: t.tip,
+        }));
+        await saveTips(item, [...existing, ...fresh]);
+      }
+    } catch (err) {
+      console.error('Item tips failed:', err);
+      setTipsError({ id: item.id, message: 'Could not reach the AI guide. Check your connection and try again.' });
+    }
+    setTipsLoadingId(null);
+  };
+
+  const handleDeleteTip = (item: GearItem, tipId: string) => {
+    setTipsError(null);
+    saveTips(item, (item.tips || []).filter((t) => t.id !== tipId));
+  };
+
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -1795,7 +2004,7 @@ function TackleboxIQ({ session }: { session: Session }) {
             { key: 'all', label: 'All', short: 'All', icon: null, count: items.length,
               active: 'bg-slate-700 text-white border-slate-500', badge: 'bg-slate-950/30 text-white', idleBadge: 'bg-slate-800 text-slate-300' },
             { key: 'favs', label: 'Favourites', short: 'Favourites', icon: <Star className="w-3.5 h-3.5 fill-current shrink-0" />, count: allFavCount,
-              active: 'bg-amber-500 text-slate-950 border-amber-400', badge: 'bg-slate-950/15 text-slate-950', idleBadge: 'bg-amber-500/15 text-amber-400' },
+              active: 'bg-white text-slate-950 border-white', badge: 'bg-slate-950/10 text-slate-950', idleBadge: 'bg-slate-700 text-slate-100' },
             { key: 'replace', label: 'To replace', short: 'Replace', icon: <Repeat className="w-3.5 h-3.5 shrink-0" />, count: allGhostCount,
               active: 'bg-red-500 text-white border-red-400', badge: 'bg-slate-950/20 text-white', idleBadge: 'bg-red-500/15 text-red-400' },
             ...(allGiftedCount > 0 ? [
@@ -1856,9 +2065,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                 />
                 
                 {showFavSection && favoriteItems.length > 0 && (
-                  <div id="favourites-section" className="bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-amber-500/20 backdrop-blur-sm shadow-2xl scroll-mt-36">
+                  <div id="favourites-section" className="bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-slate-700 backdrop-blur-sm shadow-2xl scroll-mt-36">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-100 font-mono flex items-center gap-1.5">
                         <Star className="w-4 h-4 fill-current" /> Favourites
                       </span>
                       <span className="text-xs text-slate-400 font-mono">{favoriteItems.length} items</span>
@@ -1868,7 +2077,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                       {favoriteItems.map((item) => (
                         <div 
                           key={item.id}
-                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5`}
+                          className={`relative group rounded-xl ${isSingle ? 'p-3' : 'p-2 sm:p-3'} transition-all duration-300 border bg-slate-900 border-slate-500/60 shadow-lg`}
                         >
                           <div className="relative">
                             <CardCarousel 
@@ -1925,7 +2134,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         </span>
 
                         {activeCategoryFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 text-slate-100 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Tag className="w-3 h-3" />
                             <span>Category: {activeCategoryFilter}</span>
                             <button 
@@ -1939,7 +2148,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         )}
 
                         {activeBrandFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 text-slate-100 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Filter className="w-3 h-3" />
                             <span>Brand: {activeBrandFilter}</span>
                             <button 
@@ -1953,7 +2162,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                         )}
 
                         {activeEnvFilter && (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-mono px-2 py-0.5 rounded-lg">
+                          <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 text-slate-100 text-[11px] font-mono px-2 py-0.5 rounded-lg">
                             <Compass className="w-3 h-3" />
                             <span>Location: {activeEnvFilter}</span>
                             <button 
@@ -2144,9 +2353,9 @@ function TackleboxIQ({ session }: { session: Session }) {
                         <td className="p-3 font-sans font-semibold">
                           <div className="flex items-center gap-1.5">
                             {item.is_favorite && (
-                              <Star className="w-3.5 h-3.5 fill-current text-amber-400 shrink-0" />
+                              <Star className="w-3.5 h-3.5 fill-current text-white shrink-0" />
                             )}
-                            <span className={item.is_favorite ? 'text-amber-400 font-bold' : 'text-slate-200'}>
+                            <span className={item.is_favorite ? 'text-white font-bold' : 'text-slate-200'}>
                               {item.brand ? `${item.brand} - ` : ''}{item.name}
                             </span>
                             {item.gifted_from && <Gift className="w-3.5 h-3.5 text-fuchsia-300 shrink-0" aria-label={`Gifted by ${item.gifted_from}`} />}
@@ -2220,12 +2429,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <Sparkles className="w-5 h-5 text-amber-400" />
                 <h2 className="font-bold text-lg text-slate-100 font-sans">AI trip planner</h2>
               </div>
-              <button 
-                onClick={() => setIsTripPlannerOpen(false)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <CloseButton onClick={() => setIsTripPlannerOpen(false)} />
             </div>
 
             <div className="mt-4 space-y-4">
@@ -2473,10 +2677,24 @@ function TackleboxIQ({ session }: { session: Session }) {
           onToggleGhost={toggleGhost}
           onDeleteItem={setItemToDelete}
           onShareCard={(it) => setShareCardItemId(it.id)}
+          onAddToPack={(it) => setAddToPackItemId(it.id)}
+          onGetTips={handleGetTips}
+          onDeleteTip={handleDeleteTip}
+          tipsLoading={tipsLoadingId === detailItem.id}
+          tipsError={tipsError?.id === detailItem.id ? tipsError.message : null}
           onFilterBrand={handleBrandClick}
           onFilterCategory={handleCategoryClick}
           onFilterLocation={(env) => { setActiveEnvFilter(env); scrollToSection('my-gear-section'); }}
           onZoomImage={openZoom}
+        />
+      )}
+
+      {addToPackItem && (
+        <AddToPackSheet
+          item={addToPackItem}
+          items={items}
+          userId={session.user.id}
+          onClose={() => setAddToPackItemId(null)}
         />
       )}
 
@@ -2501,12 +2719,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <ImageIcon className="w-5 h-5 text-amber-400" />
                 <h2 className="font-bold text-lg text-slate-100">Manage Item Photos</h2>
               </div>
-              <button 
-                onClick={() => setItemToEditPhotos(null)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <CloseButton onClick={() => setItemToEditPhotos(null)} />
             </div>
 
             <div className="mt-4 space-y-4 font-mono text-xs">
@@ -2601,12 +2814,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <Edit3 className="w-4 h-4 text-amber-400" />
                 <h3 className="font-bold text-slate-100 text-sm">Edit Item Specs</h3>
               </div>
-              <button 
-                onClick={() => setItemToEditSpecs(null)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <CloseButton onClick={() => setItemToEditSpecs(null)} />
             </div>
 
             <div className="mt-4 space-y-3 font-mono text-xs">
@@ -2742,12 +2950,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <Edit3 className="w-4 h-4 text-amber-400" />
                 <h3 className="font-bold text-slate-100 text-sm">Edit Custom Notes</h3>
               </div>
-              <button 
-                onClick={() => setItemToEditNotes(null)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <CloseButton onClick={() => setItemToEditNotes(null)} />
             </div>
 
             <div className="mt-4 space-y-3 font-mono text-xs">
@@ -2864,12 +3067,7 @@ function TackleboxIQ({ session }: { session: Session }) {
                 <Plus className="w-5 h-5 text-amber-400" />
                 <h2 className="font-bold text-lg text-slate-100">Add new gear</h2>
               </div>
-              <button 
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <CloseButton onClick={() => setIsAddModalOpen(false)} />
             </div>
 
             <form onSubmit={handleAddLure} className="mt-4 space-y-4 text-xs font-mono">
@@ -3108,14 +3306,9 @@ function TackleboxIQ({ session }: { session: Session }) {
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-amber-400" />
-                <h2 className="font-bold text-lg text-slate-100">Gear to replace:</h2>
+                <h2 className="font-bold text-lg text-slate-100">Restock list</h2>
               </div>
-              <button 
-                onClick={() => setIsRestockOpen(false)}
-                className="text-slate-400 hover:text-slate-200 font-mono text-xs bg-slate-800 px-2 py-1 rounded"
-              >
-                Close
-              </button>
+              <CloseButton onClick={() => setIsRestockOpen(false)} />
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 space-y-3">
