@@ -623,7 +623,6 @@ function GearDetailSheet({
   useEffect(() => { if (tipsLoading) setTipsOpen(true); }, [tipsLoading]);
   const scrollToTips = () =>
     requestAnimationFrame(() => document.getElementById('item-tips-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  const longNotes = !!item.notes && (item.notes.length > 180 || item.notes.split('\n').length > 4);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
@@ -712,18 +711,40 @@ function GearDetailSheet({
           onMore={() => onGetTips(item)}
         />
 
-        <div className="px-4 pt-4">
-          <p className="text-xs text-slate-400 mb-1">Notes</p>
-          {item.notes
-            ? <>
-                <p className={`text-sm text-slate-200 whitespace-pre-wrap leading-relaxed ${notesOpen ? '' : 'line-clamp-4'}`}>{item.notes}</p>
-                {longNotes && (
-                  <button onClick={() => setNotesOpen((o) => !o)} className="mt-1 min-h-8 text-sm font-semibold text-amber-400 hover:text-amber-300">
-                    {notesOpen ? 'Show less' : 'Show more'}
-                  </button>
-                )}
-              </>
-            : <p className="text-sm text-slate-400">No notes yet.</p>}
+        <div className="px-4 pt-3">
+          <div className="bg-slate-950/40 border border-slate-800 rounded-xl">
+            {item.notes ? (
+              <button
+                onClick={() => setNotesOpen((o) => !o)}
+                aria-expanded={notesOpen}
+                aria-controls="item-notes-body"
+                className="w-full flex items-center justify-between gap-2 px-3.5 min-h-12 text-left"
+              >
+                <span className="text-[11px] uppercase font-bold text-slate-300 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" /> Notes
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+                  {notesOpen ? 'Hide' : 'Show'}
+                  <ChevronDown className={`w-4 h-4 transition-transform ${notesOpen ? 'rotate-180' : ''}`} />
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={then(() => onEditNotes(item))}
+                className="w-full flex items-center justify-between gap-2 px-3.5 min-h-12 text-left"
+              >
+                <span className="text-[11px] uppercase font-bold text-slate-300 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" /> Notes
+                </span>
+                <span className="flex items-center gap-1 text-xs font-semibold text-amber-400"><Plus className="w-3.5 h-3.5" /> Add notes</span>
+              </button>
+            )}
+            {item.notes && notesOpen && (
+              <div id="item-notes-body" className="px-3.5 pb-3 border-t border-slate-800 pt-2.5">
+                <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{item.notes}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="px-4 pt-5">
