@@ -28,6 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-slate-950 [color-scheme:dark]">
       <body className="bg-slate-950 text-slate-100 antialiased">
+        {/* Solid strip behind the iPhone status bar on every page (incl. sign-in, which has no
+            header), so iOS tints it dark instead of blurring the page into a grey band.
+            Zero height where there's no status bar. */}
+        <div aria-hidden="true" className="fixed inset-x-0 top-0 z-[100] h-[env(safe-area-inset-top)] bg-slate-900 pointer-events-none" />
         {children}
       </body>
     </html>
